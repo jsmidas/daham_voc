@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(psql:*)",
+      "Bash(mongosh:*)",
+      "Bash(redis-cli:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm install)",
+      "Bash(npx prisma generate:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5Yzc1ZTFhNC1jOGMyLTRiYTctOTBjZi1hYWVkYWZjNzZmMTgiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjAwMTg2MjcsImV4cCI6MTc2MDYyMzQyN30.CoHUoMwISN1kJXJ5zuXKrWGWymMZFs7jpRHtJlqM9Rs\")",
+      "Bash(npm install:*)",
+      "Bash(netstat:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI5Yzc1ZTFhNC1jOGMyLTRiYTctOTBjZi1hYWVkYWZjNzZmMTgiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjAwMTk4ODYsImV4cCI6MTc2MDYyNDY4Nn0.qjDuBQ_pIxy0tEIIk-DEavW7Uc5Aaryv7i3bWLWk5i0\")",
+      "Bash(npm create:*)",
+      "Bash(npx create-expo-app:*)",
+      "Bash(npx expo install:*)",
+      "Bash(test:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prisma:*)",
+      "Bash(npx:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
