@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.log
+.DS_Store
+gcp-service-account-key.json
+google-services.json
+GoogleService-Info.plist
+.vscode/
+coverage/
+.npm
+.eslintcache
