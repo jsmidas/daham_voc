@@ -30,7 +30,15 @@
       "Bash(git branch:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(git push:*)",
+      "Bash(npm run web:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(curl -X POST http://localhost:3000/api/v1/auth/login -H \"Content-Type: application/json\" -d \"{\"\"phone\"\":\"\"01012345678\"\",\"\"password\"\":\"\"1234\"\"}\")",
+      "WebFetch(domain:developers.kakao.com)",
+      "Bash(curl -H \"Authorization: KakaoAK 2ec48bfd86a549a69da630e18d685008\" \"https://dapi.kakao.com/v2/local/search/address.json?query=서울시%20강남구%20테헤란로%2014길%206\")",
+      "Bash(curl -H \"Authorization: KakaoAK 2ec48bfd86a549a69da630e18d685008\" \"https://dapi.kakao.com/v2/local/search/address.json?query=국채보상로6길 12-12\")",
+      "Bash(curl -H \"Authorization: KakaoAK 2ec48bfd86a549a69da630e18d685008\" \"https://dapi.kakao.com/v2/local/search/address.json?query=%EA%B5%AD%EC%B1%84%EB%B3%B4%EC%83%81%EB%A1%9C6%EA%B8%B8%2012-12\")"
     ],
     "deny": [],
     "ask": []

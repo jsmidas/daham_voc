@@ -33,9 +33,9 @@ export const registerSchema = Joi.object({
  * Login validation schema
  */
 export const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
-    'string.email': '유효한 이메일 주소를 입력해주세요',
-    'any.required': '이메일은 필수 항목입니다',
+  phone: Joi.string().pattern(/^010\d{8}$/).required().messages({
+    'string.pattern.base': '010으로 시작하는 11자리 번호를 입력하세요 (예: 01012345678)',
+    'any.required': '전화번호는 필수 항목입니다',
   }),
   password: Joi.string().required().messages({
     'any.required': '비밀번호는 필수 항목입니다',

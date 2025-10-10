@@ -3,7 +3,8 @@
  * @description 사업장 등록/수정 페이지
  */
 
-import { Form, Input, Button, Card, message, Select } from 'antd';
+import { Form, Input, Button, Card, message, Select, Alert } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createSite, updateSite, getSiteById } from '@/api/site.api';
@@ -80,11 +81,19 @@ export default function SiteFormPage() {
       </div>
 
       <Card>
+        <Alert
+          message="주소 입력 방법"
+          description="주소 입력란 옆의 파란색 '주소 검색' 버튼을 클릭하여 Kakao 주소 검색 팝업에서 주소를 선택하세요. 브라우저의 자동완성 기능을 사용하지 마세요. 주소 선택 시 위도/경도가 자동으로 입력됩니다."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
           autoComplete="off"
+          initialValues={{}}
         >
           <Form.Item
             label="사업장명"
@@ -118,12 +127,107 @@ export default function SiteFormPage() {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            label="주소"
-            name="address"
-            rules={[{ required: true, message: '주소를 입력하세요' }]}
-          >
-            <Input placeholder="예: 서울시 서초구 서초대로 74길 11" />
+          <Form.Item label="주소" required>
+            <Input.Group compact>
+              <Form.Item
+                name="address"
+                noStyle
+                rules={[{ required: true, message: '주소를 검색하세요' }]}
+              >
+                <Input
+                  style={{ width: 'calc(100% - 200px)' }}
+                  placeholder="주소 검색 버튼을 클릭하세요"
+                  readOnly
+                  autoComplete="off"
+                />
+              </Form.Item>
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                onClick={() => {
+                  console.log('=== 주소 검색 버튼 클릭 ===');
+                  console.log('daum 객체 존재:', !!(window as any).daum);
+
+                  if (!(window as any).daum) {
+                    message.error('Kakao 우편번호 서비스를 불러올 수 없습니다.');
+                    return;
+                  }
+
+                  const postcodeInstance = new (window as any).daum.Postcode({
+                    oncomplete: function(data: any) {
+                      console.log('=== 주소 선택됨 ===');
+                      console.log('선택된 데이터:', data);
+
+                      const fullAddress = data.roadAddress || data.jibunAddress;
+                      console.log('최종 주소:', fullAddress);
+
+                      // 주소 입력
+                      form.setFieldsValue({ address: fullAddress });
+                      message.info('주소가 입력되었습니다. 좌표 변환 중...');
+
+                      // 좌표 변환
+                      const apiKey = import.meta.env.VITE_KAKAO_MAP_APP_KEY;
+                      console.log('API 키:', apiKey);
+
+                      if (!apiKey || apiKey === 'your_kakao_map_key_here') {
+                        message.warning('좌표는 수동으로 입력해주세요 (API 키 미설정)');
+                        return;
+                      }
+
+                      const url = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(fullAddress)}`;
+
+                      fetch(url, {
+                        headers: {
+                          Authorization: `KakaoAK ${apiKey}`,
+                        },
+                      })
+                        .then(response => {
+                          console.log('응답 상태:', response.status);
+                          if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                          }
+                          return response.json();
+                        })
+                        .then(result => {
+                          console.log('API 응답:', result);
+                          if (result.documents && result.documents.length > 0) {
+                            const { x, y } = result.documents[0];
+                            form.setFieldsValue({
+                              latitude: parseFloat(y),
+                              longitude: parseFloat(x),
+                            });
+                            message.success('주소와 좌표가 입력되었습니다!');
+                          } else {
+                            message.warning('좌표를 찾을 수 없습니다. 수동으로 입력해주세요.');
+                          }
+                        })
+                        .catch(error => {
+                          console.error('좌표 변환 오류:', error);
+                          message.error('좌표 변환 실패. 수동으로 입력해주세요.');
+                        });
+                    },
+                  });
+
+                  console.log('Postcode 인스턴스 생성 완료');
+                  postcodeInstance.open();
+                  console.log('주소 검색 창 열기 완료');
+                }}
+              >
+                주소 검색
+              </Button>
+              <Button
+                onClick={() => {
+                  form.setFieldsValue({
+                    address: undefined,
+                    latitude: undefined,
+                    longitude: undefined,
+                  });
+                  message.info('주소 정보가 초기화되었습니다');
+                }}
+              >
+                초기화
+              </Button>
+            </Input.Group>
           </Form.Item>
 
           <Form.Item
@@ -131,7 +235,7 @@ export default function SiteFormPage() {
             name="latitude"
             rules={[{ required: true, message: '위도를 입력하세요' }]}
           >
-            <Input type="number" step="0.000001" placeholder="예: 37.5012767" />
+            <Input type="number" step="0.000001" placeholder="예: 37.5012767 (주소 검색 시 자동 입력)" />
           </Form.Item>
 
           <Form.Item
@@ -139,7 +243,35 @@ export default function SiteFormPage() {
             name="longitude"
             rules={[{ required: true, message: '경도를 입력하세요' }]}
           >
-            <Input type="number" step="0.000001" placeholder="예: 127.0396597" />
+            <Input type="number" step="0.000001" placeholder="예: 127.0396597 (주소 검색 시 자동 입력)" />
+          </Form.Item>
+
+          <Form.Item
+            label="담당자명 1"
+            name="contactPerson1"
+          >
+            <Input placeholder="예: 홍길동" />
+          </Form.Item>
+
+          <Form.Item
+            label="연락처 1"
+            name="contactPhone1"
+          >
+            <Input placeholder="예: 010-1234-5678" />
+          </Form.Item>
+
+          <Form.Item
+            label="담당자명 2"
+            name="contactPerson2"
+          >
+            <Input placeholder="예: 김철수" />
+          </Form.Item>
+
+          <Form.Item
+            label="연락처 2"
+            name="contactPhone2"
+          >
+            <Input placeholder="예: 010-9876-5432" />
           </Form.Item>
 
           <Form.Item>
