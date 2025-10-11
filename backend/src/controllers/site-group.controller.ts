@@ -10,6 +10,19 @@ export class SiteGroupController {
   }
 
   /**
+   * GET /api/v1/site-groups/hierarchy
+   * Get hierarchy structure (다함푸드 > 본사/영남 > 그룹 > 사업장)
+   */
+  getHierarchy = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const hierarchy = await this.siteGroupService.getHierarchy();
+      res.json(successResponse(hierarchy));
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message, 'GET_HIERARCHY_ERROR'));
+    }
+  };
+
+  /**
    * GET /api/v1/site-groups
    * Get all site groups
    */

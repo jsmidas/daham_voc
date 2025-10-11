@@ -7,7 +7,7 @@ import { Router } from 'express';
 import * as mealPhotoController from '../controllers/meal-photo.controller';
 import { authMiddleware, roleMiddleware } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validator.middleware';
-import { uploadSingle } from '../middlewares/upload.middleware';
+import { uploadSingle, uploadMealPhotos } from '../middlewares/upload.middleware';
 import {
   createMealPhotoSchema,
   updateMealPhotoSchema,
@@ -32,6 +32,15 @@ router.get('/', authMiddleware, mealPhotoController.getMealPhotos);
 
 // GET /api/v1/meal-photos/:id - 식사 사진 상세 조회 (All authenticated users)
 router.get('/:id', authMiddleware, mealPhotoController.getMealPhotoById);
+
+// POST /api/v1/meal-photos/bulk - 식사 사진 일괄 업로드 (Admin + STAFF, 최대 6개)
+router.post(
+  '/bulk',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SITE_STAFF', 'DELIVERY_DRIVER']),
+  uploadMealPhotos,
+  mealPhotoController.bulkCreateMealPhotos
+);
 
 // POST /api/v1/meal-photos - 식사 사진 생성 (Admin + STAFF)
 router.post(

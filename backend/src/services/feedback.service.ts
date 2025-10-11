@@ -6,12 +6,14 @@
 import { prisma } from '../config/database';
 import { cache } from '../config/redis';
 import { FeedbackAuthorType, FeedbackStatus } from '@prisma/client';
+import { uploadMultipleImages } from './storage.service';
 
 export interface CreateFeedbackDto {
   siteId: string;
   authorType: FeedbackAuthorType;
   content: string;
   rating?: number;
+  imageFiles?: Express.Multer.File[];  // 최대 6개
 }
 
 export interface UpdateFeedbackDto {
@@ -57,24 +59,71 @@ export async function createFeedback(
     throw new Error('Rating must be between 1 and 5');
   }
 
-  // DB 저장
-  const feedback = await prisma.customerFeedback.create({
-    data: {
-      siteId: dto.siteId,
-      authorId: userId,
-      authorType: dto.authorType,
-      content: dto.content,
-      rating: dto.rating,
-      status: 'PENDING',
-    },
-    include: {
-      site: {
-        select: { id: true, name: true, type: true },
+  // 이미지 개수 검증 (최대 6개)
+  if (dto.imageFiles && dto.imageFiles.length > 6) {
+    throw new Error('Maximum 6 images allowed');
+  }
+
+  // 이미지 업로드 (있는 경우)
+  let uploadedImages: any[] = [];
+  if (dto.imageFiles && dto.imageFiles.length > 0) {
+    const result = await uploadMultipleImages(dto.imageFiles, 'feedbacks');
+    uploadedImages = result.uploaded;
+
+    if (result.failed.length > 0) {
+      console.error('Some images failed to upload:', result.failed);
+    }
+  }
+
+  // Transaction으로 피드백 및 이미지 저장
+  const feedback = await prisma.$transaction(async (tx) => {
+    // 피드백 생성
+    const newFeedback = await tx.customerFeedback.create({
+      data: {
+        siteId: dto.siteId,
+        authorId: userId,
+        authorType: dto.authorType,
+        content: dto.content,
+        rating: dto.rating,
+        status: 'PENDING',
       },
-      author: {
-        select: { id: true, name: true, email: true, role: true },
+      include: {
+        site: {
+          select: { id: true, name: true, type: true },
+        },
+        author: {
+          select: { id: true, name: true, email: true, role: true },
+        },
       },
-    },
+    });
+
+    // 이미지 레코드 생성
+    if (uploadedImages.length > 0) {
+      await tx.feedbackImage.createMany({
+        data: uploadedImages.map((img, index) => ({
+          feedbackId: newFeedback.id,
+          imageUrl: img.originalUrl,
+          thumbnailUrl: img.thumbnailUrl,
+          sortOrder: index,
+        })),
+      });
+    }
+
+    // 이미지 포함하여 재조회
+    return tx.customerFeedback.findUnique({
+      where: { id: newFeedback.id },
+      include: {
+        site: {
+          select: { id: true, name: true, type: true },
+        },
+        author: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+        images: {
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+    });
   });
 
   // 캐시 무효화
@@ -143,6 +192,15 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any[]> {
       author: {
         select: { id: true, name: true, email: true, role: true },
       },
+      images: {
+        orderBy: { sortOrder: 'asc' },
+        select: {
+          id: true,
+          imageUrl: true,
+          thumbnailUrl: true,
+          sortOrder: true,
+        },
+      },
     },
     orderBy: [{ createdAt: 'desc' }],
   });
@@ -165,6 +223,9 @@ export async function getFeedbackById(id: string): Promise<any> {
       },
       author: {
         select: { id: true, name: true, email: true, role: true },
+      },
+      images: {
+        orderBy: { sortOrder: 'asc' },
       },
     },
   });

@@ -16,6 +16,18 @@ export const createSiteGroupSchema = Joi.object({
   description: Joi.string().max(500).optional().messages({
     'string.max': '설명은 최대 500자까지 입력 가능합니다',
   }),
+  markerShape: Joi.string()
+    .valid('CIRCLE', 'SQUARE', 'DIAMOND', 'HEART', 'SPADE', 'CLUB', 'STAR', 'TRIANGLE')
+    .optional()
+    .messages({
+      'any.only': '유효한 마커 모양을 선택해주세요',
+    }),
+  markerColor: Joi.string()
+    .pattern(/^#[0-9A-Fa-f]{6}$/)
+    .optional()
+    .messages({
+      'string.pattern.base': '마커 색상은 hex 형식이어야 합니다 (예: #1890ff)',
+    }),
   sortOrder: Joi.number().integer().min(0).optional().messages({
     'number.base': '정렬 순서는 숫자여야 합니다',
     'number.min': '정렬 순서는 0 이상이어야 합니다',
@@ -29,6 +41,12 @@ export const updateSiteGroupSchema = Joi.object({
   name: Joi.string().min(2).max(100).optional(),
   division: Joi.string().valid('HQ', 'YEONGNAM').optional(),
   description: Joi.string().max(500).allow(null, '').optional(),
+  markerShape: Joi.string()
+    .valid('CIRCLE', 'SQUARE', 'DIAMOND', 'HEART', 'SPADE', 'CLUB', 'STAR', 'TRIANGLE')
+    .optional(),
+  markerColor: Joi.string()
+    .pattern(/^#[0-9A-Fa-f]{6}$/)
+    .optional(),
   sortOrder: Joi.number().integer().min(0).optional(),
 });
 

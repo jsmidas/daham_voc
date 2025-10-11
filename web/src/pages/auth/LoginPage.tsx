@@ -43,7 +43,7 @@ export default function LoginPage() {
       <Card
         title="Daham VOC 관리자 로그인"
         style={{ width: 400 }}
-        headStyle={{ textAlign: 'center', fontSize: '20px', fontWeight: 'bold' }}
+        styles={{ header: { textAlign: 'center', fontSize: '20px', fontWeight: 'bold' } }}
       >
         <Form name="login" onFinish={onFinish} autoComplete="off">
           <Form.Item

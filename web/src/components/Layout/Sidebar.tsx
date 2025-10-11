@@ -14,6 +14,7 @@ import {
   ClockCircleOutlined,
   BarChartOutlined,
   EnvironmentOutlined,
+  AppstoreOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -28,52 +29,57 @@ export default function Sidebar() {
     {
       key: '/dashboard',
       icon: <DashboardOutlined />,
-      label: '대시보드',
+      label: <span>대시보드</span>,
     },
     {
       key: '/sites',
       icon: <ShopOutlined />,
-      label: '사업장 관리',
+      label: <span>사업장 관리</span>,
     },
     {
       key: '/site-groups',
       icon: <ShopOutlined />,
-      label: '사업장 그룹',
+      label: <span>사업장 그룹</span>,
     },
     {
       key: '/map',
       icon: <EnvironmentOutlined />,
-      label: '사업장 지도',
+      label: <span>사업장 지도</span>,
     },
     {
-      key: '/menus',
+      key: '/menu-types',
+      icon: <AppstoreOutlined />,
+      label: <span>식단유형 관리</span>,
+    },
+    {
+      key: '/weekly-menus',
       icon: <CalendarOutlined />,
-      label: '식단 관리',
+      label: <span>주간 식단표</span>,
     },
     {
-      key: '/photos',
+      key: '/meal-photos',
       icon: <CameraOutlined />,
-      label: '배식 사진',
+      label: <span>배식사진 관리</span>,
     },
     {
       key: '/feedbacks',
       icon: <MessageOutlined />,
-      label: 'VOC 관리',
+      label: <span>VOC 관리</span>,
     },
     {
       key: '/staff',
       icon: <TeamOutlined />,
-      label: '담당자 관리',
+      label: <span>담당자 관리</span>,
     },
     {
       key: '/attendances',
       icon: <ClockCircleOutlined />,
-      label: '근태 관리',
+      label: <span>근태 관리</span>,
     },
     {
       key: '/stats',
       icon: <BarChartOutlined />,
-      label: '통계 조회',
+      label: <span>통계 조회</span>,
     },
   ];
 
@@ -86,7 +92,9 @@ export default function Sidebar() {
     const path = location.pathname;
     // /sites/new, /sites/:id/edit 등도 /sites로 선택되도록
     if (path.startsWith('/sites')) return '/sites';
-    if (path.startsWith('/menus')) return '/menus';
+    if (path.startsWith('/menu-types')) return '/menu-types';
+    if (path.startsWith('/weekly-menus')) return '/weekly-menus';
+    if (path.startsWith('/meal-photos')) return '/meal-photos';
     return path;
   };
 
@@ -113,6 +121,14 @@ export default function Sidebar() {
         theme="dark"
         style={{ borderRight: 0 }}
       />
+      <style>{`
+        .ant-menu-item .ant-menu-title-content {
+          pointer-events: none !important;
+        }
+        .ant-menu-item {
+          pointer-events: auto !important;
+        }
+      `}</style>
     </Sider>
   );
 }

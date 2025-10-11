@@ -6,7 +6,7 @@
 import { prisma } from '../config/database';
 import { cache } from '../config/redis';
 import { MealType, PhotoType } from '@prisma/client';
-import { uploadImage, deleteImage, extractPathFromUrl } from './storage.service';
+import { uploadImage, deleteImage, extractPathFromUrl, uploadMultipleImages } from './storage.service';
 import { checkGeofencing, getGeofencingInfo, Coordinates } from '../utils/geofencing.util';
 
 export interface CreateMealPhotoDto {
@@ -17,6 +17,16 @@ export interface CreateMealPhotoDto {
   latitude?: number;
   longitude?: number;
   image: Express.Multer.File;
+}
+
+export interface BulkCreateMealPhotoDto {
+  siteId: string;
+  mealType?: MealType;
+  photoType: PhotoType;
+  capturedAt: Date;
+  latitude?: number;
+  longitude?: number;
+  images: Express.Multer.File[];
 }
 
 export interface UpdateMealPhotoDto {
@@ -105,6 +115,84 @@ export async function createMealPhoto(
   await invalidateMealPhotoCache(dto.siteId);
 
   return photo;
+}
+
+/**
+ * 식사 사진 일괄 업로드 (GPS 검증 포함)
+ */
+export async function bulkCreateMealPhotos(
+  dto: BulkCreateMealPhotoDto,
+  userId: string
+): Promise<any> {
+  // 사업장 조회
+  const site = await prisma.site.findUnique({
+    where: { id: dto.siteId },
+  });
+
+  if (!site) {
+    throw new Error('Site not found');
+  }
+
+  // GPS 검증 (위도/경도가 제공된 경우)
+  if (dto.latitude !== undefined && dto.longitude !== undefined) {
+    const userCoord: Coordinates = {
+      lat: dto.latitude,
+      lng: dto.longitude,
+    };
+
+    const siteCoord: Coordinates = {
+      lat: site.latitude,
+      lng: site.longitude,
+    };
+
+    // 기본 허용 반경 100m
+    const allowedRadius = 100;
+    const isWithinRange = checkGeofencing(userCoord, siteCoord, allowedRadius);
+
+    if (!isWithinRange) {
+      const info = getGeofencingInfo(userCoord, siteCoord, allowedRadius);
+      throw new Error(info.message);
+    }
+  }
+
+  // 이미지 일괄 업로드
+  const uploadResult = await uploadMultipleImages(dto.images, 'meal-photos');
+
+  // 업로드된 이미지들 DB 저장
+  const photos = await prisma.$transaction(
+    uploadResult.uploaded.map((uploaded) =>
+      prisma.mealPhoto.create({
+        data: {
+          siteId: dto.siteId,
+          uploaderId: userId,
+          imageUrl: uploaded.originalUrl,
+          thumbnailUrl: uploaded.thumbnailUrl,
+          mealType: dto.mealType,
+          photoType: dto.photoType,
+          capturedAt: dto.capturedAt,
+          latitude: dto.latitude,
+          longitude: dto.longitude,
+        },
+        include: {
+          site: {
+            select: { id: true, name: true, type: true },
+          },
+          uploader: {
+            select: { id: true, name: true, email: true },
+          },
+        },
+      })
+    )
+  );
+
+  // 캐시 무효화
+  await invalidateMealPhotoCache(dto.siteId);
+
+  return {
+    photos,
+    uploaded: uploadResult.uploaded.length,
+    failed: uploadResult.failed,
+  };
 }
 
 /**

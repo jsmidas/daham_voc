@@ -22,7 +22,7 @@ export async function createSite(data: any) {
 
 // 사업장 수정
 export async function updateSite(id: string, data: any) {
-  return apiClient.patch(`/sites/${id}`, data);
+  return apiClient.put(`/sites/${id}`, data);
 }
 
 // 사업장 삭제

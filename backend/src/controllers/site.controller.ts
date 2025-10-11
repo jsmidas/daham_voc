@@ -128,4 +128,32 @@ export class SiteController {
       res.status(400).json(errorResponse(error.message, 'DELETE_SITE_ERROR'));
     }
   };
+
+  /**
+   * PATCH /api/v1/sites/order
+   * Batch update site orders
+   */
+  updateSiteOrders = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json(errorResponse('인증되지 않은 사용자입니다', 'UNAUTHORIZED'));
+        return;
+      }
+
+      const { updates } = req.body;
+
+      if (!Array.isArray(updates) || updates.length === 0) {
+        res.status(400).json(errorResponse('업데이트할 사업장 목록이 필요합니다', 'INVALID_INPUT'));
+        return;
+      }
+
+      await this.siteService.batchUpdateSiteOrders(updates, userId);
+
+      res.json(successResponse(null, '사업장 순서가 업데이트되었습니다'));
+    } catch (error: any) {
+      res.status(400).json(errorResponse(error.message, 'UPDATE_ORDER_ERROR'));
+    }
+  };
 }

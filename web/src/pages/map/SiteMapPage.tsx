@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Select, Card, Spin, Space, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
+import { createMarkerImage, type MarkerShape } from '@/utils/markerShapes';
 
 declare global {
   interface Window {
@@ -18,35 +19,113 @@ export default function SiteMapPage() {
   const [division, setDivision] = useState<string | undefined>();
   const [type, setType] = useState<string | undefined>();
 
+  // 사업장 유형 한국어 변환
+  const getTypeLabel = (type: string) => {
+    const typeLabels: Record<string, string> = {
+      'CONSIGNMENT': '위탁',
+      'DELIVERY': '운반급식',
+      'LUNCHBOX': '도시락',
+      'EVENT': '행사',
+    };
+    return typeLabels[type] || type;
+  };
+
   // 사업장 목록 조회
-  const { data: sites, isLoading } = useQuery({
+  const { data: sites, isLoading, error } = useQuery({
     queryKey: ['sites', { division, type }],
     queryFn: () => getSites({ division, type }),
     retry: false,
   });
 
+  // 디버깅을 위한 로그
+  useEffect(() => {
+    console.log('=== SiteMapPage Debug ===');
+    console.log('isLoading:', isLoading);
+    console.log('error:', error);
+    console.log('sites:', sites);
+    console.log('sites?.data?.sites:', sites?.data?.sites);
+  }, [isLoading, error, sites]);
+
   // 카카오맵 초기화 및 마커 표시
   useEffect(() => {
-    if (!sites?.data?.sites || sites.data.sites.length === 0) return;
+    console.log('=== Kakao Map Init Start ===');
+    console.log('sites?.data?.sites:', sites?.data?.sites);
+
+    if (!sites?.data?.sites || sites.data.sites.length === 0) {
+      console.log('No sites data, skipping map init');
+      return;
+    }
+
+    console.log('Sites count:', sites.data.sites.length);
+
+    // 이미 스크립트가 로드되어 있는지 확인
+    const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
+
+    if (existingScript && window.kakao?.maps) {
+      console.log('Kakao script already loaded, initializing map directly');
+      initializeMap();
+      return;
+    }
+
+    console.log('Loading Kakao script...');
+    console.log('Kakao API Key:', import.meta.env.VITE_KAKAO_MAP_APP_KEY);
 
     const script = document.createElement('script');
-    script.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${
+    const scriptUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
       import.meta.env.VITE_KAKAO_MAP_APP_KEY
     }&autoload=false`;
+
+    console.log('Script URL:', scriptUrl);
+    script.src = scriptUrl;
     script.async = true;
 
     script.onload = () => {
+      console.log('Kakao script loaded successfully');
       window.kakao.maps.load(() => {
-        const container = document.getElementById('map');
+        console.log('Kakao maps API loaded, initializing map');
+        initializeMap();
+      });
+    };
 
-        // 첫 번째 사업장 좌표를 중심으로 설정
-        const firstSite = sites.data.sites[0];
-        const options = {
-          center: new window.kakao.maps.LatLng(firstSite.latitude, firstSite.longitude),
-          level: 8, // 확대 레벨 (높을수록 넓은 지역)
-        };
+    script.onerror = (error) => {
+      console.error('Failed to load Kakao script:', error);
+      console.error('Please check:');
+      console.error('1. Kakao Developers Console (https://developers.kakao.com)');
+      console.error('2. Your app has a JavaScript API key (not REST API)');
+      console.error('3. Web platform domain is registered (http://localhost:5173)');
+    };
 
-        const map = new window.kakao.maps.Map(container, options);
+    document.head.appendChild(script);
+  }, [sites]);
+
+  const initializeMap = () => {
+    if (!sites?.data?.sites || sites.data.sites.length === 0) return;
+
+    try {
+      console.log('initializeMap called');
+      const container = document.getElementById('map');
+      console.log('Map container:', container);
+
+      if (!container) {
+        console.error('Map container not found!');
+        return;
+      }
+
+      // 첫 번째 사업장 좌표를 중심으로 설정
+      const firstSite = sites.data.sites[0];
+      console.log('First site:', firstSite);
+
+      const options = {
+        center: new window.kakao.maps.LatLng(firstSite.latitude, firstSite.longitude),
+        level: 8, // 확대 레벨 (높을수록 넓은 지역)
+      };
+
+      const map = new window.kakao.maps.Map(container, options);
+      console.log('Map created:', map);
+
+        // 현재 열려있는 InfoWindow와 타이머를 추적
+        let currentInfoWindow: any = null;
+        let closeTimer: NodeJS.Timeout | null = null;
 
         // 모든 사업장에 마커 표시
         sites.data.sites.forEach((site: any) => {
@@ -55,8 +134,10 @@ export default function SiteMapPage() {
             site.longitude
           );
 
-          // 사업장 유형별 마커 이미지
-          const markerImage = getMarkerImageBySiteType(site.type);
+          // 그룹이 있으면 그룹의 마커 모양/색상 사용, 없으면 사업장 유형별 기본값 사용
+          const markerShape: MarkerShape = site.group?.markerShape || 'CIRCLE';
+          const markerColor = site.group?.markerColor || getDefaultColorBySiteType(site.type);
+          const markerImage = createMarkerImage(markerShape, markerColor, window.kakao.maps);
 
           const marker = new window.kakao.maps.Marker({
             position: markerPosition,
@@ -65,6 +146,29 @@ export default function SiteMapPage() {
           });
 
           marker.setMap(map);
+
+          // 사업장 이름 라벨 추가 (CustomOverlay)
+          const labelContent = `
+            <div style="
+              font-size: 11px;
+              font-weight: 600;
+              color: #333;
+              white-space: nowrap;
+              font-family: sans-serif;
+              text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;
+            ">
+              ${site.name}
+            </div>
+          `;
+
+          const labelOverlay = new window.kakao.maps.CustomOverlay({
+            position: markerPosition,
+            content: labelContent,
+            yAnchor: 1.1, // 마커 바로 아래에 라벨 표시
+            xAnchor: 0.5, // 중앙 정렬
+          });
+
+          labelOverlay.setMap(map);
 
           // 마커 클릭 시 정보 팝업
           const infowindow = new window.kakao.maps.InfoWindow({
@@ -75,7 +179,7 @@ export default function SiteMapPage() {
                 </h4>
                 <div style="margin-bottom:8px;">
                   <span style="display:inline-block;padding:2px 8px;background:#1890ff;color:white;border-radius:4px;font-size:12px;margin-right:4px;">
-                    ${site.type}
+                    ${getTypeLabel(site.type)}
                   </span>
                   <span style="display:inline-block;padding:2px 8px;background:#52c41a;color:white;border-radius:4px;font-size:12px;">
                     ${site.division === 'HQ' ? '본사' : '영남지사'}
@@ -90,7 +194,25 @@ export default function SiteMapPage() {
 
           // 마커 클릭 이벤트
           window.kakao.maps.event.addListener(marker, 'click', () => {
+            // 이전 타이머가 있으면 취소
+            if (closeTimer) {
+              clearTimeout(closeTimer);
+            }
+
+            // 이전에 열린 InfoWindow가 있으면 닫기
+            if (currentInfoWindow) {
+              currentInfoWindow.close();
+            }
+
+            // 새 InfoWindow 열기
             infowindow.open(map, marker);
+            currentInfoWindow = infowindow;
+
+            // 2초 후 자동으로 닫기
+            closeTimer = setTimeout(() => {
+              infowindow.close();
+              currentInfoWindow = null;
+            }, 2000);
           });
 
           // 마커에 호버 효과
@@ -112,48 +234,25 @@ export default function SiteMapPage() {
         });
         map.setBounds(bounds);
 
-        // 지도 확대/축소 제한 설정
-        map.setMaxLevel(10);
-        map.setMinLevel(1);
-      });
-    };
+      // 지도 확대/축소 제한 설정
+      map.setMaxLevel(10);
+      map.setMinLevel(1);
 
-    document.head.appendChild(script);
+      console.log('Map initialization complete!');
+    } catch (error) {
+      console.error('Error initializing map:', error);
+    }
+  };
 
-    return () => {
-      // 스크립트 중복 방지를 위한 정리
-      const existingScript = document.querySelector(
-        `script[src*="dapi.kakao.com"]`
-      );
-      if (existingScript) {
-        document.head.removeChild(existingScript);
-      }
-    };
-  }, [sites]);
-
-  // 사업장 유형별 마커 이미지 생성
-  const getMarkerImageBySiteType = (type: string) => {
+  // 사업장 유형별 기본 색상 (그룹이 없는 경우)
+  const getDefaultColorBySiteType = (type: string) => {
     const colors: Record<string, string> = {
-      '위탁': '#ff4d4f',
-      '운반급식': '#1890ff',
-      '도시락': '#52c41a',
-      '행사': '#faad14',
+      'CONSIGNMENT': '#ff4d4f',
+      'DELIVERY': '#1890ff',
+      'LUNCHBOX': '#52c41a',
+      'EVENT': '#faad14',
     };
-
-    const color = colors[type] || '#000000';
-
-    // 커스텀 마커 이미지 (SVG를 사용한 원형 마커)
-    const imageSrc = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
-        <path fill="${color}" d="M16 0C7.2 0 0 7.2 0 16c0 8.8 16 24 16 24s16-15.2 16-24C32 7.2 24.8 0 16 0z"/>
-        <circle fill="white" cx="16" cy="16" r="6"/>
-      </svg>
-    `)}`;
-
-    const imageSize = new window.kakao.maps.Size(32, 40);
-    const imageOption = { offset: new window.kakao.maps.Point(16, 40) };
-
-    return new window.kakao.maps.MarkerImage(imageSrc, imageSize, imageOption);
+    return colors[type] || '#1890ff';
   };
 
   if (isLoading) {
@@ -162,6 +261,29 @@ export default function SiteMapPage() {
         <Spin size="large">
           <div style={{ padding: '50px' }}>사업장 정보를 불러오는 중...</div>
         </Spin>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card style={{ margin: '24px' }}>
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <h2 style={{ color: '#ff4d4f' }}>데이터를 불러오는 중 오류가 발생했습니다</h2>
+          <p>{(error as any).message || '알 수 없는 오류'}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (!sites?.data?.sites || sites.data.sites.length === 0) {
+    return (
+      <div>
+        <h1>사업장 지도</h1>
+        <Card style={{ margin: '24px', textAlign: 'center', padding: '50px' }}>
+          <h2>등록된 사업장이 없습니다</h2>
+          <p>사업장을 먼저 등록해주세요.</p>
+        </Card>
       </div>
     );
   }
@@ -198,10 +320,10 @@ export default function SiteMapPage() {
                 onChange={setType}
                 value={type}
               >
-                <Select.Option value="위탁">위탁</Select.Option>
-                <Select.Option value="운반급식">운반급식</Select.Option>
-                <Select.Option value="도시락">도시락</Select.Option>
-                <Select.Option value="행사">행사</Select.Option>
+                <Select.Option value="CONSIGNMENT">위탁</Select.Option>
+                <Select.Option value="DELIVERY">운반급식</Select.Option>
+                <Select.Option value="LUNCHBOX">도시락</Select.Option>
+                <Select.Option value="EVENT">행사</Select.Option>
               </Select>
             </div>
           </Space>
@@ -242,7 +364,7 @@ export default function SiteMapPage() {
       {/* 안내 메시지 */}
       <Card style={{ marginTop: 16, background: '#f6ffed', borderColor: '#b7eb8f' }}>
         <p style={{ margin: 0, color: '#52c41a' }}>
-          💡 <strong>사용 팁:</strong> 마커를 클릭하면 사업장 상세 정보를 확인할 수 있습니다.
+          💡 <strong>사용 팁:</strong> 마커를 클릭하면 사업장 상세 정보를 확인할 수 있습니다 (2초 후 자동으로 닫힘).
           지도를 드래그하거나 마우스 휠로 확대/축소할 수 있습니다.
         </p>
       </Card>

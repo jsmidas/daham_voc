@@ -27,6 +27,11 @@ export interface CreateSiteDto {
   contactPhone1?: string;
   contactPerson2?: string;
   contactPhone2?: string;
+  menuTypeIds?: string[];
+  pricePerMeal?: number;
+  deliveryRoute?: string;
+  contractStartDate?: Date;
+  contractEndDate?: Date;
   staffIds?: string[];
 }
 
@@ -42,6 +47,11 @@ export interface UpdateSiteDto {
   contactPhone1?: string;
   contactPerson2?: string;
   contactPhone2?: string;
+  menuTypeIds?: string[];
+  pricePerMeal?: number;
+  deliveryRoute?: string;
+  contractStartDate?: Date;
+  contractEndDate?: Date;
   staffIds?: string[];
 }
 
@@ -213,11 +223,22 @@ export class SiteService {
         contactPhone1: data.contactPhone1,
         contactPerson2: data.contactPerson2,
         contactPhone2: data.contactPhone2,
+        pricePerMeal: data.pricePerMeal,
+        deliveryRoute: data.deliveryRoute,
+        contractStartDate: data.contractStartDate,
+        contractEndDate: data.contractEndDate,
         staffSites: data.staffIds
           ? {
               create: data.staffIds.map((staffId, index) => ({
                 staffId,
                 isPrimary: index === 0,
+              })),
+            }
+          : undefined,
+        siteMenuTypes: data.menuTypeIds
+          ? {
+              create: data.menuTypeIds.map((menuTypeId) => ({
+                menuTypeId,
               })),
             }
           : undefined,
@@ -263,12 +284,24 @@ export class SiteService {
         contactPhone1: data.contactPhone1,
         contactPerson2: data.contactPerson2,
         contactPhone2: data.contactPhone2,
+        pricePerMeal: data.pricePerMeal,
+        deliveryRoute: data.deliveryRoute,
+        contractStartDate: data.contractStartDate,
+        contractEndDate: data.contractEndDate,
         staffSites: data.staffIds
           ? {
               deleteMany: {},
               create: data.staffIds.map((staffId, index) => ({
                 staffId,
                 isPrimary: index === 0,
+              })),
+            }
+          : undefined,
+        siteMenuTypes: data.menuTypeIds
+          ? {
+              deleteMany: {},
+              create: data.menuTypeIds.map((menuTypeId) => ({
+                menuTypeId,
               })),
             }
           : undefined,
@@ -364,6 +397,55 @@ export class SiteService {
       if (!isAssigned) {
         throw new Error('담당 사업장이 아닙니다');
       }
+    }
+  }
+
+  /**
+   * Update site order (sortOrder)
+   */
+  async updateSiteOrder(siteId: string, newOrder: number, userId: string) {
+    // Check permission
+    await this.checkPermission(siteId, userId);
+
+    await prisma.site.update({
+      where: { id: siteId },
+      data: { sortOrder: newOrder },
+    });
+
+    await this.invalidateCache();
+
+    // Also invalidate site-groups cache
+    const groupKeys = await cache.keys('site-groups:*');
+    if (groupKeys.length > 0) {
+      await cache.del(...groupKeys);
+    }
+  }
+
+  /**
+   * Batch update site orders
+   */
+  async batchUpdateSiteOrders(updates: { siteId: string; sortOrder: number }[], userId: string) {
+    // Check permissions for all sites
+    for (const update of updates) {
+      await this.checkPermission(update.siteId, userId);
+    }
+
+    // Update all sites
+    await prisma.$transaction(
+      updates.map((update) =>
+        prisma.site.update({
+          where: { id: update.siteId },
+          data: { sortOrder: update.sortOrder },
+        })
+      )
+    );
+
+    await this.invalidateCache();
+
+    // Also invalidate site-groups cache
+    const groupKeys = await cache.keys('site-groups:*');
+    if (groupKeys.length > 0) {
+      await cache.del(...groupKeys);
     }
   }
 

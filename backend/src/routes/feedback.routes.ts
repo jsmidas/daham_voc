@@ -7,11 +7,11 @@ import { Router } from 'express';
 import * as feedbackController from '../controllers/feedback.controller';
 import { authMiddleware, roleMiddleware } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validator.middleware';
+import { uploadFeedbackImages } from '../middlewares/upload.middleware';
 import {
-  createFeedbackSchema,
-  updateFeedbackSchema,
   replyFeedbackSchema,
   updateStatusSchema,
+  updateFeedbackSchema,
 } from '../validators/feedback.validator';
 
 const router = Router();
@@ -28,11 +28,11 @@ router.get('/', authMiddleware, feedbackController.getFeedbacks);
 // GET /api/v1/feedbacks/:id - 피드백 상세 조회 (All authenticated users)
 router.get('/:id', authMiddleware, feedbackController.getFeedbackById);
 
-// POST /api/v1/feedbacks - 피드백 생성 (All authenticated users)
+// POST /api/v1/feedbacks - 피드백 생성 (All authenticated users, 이미지 업로드 지원 최대 6개)
 router.post(
   '/',
   authMiddleware,
-  validateRequest(createFeedbackSchema),
+  uploadFeedbackImages,  // multipart/form-data 처리, 최대 6개 이미지
   feedbackController.createFeedback
 );
 

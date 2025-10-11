@@ -1,11 +1,13 @@
 import { prisma } from '../config/database';
 import { cache } from '../config/redis';
-import { Division } from '@prisma/client';
+import { Division, MarkerShape } from '@prisma/client';
 
 export interface CreateSiteGroupDto {
   name: string;
   division: Division;
   description?: string;
+  markerShape?: MarkerShape;
+  markerColor?: string;
   sortOrder?: number;
 }
 
@@ -13,10 +15,114 @@ export interface UpdateSiteGroupDto {
   name?: string;
   division?: Division;
   description?: string;
+  markerShape?: MarkerShape;
+  markerColor?: string;
   sortOrder?: number;
 }
 
 export class SiteGroupService {
+  /**
+   * Get hierarchy structure for site management
+   * 다함푸드 > 본사/영남 > 그룹(도시락/운반/행사) > 사업장
+   */
+  async getHierarchy() {
+    const cacheKey = 'site-groups:hierarchy';
+
+    // Check cache
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    // Get all groups with sites
+    const groups = await prisma.siteGroup.findMany({
+      where: { isActive: true },
+      include: {
+        sites: {
+          where: { isActive: true },
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            address: true,
+            latitude: true,
+            longitude: true,
+            sortOrder: true,
+          },
+          orderBy: { sortOrder: 'asc' },
+        },
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    // Get consignment sites (no group)
+    const consignmentSites = await prisma.site.findMany({
+      where: {
+        type: 'CONSIGNMENT',
+        groupId: null,
+        isActive: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        division: true,
+        address: true,
+        latitude: true,
+        longitude: true,
+        sortOrder: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    });
+
+    // Build hierarchy
+    const hierarchy = {
+      company: '다함푸드',
+      divisions: [
+        {
+          code: 'HQ',
+          name: '본사',
+          groups: groups
+            .filter((g) => g.division === 'HQ')
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              markerShape: g.markerShape,
+              markerColor: g.markerColor,
+              description: g.description,
+              sortOrder: g.sortOrder,
+              sites: g.sites,
+            })),
+        },
+        {
+          code: 'YEONGNAM',
+          name: '영남지사',
+          groups: groups
+            .filter((g) => g.division === 'YEONGNAM')
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              markerShape: g.markerShape,
+              markerColor: g.markerColor,
+              description: g.description,
+              sortOrder: g.sortOrder,
+              sites: g.sites,
+            })),
+        },
+        {
+          code: 'CONSIGNMENT',
+          name: '위탁사업장',
+          sites: consignmentSites,
+        },
+      ],
+    };
+
+    // Cache for 10 minutes
+    await cache.set(cacheKey, JSON.stringify(hierarchy), 600);
+
+    return hierarchy;
+  }
+
   /**
    * Get all site groups with optional division filter
    */

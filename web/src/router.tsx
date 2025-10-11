@@ -17,11 +17,13 @@ import SiteListPage from '@/pages/site/SiteListPage';
 import SiteFormPage from '@/pages/site/SiteFormPage';
 import SiteGroupPage from '@/pages/site/SiteGroupPage';
 import SiteMapPage from '@/pages/map/SiteMapPage';
-import MenuListPage from '@/pages/menu/MenuListPage';
-import MenuFormPage from '@/pages/menu/MenuFormPage';
+import MenuTypePage from '@/pages/menu-type/MenuTypePage';
+import WeeklyMenuPage from '@/pages/menu/WeeklyMenuPage';
 import PhotoGalleryPage from '@/pages/photo/PhotoGalleryPage';
+import MealPhotoManagementPage from '@/pages/meal-photo/MealPhotoManagementPage';
 import FeedbackListPage from '@/pages/feedback/FeedbackListPage';
 import StaffListPage from '@/pages/staff/StaffListPage';
+import StaffFormPage from '@/pages/staff/StaffFormPage';
 import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
 import StatsPage from '@/pages/stats/StatsPage';
 
@@ -80,15 +82,23 @@ export const router = createBrowserRouter([
       },
       {
         path: 'menus',
-        children: [
-          { index: true, element: <MenuListPage /> },
-          { path: 'new', element: <MenuFormPage /> },
-          { path: ':id/edit', element: <MenuFormPage /> },
-        ],
+        element: <Navigate to="/weekly-menus" replace />,
+      },
+      {
+        path: 'menu-types',
+        element: <MenuTypePage />,
+      },
+      {
+        path: 'weekly-menus',
+        element: <WeeklyMenuPage />,
       },
       {
         path: 'photos',
         element: <PhotoGalleryPage />,
+      },
+      {
+        path: 'meal-photos',
+        element: <MealPhotoManagementPage />,
       },
       {
         path: 'feedbacks',
@@ -96,7 +106,11 @@ export const router = createBrowserRouter([
       },
       {
         path: 'staff',
-        element: <StaffListPage />,
+        children: [
+          { index: true, element: <StaffListPage /> },
+          { path: 'new', element: <StaffFormPage /> },
+          { path: ':id/edit', element: <StaffFormPage /> },
+        ],
       },
       {
         path: 'attendances',

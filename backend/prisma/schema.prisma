@@ -12,25 +12,25 @@ datasource db {
 // ===== User & Role Management =====
 
 model User {
-  id            String      @id @default(uuid())
-  email         String?     // Optional (기존 데이터 호환성)
-  password      String      // bcrypt hash
-  name          String
-  phone         String      @unique  // 핸드폰 번호로 로그인
-  role          Role        @default(STAFF)
-  division      Division?
-  isActive      Boolean     @default(true)
-  lastLoginAt   DateTime?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?   // Soft delete
+  id          String    @id @default(uuid())
+  email       String? // Optional (기존 데이터 호환성)
+  password    String // bcrypt hash
+  name        String
+  phone       String    @unique // 핸드폰 번호로 로그인
+  role        Role      @default(SITE_STAFF)
+  division    Division?
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime? // Soft delete
 
   // Relations
-  staff         Staff?
-  feedbacks     CustomerFeedback[]
-  mealPhotos    MealPhoto[]
-  attendances   Attendance[]
-  mealCounts    MealCount[]
+  staff       Staff?
+  feedbacks   CustomerFeedback[]
+  mealPhotos  MealPhoto[]
+  attendances Attendance[]
+  mealCounts  MealCount[]
 
   @@index([phone])
   @@index([email])
@@ -39,37 +39,40 @@ model User {
 }
 
 enum Role {
-  SUPER_ADMIN      // 최고 관리자
-  HQ_ADMIN         // 본사 관리자
-  YEONGNAM_ADMIN   // 영남지사 관리자
-  STAFF            // 담당자
-  CLIENT           // 고객사
+  SUPER_ADMIN // 1. 시스템 전체 관리 + 모든 담당자 관리
+  HQ_ADMIN // 2. 본사 부문 관리 + 그룹 생성/삭제
+  YEONGNAM_ADMIN // 2. 영남 부문 관리 + 그룹 생성/삭제
+  GROUP_MANAGER // 3. 그룹별 관리 + 사업장 생성/삭제
+  SITE_MANAGER // 4. 복수 사업장 관리
+  SITE_STAFF // 5. 배식/잔반 사진 + VOC (단일 또는 복수 사업장)
+  DELIVERY_DRIVER // 6. 복수 사업장 배식/잔반 사진 + VOC
+  CLIENT // 7. 고객사 (식수 입력, VOC 입력)
 }
 
 enum Division {
-  HQ               // 본사
-  YEONGNAM         // 영남지사
+  HQ // 본사
+  YEONGNAM // 영남지사
 }
 
 // ===== Staff Management =====
 
 model Staff {
-  id            String      @id @default(uuid())
-  userId        String      @unique
-  employeeNo    String      @unique
-  department    String?     // 부서
-  position      String?     // 직책
-  managerId     String?     // 상위 관리자 ID
-  averageRating Float       @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id            String    @id @default(uuid())
+  userId        String    @unique
+  employeeNo    String?   @unique
+  department    String? // 부서
+  position      String? // 직책
+  managerId     String? // 상위 관리자 ID
+  averageRating Float     @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
   // Relations
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  manager       Staff?      @relation("StaffHierarchy", fields: [managerId], references: [id])
-  subordinates  Staff[]     @relation("StaffHierarchy")
-  staffSites    StaffSite[]
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manager      Staff?      @relation("StaffHierarchy", fields: [managerId], references: [id])
+  subordinates Staff[]     @relation("StaffHierarchy")
+  staffSites   StaffSite[]
 
   @@index([managerId])
   @@index([department])
@@ -78,11 +81,50 @@ model Staff {
 
 // ===== Site Management =====
 
+// 식단 유형 (5찬 저가, 4찬 고가, 3찬 국 없이 등)
+model MenuType {
+  id          String    @id @default(uuid())
+  name        String    @unique // 유형명 (예: 5찬 저가, 4찬 고가)
+  description String?   @db.Text // 설명
+  price       Decimal?  @db.Decimal(10, 2) // 식단가 (VAT 제외)
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relations
+  siteMenuTypes       SiteMenuType[]
+  weeklyMenuTemplates WeeklyMenuTemplate[]
+
+  @@index([sortOrder])
+}
+
+// 사업장-식단유형 중간 테이블
+model SiteMenuType {
+  id         String   @id @default(uuid())
+  siteId     String
+  menuTypeId String
+  createdAt  DateTime @default(now())
+
+  // Relations
+  site     Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  menuType MenuType @relation(fields: [menuTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, menuTypeId])
+  @@index([siteId])
+  @@index([menuTypeId])
+}
+
+// 사업장 그룹 (본사/영남의 도시락, 운반급식, 행사 등)
+// 위탁사업장(CONSIGNMENT)은 그룹 없이 division에 직접 속함
 model SiteGroup {
   id          String      @id @default(uuid())
-  name        String
-  division    Division
+  name        String // 도시락, 운반급식, 행사 등
+  division    Division // HQ 또는 YEONGNAM
   description String?     @db.Text
+  markerShape MarkerShape @default(CIRCLE) // 마커 모양
+  markerColor String      @default("#1890ff") // 마커 색상 (hex)
   sortOrder   Int         @default(0)
   isActive    Boolean     @default(true)
   createdAt   DateTime    @default(now())
@@ -90,40 +132,58 @@ model SiteGroup {
   deletedAt   DateTime?
 
   // Relations
-  sites       Site[]
+  sites Site[]
 
+  @@unique([division, name]) // 같은 division에서 그룹명 중복 방지
   @@index([division])
   @@index([sortOrder])
 }
 
+enum MarkerShape {
+  CIRCLE // 동그라미
+  SQUARE // 네모
+  DIAMOND // 다이아몬드 (마름모)
+  HEART // 하트
+  SPADE // 스페이드
+  CLUB // 클로버
+  STAR // 별
+  TRIANGLE // 삼각형
+}
+
 model Site {
-  id                String      @id @default(uuid())
+  id                String    @id @default(uuid())
   name              String
   type              SiteType
   division          Division
-  groupId           String?
+  groupId           String? // 위탁사업장(CONSIGNMENT)은 null, 나머지는 그룹 필수
   address           String
   latitude          Float
   longitude         Float
-  contactPerson1    String?     // 고객사 담당자1
+  contactPerson1    String? // 고객사 담당자1
   contactPhone1     String?
-  contactPerson2    String?     // 고객사 담당자2
+  contactPerson2    String? // 고객사 담당자2
   contactPhone2     String?
-  isActive          Boolean     @default(true)
-  createdAt         DateTime    @default(now())
-  updatedAt         DateTime    @updatedAt
+  pricePerMeal      Decimal?  @db.Decimal(10, 2) // 단가
+  deliveryRoute     String? // 배송코스
+  contractStartDate DateTime? @db.Date // 계약시작일
+  contractEndDate   DateTime? @db.Date // 계약종료일
+  sortOrder         Int       @default(0) // 표시 순서
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
   deletedAt         DateTime?
 
   // Relations
-  group             SiteGroup?  @relation(fields: [groupId], references: [id])
-  staffSites        StaffSite[]
-  menus             Menu[]
-  mealPhotos        MealPhoto[]
-  feedbacks         CustomerFeedback[]
-  attendances       Attendance[]
+  group              SiteGroup?          @relation(fields: [groupId], references: [id])
+  staffSites         StaffSite[]
+  siteMenuTypes      SiteMenuType[] // 식단유형
+  menus              Menu[]
+  mealPhotos         MealPhoto[]
+  feedbacks          CustomerFeedback[]
+  attendances        Attendance[]
   attendanceSettings AttendanceSetting[]
-  mealCountSetting  MealCountSetting?
-  mealCounts        MealCount[]
+  mealCountSetting   MealCountSetting?
+  mealCounts         MealCount[]
 
   @@index([type])
   @@index([division])
@@ -132,24 +192,24 @@ model Site {
 }
 
 enum SiteType {
-  CONSIGNMENT     // 위탁
-  DELIVERY        // 운반급식
-  LUNCHBOX        // 도시락
-  EVENT           // 행사
+  CONSIGNMENT // 위탁
+  DELIVERY // 운반급식
+  LUNCHBOX // 도시락
+  EVENT // 행사
 }
 
 // 담당자-사업장 중간 테이블 (Many-to-Many)
 model StaffSite {
-  id          String      @id @default(uuid())
-  staffId     String
-  siteId      String
-  isPrimary   Boolean     @default(false)  // 주 담당 여부
-  assignedAt  DateTime    @default(now())
-  removedAt   DateTime?
+  id         String    @id @default(uuid())
+  staffId    String
+  siteId     String
+  isPrimary  Boolean   @default(false) // 주 담당 여부
+  assignedAt DateTime  @default(now())
+  removedAt  DateTime?
 
   // Relations
-  staff       Staff       @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  site        Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  staff Staff @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  site  Site  @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@unique([staffId, siteId])
   @@index([staffId])
@@ -159,55 +219,77 @@ model StaffSite {
 // ===== Menu Management =====
 
 model Menu {
-  id            String      @id @default(uuid())
-  siteId        String
-  startDate     DateTime    @db.Date
-  endDate       DateTime    @db.Date
-  mealType      MealType
-  imageUrl      String?     // GCP Storage URL
-  thumbnailUrl  String?
-  menuItems     String?     @db.Text  // JSON 또는 텍스트
-  mongoMetaId   String?     // MongoDB 메타데이터 ID
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
+  id           String    @id @default(uuid())
+  siteId       String
+  startDate    DateTime  @db.Date
+  endDate      DateTime  @db.Date
+  mealType     MealType
+  imageUrl     String? // GCP Storage URL
+  thumbnailUrl String?
+  menuItems    String?   @db.Text // JSON 또는 텍스트
+  mongoMetaId  String? // MongoDB 메타데이터 ID
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   // Relations
-  site          Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId, startDate])
   @@index([startDate])
 }
 
 enum MealType {
-  BREAKFAST
-  LUNCH
-  DINNER
-  SNACK
+  BREAKFAST // 조식
+  LUNCH // 중식
+  DINNER // 석식
+  SUPPER // 야식
+}
+
+// 주간 식단표 템플릿 (식단유형별로 관리)
+model WeeklyMenuTemplate {
+  id           String    @id @default(uuid())
+  menuTypeId   String
+  year         Int // 년도 (예: 2025)
+  weekNumber   Int // 주차 (1-53)
+  imageUrl     String // GCP Storage URL
+  thumbnailUrl String?
+  description  String?   @db.Text // 비고
+  createdBy    String? // 생성자 User ID
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  // Relations
+  menuType MenuType @relation(fields: [menuTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([menuTypeId, year, weekNumber]) // 같은 식단유형의 같은 주차는 중복 불가
+  @@index([menuTypeId])
+  @@index([year, weekNumber])
 }
 
 // ===== Photo Management =====
 
 model MealPhoto {
-  id            String      @id @default(uuid())
-  siteId        String
-  uploaderId    String
-  imageUrl      String
-  thumbnailUrl  String?
-  mealType      MealType?
-  photoType     PhotoType   @default(SERVING)
-  capturedAt    DateTime
-  latitude      Float?
-  longitude     Float?
-  feedback      String?     @db.Text  // 관리자 피드백
-  mongoMetaId   String?     // MongoDB 메타데이터 ID
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
+  id           String    @id @default(uuid())
+  siteId       String
+  uploaderId   String
+  imageUrl     String
+  thumbnailUrl String?
+  mealType     MealType?
+  photoType    PhotoType @default(SERVING)
+  capturedAt   DateTime
+  latitude     Float?
+  longitude    Float?
+  feedback     String?   @db.Text // 관리자 피드백
+  mongoMetaId  String? // MongoDB 메타데이터 ID
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   // Relations
-  site          Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  uploader      User        @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+  site     Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
   @@index([siteId, capturedAt])
   @@index([uploaderId])
@@ -215,31 +297,32 @@ model MealPhoto {
 }
 
 enum PhotoType {
-  SERVING       // 배식 준비
-  LEFTOVER      // 잔반
-  FACILITY      // 시설
+  SERVING // 배식 준비
+  LEFTOVER // 잔반
+  FACILITY // 시설
 }
 
 // ===== VOC Management =====
 
 model CustomerFeedback {
-  id            String        @id @default(uuid())
-  siteId        String
-  authorId      String
-  authorType    FeedbackAuthorType
-  content       String        @db.Text
-  rating        Int?          @default(0)  // 1-5점
-  status        FeedbackStatus @default(PENDING)
-  adminReply    String?       @db.Text
-  repliedAt     DateTime?
-  repliedBy     String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  deletedAt     DateTime?
+  id         String             @id @default(uuid())
+  siteId     String
+  authorId   String
+  authorType FeedbackAuthorType
+  content    String             @db.Text
+  rating     Int?               @default(0) // 1-5점
+  status     FeedbackStatus     @default(PENDING)
+  adminReply String?            @db.Text
+  repliedAt  DateTime?
+  repliedBy  String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  deletedAt  DateTime?
 
   // Relations
-  site          Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  site   Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  author User            @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  images FeedbackImage[] // VOC 첨부 이미지 (최대 6개)
 
   @@index([siteId, status])
   @@index([authorId])
@@ -247,39 +330,56 @@ model CustomerFeedback {
   @@index([createdAt])
 }
 
+// VOC 첨부 이미지 (최대 6개)
+model FeedbackImage {
+  id           String    @id @default(uuid())
+  feedbackId   String
+  imageUrl     String // GCP Storage URL
+  thumbnailUrl String?
+  sortOrder    Int       @default(0) // 0-5 (최대 6개)
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  // Relations
+  feedback CustomerFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([feedbackId, sortOrder])
+}
+
 enum FeedbackAuthorType {
-  STAFF         // 담당자
-  CLIENT        // 고객사
+  STAFF // 담당자
+  CLIENT // 고객사
 }
 
 enum FeedbackStatus {
-  PENDING       // 미처리
-  IN_PROGRESS   // 처리중
-  RESOLVED      // 처리완료
-  CLOSED        // 종료
+  PENDING // 미처리
+  IN_PROGRESS // 처리중
+  RESOLVED // 처리완료
+  CLOSED // 종료
 }
 
 // ===== Attendance Management =====
 
 model Attendance {
-  id            String      @id @default(uuid())
-  userId        String
-  siteId        String
-  checkInTime   DateTime
-  checkInLat    Float?
-  checkInLng    Float?
-  checkOutTime  DateTime?
-  checkOutLat   Float?
-  checkOutLng   Float?
-  status        AttendanceStatus @default(NORMAL)
-  note          String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
+  id           String           @id @default(uuid())
+  userId       String
+  siteId       String
+  checkInTime  DateTime
+  checkInLat   Float?
+  checkInLng   Float?
+  checkOutTime DateTime?
+  checkOutLat  Float?
+  checkOutLng  Float?
+  status       AttendanceStatus @default(NORMAL)
+  note         String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
 
   // Relations
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  site          Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([userId, checkInTime])
   @@index([siteId, checkInTime])
@@ -287,24 +387,24 @@ model Attendance {
 }
 
 enum AttendanceStatus {
-  NORMAL        // 정상
-  LATE          // 지각
-  EARLY_LEAVE   // 조퇴
+  NORMAL // 정상
+  LATE // 지각
+  EARLY_LEAVE // 조퇴
   OUTSIDE_RANGE // 사업장 외부 체크인
 }
 
 model AttendanceSetting {
-  id              String      @id @default(uuid())
-  siteId          String
-  expectedCheckIn String      // HH:mm 형식 (예: "09:00")
-  expectedCheckOut String     // HH:mm 형식
-  allowedRadius   Int         @default(100)  // 미터 단위
-  isActive        Boolean     @default(true)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id               String   @id @default(uuid())
+  siteId           String
+  expectedCheckIn  String // HH:mm 형식 (예: "09:00")
+  expectedCheckOut String // HH:mm 형식
+  allowedRadius    Int      @default(100) // 미터 단위
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  site            Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId])
 }
@@ -312,39 +412,39 @@ model AttendanceSetting {
 // ===== Meal Count Management (식수 관리) =====
 
 model MealCountSetting {
-  id                    String      @id @default(uuid())
-  siteId                String      @unique
-  deadlineHoursBefore   Int         @default(24)    // 조리 시작 몇 시간 전에 마감 (기본: 24시간)
-  breakfastStartTime    String?     // 조리 시작 시간 (HH:mm)
-  lunchStartTime        String?     // 조리 시작 시간 (HH:mm)
-  dinnerStartTime       String?     // 조리 시작 시간 (HH:mm)
-  allowLateSubmission   Boolean     @default(false) // 마감 후 입력 허용 여부
-  isActive              Boolean     @default(true)
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  id                  String   @id @default(uuid())
+  siteId              String   @unique
+  deadlineHoursBefore Int      @default(24) // 조리 시작 몇 시간 전에 마감 (기본: 24시간)
+  breakfastStartTime  String? // 조리 시작 시간 (HH:mm)
+  lunchStartTime      String? // 조리 시작 시간 (HH:mm)
+  dinnerStartTime     String? // 조리 시작 시간 (HH:mm)
+  allowLateSubmission Boolean  @default(false) // 마감 후 입력 허용 여부
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   // Relations
-  site                  Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([siteId])
 }
 
 model MealCount {
-  id            String      @id @default(uuid())
-  siteId        String
-  date          DateTime    @db.Date
-  mealType      MealType
-  count         Int         // 식수 인원
-  submittedBy   String      // 제출자 (고객사 담당자)
-  submittedAt   DateTime    @default(now())
-  isLate        Boolean     @default(false)  // 마감 후 제출 여부
-  note          String?     @db.Text  // 비고
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id          String   @id @default(uuid())
+  siteId      String
+  date        DateTime @db.Date
+  mealType    MealType
+  count       Int // 식수 인원
+  submittedBy String // 제출자 (고객사 담당자)
+  submittedAt DateTime @default(now())
+  isLate      Boolean  @default(false) // 마감 후 제출 여부
+  note        String?  @db.Text // 비고
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   // Relations
-  site          Site        @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  submitter     User        @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+  site      Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submitter User @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
 
   @@unique([siteId, date, mealType])
   @@index([siteId, date])

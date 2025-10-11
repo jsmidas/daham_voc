@@ -44,6 +44,50 @@ export async function createMealPhoto(req: Request, res: Response): Promise<void
 }
 
 /**
+ * 식사 사진 일괄 업로드
+ * POST /api/v1/meal-photos/bulk
+ */
+export async function bulkCreateMealPhotos(req: Request, res: Response): Promise<void> {
+  try {
+    const { siteId, mealType, photoType, capturedAt, latitude, longitude } = req.body;
+    const userId = req.user!.userId;
+    const images = req.files as Express.Multer.File[];
+
+    if (!images || images.length === 0) {
+      res.status(400).json(errorResponse('이미지 파일이 필요합니다'));
+      return;
+    }
+
+    if (images.length > 6) {
+      res.status(400).json(errorResponse('최대 6개의 이미지만 업로드할 수 있습니다'));
+      return;
+    }
+
+    const result = await mealPhotoService.bulkCreateMealPhotos(
+      {
+        siteId,
+        mealType: mealType ? (mealType as MealType) : undefined,
+        photoType: photoType as PhotoType,
+        capturedAt: new Date(capturedAt),
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+        images,
+      },
+      userId
+    );
+
+    const message = result.failed.length > 0
+      ? `${result.uploaded}개 업로드 완료, ${result.failed.length}개 실패`
+      : `${result.uploaded}개 사진이 업로드되었습니다.`;
+
+    res.status(201).json(successResponse(result, message));
+  } catch (error: any) {
+    console.error('Bulk create meal photos error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
  * 식사 사진 목록 조회
  * GET /api/v1/meal-photos
  */

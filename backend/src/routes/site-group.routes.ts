@@ -11,6 +11,9 @@ import {
 const router = Router();
 const controller = new SiteGroupController();
 
+// GET /api/v1/site-groups/hierarchy - Get hierarchy structure
+router.get('/hierarchy', authMiddleware, controller.getHierarchy);
+
 // GET /api/v1/site-groups - Get all site groups
 router.get('/', authMiddleware, controller.getGroups);
 

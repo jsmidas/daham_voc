@@ -11,11 +11,15 @@ import { FeedbackAuthorType, FeedbackStatus } from '@prisma/client';
 /**
  * 피드백 생성
  * POST /api/v1/feedbacks
+ * @description multipart/form-data 지원 (이미지 업로드 포함, 최대 6개)
  */
 export async function createFeedback(req: Request, res: Response): Promise<void> {
   try {
     const { siteId, authorType, content, rating } = req.body;
     const userId = req.user!.userId;
+
+    // 업로드된 파일들 (multer가 req.files에 저장)
+    const imageFiles = req.files as Express.Multer.File[];
 
     const feedback = await feedbackService.createFeedback(
       {
@@ -23,6 +27,7 @@ export async function createFeedback(req: Request, res: Response): Promise<void>
         authorType: authorType as FeedbackAuthorType,
         content,
         rating: rating ? parseInt(rating) : undefined,
+        imageFiles: imageFiles || [],
       },
       userId
     );

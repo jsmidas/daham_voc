@@ -3,20 +3,25 @@
  * @description 사업장 등록/수정 페이지
  */
 
-import { Form, Input, Button, Card, message, Select, Alert } from 'antd';
+import { Form, Input, Button, Card, message, Select, Alert, Space, DatePicker, InputNumber } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { createSite, updateSite, getSiteById } from '@/api/site.api';
 import { useEffect } from 'react';
 
 export default function SiteFormPage() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const queryClient = useQueryClient();
   const [form] = Form.useForm();
 
   const isEditMode = !!id;
+
+  // 계층 구조에서 전달된 초기값 가져오기
+  const stateData = location.state as { groupId?: string; division?: string; type?: string } | null;
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: siteData } = useQuery({
@@ -26,19 +31,34 @@ export default function SiteFormPage() {
     retry: false,
   });
 
-  // 폼에 기존 데이터 설정
+  // 폼에 기존 데이터 설정 (수정 모드) 또는 초기값 설정 (생성 모드)
   useEffect(() => {
-    if (siteData?.data) {
-      form.setFieldsValue(siteData.data);
+    if (isEditMode && siteData?.data) {
+      // 수정 모드: 기존 데이터 로드
+      const formData = {
+        ...siteData.data,
+        contractStartDate: siteData.data.contractStartDate ? dayjs(siteData.data.contractStartDate) : undefined,
+        contractEndDate: siteData.data.contractEndDate ? dayjs(siteData.data.contractEndDate) : undefined,
+      };
+      form.setFieldsValue(formData);
+    } else if (!isEditMode && stateData) {
+      // 생성 모드: 계층 구조에서 전달된 초기값 설정
+      form.setFieldsValue({
+        groupId: stateData.groupId,
+        division: stateData.division,
+        type: stateData.type,
+      });
     }
-  }, [siteData, form]);
+  }, [isEditMode, siteData, stateData, form]);
 
   const createMutation = useMutation({
     mutationFn: createSite,
     onSuccess: () => {
       message.success('사업장이 등록되었습니다');
       queryClient.invalidateQueries({ queryKey: ['sites'] });
-      navigate('/sites');
+      queryClient.invalidateQueries({ queryKey: ['site-groups'] });
+      // 계층 구조에서 온 경우 다시 돌아가기, 아니면 사업장 목록으로
+      navigate(stateData ? '/site-groups' : '/sites');
     },
     onError: (error: any) => {
       message.error(error.message || '등록 실패');
@@ -59,11 +79,14 @@ export default function SiteFormPage() {
   });
 
   const onFinish = (values: any) => {
-    // 좌표를 숫자로 변환
+    // 좌표를 숫자로 변환하고 날짜를 ISO 문자열로 변환
     const payload = {
       ...values,
       latitude: parseFloat(values.latitude),
       longitude: parseFloat(values.longitude),
+      pricePerMeal: values.pricePerMeal ? parseFloat(values.pricePerMeal) : undefined,
+      contractStartDate: values.contractStartDate ? values.contractStartDate.toISOString() : undefined,
+      contractEndDate: values.contractEndDate ? values.contractEndDate.toISOString() : undefined,
     };
 
     if (isEditMode) {
@@ -95,6 +118,11 @@ export default function SiteFormPage() {
           autoComplete="off"
           initialValues={{}}
         >
+          {/* Hidden field for groupId */}
+          <Form.Item name="groupId" hidden>
+            <Input />
+          </Form.Item>
+
           <Form.Item
             label="사업장명"
             name="name"
@@ -109,10 +137,10 @@ export default function SiteFormPage() {
             rules={[{ required: true, message: '유형을 선택하세요' }]}
           >
             <Select placeholder="유형 선택">
-              <Select.Option value="위탁">위탁</Select.Option>
-              <Select.Option value="운반급식">운반급식</Select.Option>
-              <Select.Option value="도시락">도시락</Select.Option>
-              <Select.Option value="행사">행사</Select.Option>
+              <Select.Option value="CONSIGNMENT">위탁</Select.Option>
+              <Select.Option value="DELIVERY">운반급식</Select.Option>
+              <Select.Option value="LUNCHBOX">도시락</Select.Option>
+              <Select.Option value="EVENT">행사</Select.Option>
             </Select>
           </Form.Item>
 
@@ -128,7 +156,7 @@ export default function SiteFormPage() {
           </Form.Item>
 
           <Form.Item label="주소" required>
-            <Input.Group compact>
+            <Space.Compact style={{ width: '100%' }}>
               <Form.Item
                 name="address"
                 noStyle
@@ -227,7 +255,7 @@ export default function SiteFormPage() {
               >
                 초기화
               </Button>
-            </Input.Group>
+            </Space.Compact>
           </Form.Item>
 
           <Form.Item
@@ -272,6 +300,59 @@ export default function SiteFormPage() {
             name="contactPhone2"
           >
             <Input placeholder="예: 010-9876-5432" />
+          </Form.Item>
+
+          <Form.Item
+            label="식단유형"
+            name="mealTypes"
+            tooltip="제공하는 식사 유형을 선택하세요"
+          >
+            <Select
+              mode="multiple"
+              placeholder="식단유형 선택"
+              options={[
+                { label: '조식', value: 'BREAKFAST' },
+                { label: '중식', value: 'LUNCH' },
+                { label: '석식', value: 'DINNER' },
+                { label: '간식', value: 'SNACK' },
+              ]}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="단가 (원)"
+            name="pricePerMeal"
+            tooltip="1인당 식사 단가를 입력하세요"
+          >
+            <InputNumber
+              style={{ width: '100%' }}
+              min={0}
+              placeholder="예: 7000"
+              formatter={value => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+              parser={value => value!.replace(/₩\s?|(,*)/g, '')}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="배송코스"
+            name="deliveryRoute"
+            tooltip="배송 경로나 구역을 입력하세요"
+          >
+            <Input placeholder="예: A코스, 강남구역" />
+          </Form.Item>
+
+          <Form.Item
+            label="계약시작일"
+            name="contractStartDate"
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="계약 시작일 선택" />
+          </Form.Item>
+
+          <Form.Item
+            label="계약종료일"
+            name="contractEndDate"
+          >
+            <DatePicker style={{ width: '100%' }} placeholder="계약 종료일 선택" />
           </Form.Item>
 
           <Form.Item>

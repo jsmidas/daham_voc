@@ -27,7 +27,7 @@ export interface BulkUploadResult {
  */
 export async function uploadImage(
   file: Express.Multer.File,
-  folder: 'menus' | 'meal-photos'
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks'
 ): Promise<UploadedImage> {
   try {
     // 이미지 처리
@@ -95,7 +95,7 @@ async function uploadToGCP(
  */
 export async function uploadMultipleImages(
   files: Express.Multer.File[],
-  folder: 'menus' | 'meal-photos'
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks'
 ): Promise<BulkUploadResult> {
   const uploaded: UploadedImage[] = [];
   const failed: Array<{ filename: string; error: string }> = [];

@@ -47,3 +47,27 @@ export const uploadMultiple = multer({
     files: 10,
   },
 }).array('images', 10);
+
+/**
+ * VOC 피드백 이미지 업로드 (필드명: images, 최대 6개)
+ */
+export const uploadFeedbackImages = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    files: 6,
+  },
+}).array('images', 6);
+
+/**
+ * 배식 사진 업로드 (필드명: photos, 최대 6개)
+ */
+export const uploadMealPhotos = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    files: 6,
+  },
+}).array('photos', 6);
