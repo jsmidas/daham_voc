@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { SiteController } from '../controllers/site.controller';
 import { authMiddleware, roleMiddleware } from '../middlewares/auth.middleware';
 import { validateRequest } from '../middlewares/validator.middleware';
+import { uploadExcel } from '../middlewares/upload.middleware';
 import {
   createSiteSchema,
   updateSiteSchema,
@@ -12,6 +13,23 @@ const controller = new SiteController();
 
 // GET /api/v1/sites - Get all sites (All authenticated users)
 router.get('/', authMiddleware, controller.getSites);
+
+// GET /api/v1/sites/excel-template - Download Excel template (Admin only)
+router.get(
+  '/excel-template',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  controller.downloadExcelTemplate
+);
+
+// POST /api/v1/sites/excel-upload - Bulk create sites from Excel (Admin only)
+router.post(
+  '/excel-upload',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  uploadExcel,
+  controller.uploadExcelFile
+);
 
 // GET /api/v1/sites/:id - Get site by ID (All authenticated users)
 router.get('/:id', authMiddleware, controller.getSiteById);

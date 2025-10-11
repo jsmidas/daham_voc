@@ -3,12 +3,12 @@
  * @description 배식사진 관리 페이지 (탭 방식)
  */
 
-import { useState } from 'react';
-import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal } from 'antd';
+import React, { useState } from 'react';
+import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table } from 'antd';
 import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
-import { bulkUploadMealPhotos, getDailyMealPhotos, deleteMealPhoto } from '@/api/meal-photo.api';
+import { bulkUploadMealPhotos, getDailyMealPhotos, deleteMealPhoto, bulkDeleteMealPhotos } from '@/api/meal-photo.api';
 import dayjs, { Dayjs } from 'dayjs';
 import type { UploadFile } from 'antd';
 
@@ -16,8 +16,8 @@ type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
 type PhotoType = 'SERVING' | 'LEFTOVER';
 
 interface PhotoState {
-  serving: UploadFile[];
-  leftover: UploadFile[];
+  SERVING: UploadFile[];
+  LEFTOVER: UploadFile[];
 }
 
 export default function MealPhotoManagementPage() {
@@ -28,12 +28,16 @@ export default function MealPhotoManagementPage() {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
+  // 필터 상태
+  const [mealTypeFilter, setMealTypeFilter] = useState<MealType | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETE' | 'PARTIAL' | 'PENDING'>('ALL');
+
   // 각 끼니별 사진 상태 관리
   const [photos, setPhotos] = useState<Record<MealType, PhotoState>>({
-    BREAKFAST: { serving: [], leftover: [] },
-    LUNCH: { serving: [], leftover: [] },
-    DINNER: { serving: [], leftover: [] },
-    SUPPER: { serving: [], leftover: [] },
+    BREAKFAST: { SERVING: [], LEFTOVER: [] },
+    LUNCH: { SERVING: [], LEFTOVER: [] },
+    DINNER: { SERVING: [], LEFTOVER: [] },
+    SUPPER: { SERVING: [], LEFTOVER: [] },
   });
 
   // 사업장 목록 조회 (도시락 제외)
@@ -78,6 +82,18 @@ export default function MealPhotoManagementPage() {
     },
   });
 
+  // 일괄 삭제 mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: bulkDeleteMealPhotos,
+    onSuccess: (data: any) => {
+      message.success(data.message || '사진이 일괄 삭제되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+    },
+    onError: (error: any) => {
+      message.error(error.message || '일괄 삭제 실패');
+    },
+  });
+
   // 도시락 사업장 제외한 사업장 목록
   const filteredSites = sites?.data?.sites?.filter((site: any) => site.type !== 'LUNCHBOX') || [];
 
@@ -87,16 +103,18 @@ export default function MealPhotoManagementPage() {
     mealType: MealType,
     photoType: PhotoType
   ) => {
+    // 6개 초과 시 6개로 제한
+    let limitedFileList = fileList;
     if (fileList.length > 6) {
       message.warning('최대 6개까지 업로드할 수 있습니다');
-      return;
+      limitedFileList = fileList.slice(0, 6);
     }
 
     setPhotos((prev) => ({
       ...prev,
       [mealType]: {
         ...prev[mealType],
-        [photoType]: fileList,
+        [photoType]: limitedFileList,
       },
     }));
   };
@@ -122,7 +140,7 @@ export default function MealPhotoManagementPage() {
       siteId: selectedSiteId,
       mealType,
       photoType,
-      capturedAt: selectedDate.toISOString(),
+      capturedAt: selectedDate.format('YYYY-MM-DD'),
       photos: photoFiles,
     });
 
@@ -148,6 +166,32 @@ export default function MealPhotoManagementPage() {
     });
   };
 
+  // 일괄 삭제 핸들러
+  const handleBulkDelete = (
+    date: string,
+    siteId: string,
+    mealType: MealType,
+    photoType?: PhotoType
+  ) => {
+    const typeText = photoType === 'SERVING' ? '배식준비' : photoType === 'LEFTOVER' ? '잔반' : '모든';
+
+    Modal.confirm({
+      title: '일괄 삭제',
+      content: `${typeText} 사진을 모두 삭제하시겠습니까?`,
+      okText: '삭제',
+      cancelText: '취소',
+      okButtonProps: { danger: true },
+      onOk: () => {
+        bulkDeleteMutation.mutate({
+          siteId,
+          date,
+          mealType,
+          photoType,
+        });
+      },
+    });
+  };
+
   // 업로드 버튼
   const uploadButton = (
     <div>
@@ -158,7 +202,8 @@ export default function MealPhotoManagementPage() {
 
   // 끼니별 업로드 상태 계산
   const getUploadStatus = (mealType: MealType) => {
-    const mealPhotos = dailyPhotos?.data?.filter((p: any) => p.mealType === mealType) || [];
+    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const mealPhotos = uploadedPhotosData.filter((p: any) => p.mealType === mealType);
     const servingCount = mealPhotos.filter((p: any) => p.photoType === 'SERVING').length;
     const leftoverCount = mealPhotos.filter((p: any) => p.photoType === 'LEFTOVER').length;
 
@@ -173,9 +218,10 @@ export default function MealPhotoManagementPage() {
 
   // 탭 렌더링
   const renderMealTab = (mealType: MealType, photoType: PhotoType) => {
-    const uploadedPhotos = dailyPhotos?.data?.filter(
+    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const uploadedPhotos = uploadedPhotosData.filter(
       (p: any) => p.mealType === mealType && p.photoType === photoType
-    ) || [];
+    );
 
     return (
       <div>
@@ -188,32 +234,50 @@ export default function MealPhotoManagementPage() {
               <Tag color="green">업로드 완료 ({uploadedPhotos.length}개)</Tag>
             </div>
             <Image.PreviewGroup>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 {uploadedPhotos.map((photo: any) => (
-                  <div key={photo.id} style={{ position: 'relative' }}>
-                    <Image
-                      src={photo.thumbnailUrl}
-                      alt={`${photoType} photo`}
-                      width={100}
-                      height={100}
-                      style={{ objectFit: 'cover', borderRadius: 4 }}
-                      preview={{
-                        src: photo.imageUrl,
-                      }}
-                    />
-                    <Button
-                      type="primary"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      style={{
-                        position: 'absolute',
-                        top: 4,
-                        right: 4,
-                        opacity: 0.9,
-                      }}
-                      onClick={() => handleDelete(photo.id)}
-                    />
+                  <div
+                    key={photo.id}
+                    style={{
+                      border: '1px solid #d9d9d9',
+                      borderRadius: 4,
+                      padding: 8,
+                      backgroundColor: '#fafafa',
+                    }}
+                  >
+                    <div style={{ position: 'relative', marginBottom: 4 }}>
+                      <Image
+                        src={photo.thumbnailUrl}
+                        alt={`${photoType} photo`}
+                        width={120}
+                        height={120}
+                        style={{ objectFit: 'cover', borderRadius: 4 }}
+                        preview={{
+                          src: photo.imageUrl,
+                        }}
+                      />
+                      <Button
+                        type="primary"
+                        danger
+                        size="small"
+                        icon={<DeleteOutlined />}
+                        style={{
+                          position: 'absolute',
+                          top: 4,
+                          right: 4,
+                          opacity: 0.9,
+                        }}
+                        onClick={() => handleDelete(photo.id)}
+                      />
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#666', marginTop: 4 }}>
+                      <div style={{ fontWeight: 'bold' }}>{photo.site?.name}</div>
+                      <div>
+                        {photo.capturedAt
+                          ? new Date(photo.capturedAt).toLocaleDateString('ko-KR')
+                          : '날짜 정보 없음'}
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -258,6 +322,241 @@ export default function MealPhotoManagementPage() {
     { key: 'LUNCH', label: '중식' },
     { key: 'DINNER', label: '석식' },
     { key: 'SUPPER', label: '야식' },
+  ];
+
+  // 데이터 그룹화: 날짜 + 사업장 + 끼니 기준
+  const groupedData = React.useMemo(() => {
+    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const groups: any = {};
+
+    uploadedPhotosData.forEach((photo: any) => {
+      const key = `${photo.capturedAt}_${photo.siteId}_${photo.mealType}`;
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          capturedAt: photo.capturedAt,
+          site: photo.site,
+          mealType: photo.mealType,
+          servingPhotos: [],
+          leftoverPhotos: [],
+        };
+      }
+
+      if (photo.photoType === 'SERVING') {
+        groups[key].servingPhotos.push(photo);
+      } else if (photo.photoType === 'LEFTOVER') {
+        groups[key].leftoverPhotos.push(photo);
+      }
+    });
+
+    return Object.values(groups);
+  }, [dailyPhotos]);
+
+  // 필터링된 데이터
+  const filteredData = React.useMemo(() => {
+    return groupedData.filter((item: any) => {
+      // 끼니 필터
+      if (mealTypeFilter !== 'ALL' && item.mealType !== mealTypeFilter) {
+        return false;
+      }
+
+      // 상태 필터
+      if (statusFilter !== 'ALL') {
+        const hasServing = item.servingPhotos.length > 0;
+        const hasLeftover = item.leftoverPhotos.length > 0;
+
+        if (statusFilter === 'COMPLETE' && !(hasServing && hasLeftover)) {
+          return false;
+        }
+        if (statusFilter === 'PARTIAL' && !(hasServing !== hasLeftover)) {
+          return false;
+        }
+        if (statusFilter === 'PENDING' && (hasServing || hasLeftover)) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [groupedData, mealTypeFilter, statusFilter]);
+
+  // 테이블 컬럼 정의
+  const columns = [
+    {
+      title: '날짜',
+      dataIndex: 'capturedAt',
+      key: 'date',
+      width: 120,
+      render: (date: string) => new Date(date).toLocaleDateString('ko-KR'),
+    },
+    {
+      title: '사업장',
+      dataIndex: ['site', 'name'],
+      key: 'site',
+      width: 150,
+    },
+    {
+      title: '끼니',
+      dataIndex: 'mealType',
+      key: 'mealType',
+      width: 80,
+      render: (type: string) => {
+        const labels: any = {
+          BREAKFAST: '조식',
+          LUNCH: '중식',
+          DINNER: '석식',
+          SUPPER: '야식',
+        };
+        return <Tag color="blue">{labels[type] || type}</Tag>;
+      },
+    },
+    {
+      title: '배식준비 사진',
+      dataIndex: 'servingPhotos',
+      key: 'serving',
+      render: (photos: any[]) => (
+        <Image.PreviewGroup>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {photos.length > 0 ? (
+              photos.map((photo: any) => (
+                <div key={photo.id} style={{ position: 'relative' }}>
+                  <Image
+                    src={photo.thumbnailUrl}
+                    alt="배식준비"
+                    width={60}
+                    height={60}
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                    preview={{ src: photo.imageUrl }}
+                  />
+                  <Button
+                    type="primary"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      padding: '0 4px',
+                      height: 20,
+                      fontSize: 10,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(photo.id);
+                    }}
+                  />
+                </div>
+              ))
+            ) : (
+              <span style={{ color: '#999' }}>없음</span>
+            )}
+          </div>
+        </Image.PreviewGroup>
+      ),
+    },
+    {
+      title: '잔반 사진',
+      dataIndex: 'leftoverPhotos',
+      key: 'leftover',
+      render: (photos: any[]) => (
+        <Image.PreviewGroup>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {photos.length > 0 ? (
+              photos.map((photo: any) => (
+                <div key={photo.id} style={{ position: 'relative' }}>
+                  <Image
+                    src={photo.thumbnailUrl}
+                    alt="잔반"
+                    width={60}
+                    height={60}
+                    style={{ objectFit: 'cover', borderRadius: 4 }}
+                    preview={{ src: photo.imageUrl }}
+                  />
+                  <Button
+                    type="primary"
+                    danger
+                    size="small"
+                    icon={<DeleteOutlined />}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      right: 2,
+                      padding: '0 4px',
+                      height: 20,
+                      fontSize: 10,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(photo.id);
+                    }}
+                  />
+                </div>
+              ))
+            ) : (
+              <span style={{ color: '#999' }}>없음</span>
+            )}
+          </div>
+        </Image.PreviewGroup>
+      ),
+    },
+    {
+      title: '액션',
+      key: 'actions',
+      width: 120,
+      render: (_: any, record: any) => (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {record.servingPhotos.length > 0 && (
+            <Button
+              size="small"
+              danger
+              onClick={() =>
+                handleBulkDelete(
+                  dayjs(record.capturedAt).format('YYYY-MM-DD'),
+                  record.site.id,
+                  record.mealType,
+                  'SERVING'
+                )
+              }
+            >
+              배식 삭제
+            </Button>
+          )}
+          {record.leftoverPhotos.length > 0 && (
+            <Button
+              size="small"
+              danger
+              onClick={() =>
+                handleBulkDelete(
+                  dayjs(record.capturedAt).format('YYYY-MM-DD'),
+                  record.site.id,
+                  record.mealType,
+                  'LEFTOVER'
+                )
+              }
+            >
+              잔반 삭제
+            </Button>
+          )}
+          {(record.servingPhotos.length > 0 || record.leftoverPhotos.length > 0) && (
+            <Button
+              size="small"
+              danger
+              type="primary"
+              onClick={() =>
+                handleBulkDelete(
+                  dayjs(record.capturedAt).format('YYYY-MM-DD'),
+                  record.site.id,
+                  record.mealType
+                )
+              }
+            >
+              모두 삭제
+            </Button>
+          )}
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -317,6 +616,52 @@ export default function MealPhotoManagementPage() {
           </div>
         )}
       </Card>
+
+      {/* 업로드 내역 테이블 */}
+      {selectedSiteId && (
+        <Card
+          title="업로드 내역"
+          extra={
+            <div style={{ display: 'flex', gap: 12 }}>
+              <Select
+                style={{ width: 120 }}
+                value={mealTypeFilter}
+                onChange={setMealTypeFilter}
+                options={[
+                  { value: 'ALL', label: '전체 끼니' },
+                  { value: 'BREAKFAST', label: '조식' },
+                  { value: 'LUNCH', label: '중식' },
+                  { value: 'DINNER', label: '석식' },
+                  { value: 'SUPPER', label: '야식' },
+                ]}
+              />
+              <Select
+                style={{ width: 120 }}
+                value={statusFilter}
+                onChange={setStatusFilter}
+                options={[
+                  { value: 'ALL', label: '전체 상태' },
+                  { value: 'COMPLETE', label: '완료' },
+                  { value: 'PARTIAL', label: '일부' },
+                  { value: 'PENDING', label: '대기' },
+                ]}
+              />
+            </div>
+          }
+          style={{ marginBottom: 24 }}
+        >
+          <Table
+            columns={columns}
+            dataSource={filteredData}
+            rowKey="key"
+            loading={isLoadingPhotos}
+            pagination={{ pageSize: 10 }}
+            locale={{
+              emptyText: '업로드된 사진이 없습니다.',
+            }}
+          />
+        </Card>
+      )}
 
       {/* 끼니별 탭 */}
       {!selectedSiteId ? (

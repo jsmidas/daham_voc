@@ -86,7 +86,7 @@ export async function setupBucket(): Promise<void> {
  * 파일 경로 생성 헬퍼
  */
 export function generateImagePath(
-  folder: 'menus' | 'meal-photos',
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks',
   filename: string
 ): string {
   const timestamp = Date.now();

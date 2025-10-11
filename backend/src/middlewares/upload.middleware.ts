@@ -71,3 +71,30 @@ export const uploadMealPhotos = multer({
     files: 6,
   },
 }).array('photos', 6);
+
+/**
+ * 엑셀 파일 필터
+ */
+const excelFileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const allowedMimeTypes = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel',
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Excel 파일만 업로드 가능합니다 (.xlsx, .xls)'));
+  }
+};
+
+/**
+ * 엑셀 파일 업로드 (필드명: file)
+ */
+export const uploadExcel = multer({
+  storage,
+  fileFilter: excelFileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_EXCEL_SIZE || '10485760'), // 10MB
+  },
+}).single('file');

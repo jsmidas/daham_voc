@@ -45,7 +45,9 @@
       "Bash(start http://localhost:5173/map)",
       "Bash(timeout:*)",
       "Bash(start http://localhost:5176)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(npm run kill-port:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

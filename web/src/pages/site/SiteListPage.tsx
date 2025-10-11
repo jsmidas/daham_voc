@@ -3,12 +3,13 @@
  * @description 사업장 목록 페이지
  */
 
-import { Table, Button, Space, Input, Select, message, Popconfirm } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Input, Select, message, Popconfirm, Modal, Upload } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getSites, deleteSite } from '@/api/site.api';
+import { getSites, deleteSite, downloadExcelTemplate, uploadExcelFile } from '@/api/site.api';
 import { useState } from 'react';
+import type { UploadFile } from 'antd/es/upload/interface';
 
 const { Search } = Input;
 
@@ -18,6 +19,9 @@ export default function SiteListPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [divisionFilter, setDivisionFilter] = useState<string | undefined>();
+  const [uploadModalVisible, setUploadModalVisible] = useState(false);
+  const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const { data: sites, isLoading } = useQuery({
     queryKey: ['sites', { search, type: typeFilter, division: divisionFilter }],
@@ -35,6 +39,68 @@ export default function SiteListPage() {
       message.error(error.message || '삭제 실패');
     },
   });
+
+  const uploadMutation = useMutation({
+    mutationFn: uploadExcelFile,
+    onSuccess: (response: any) => {
+      const result = response.data;
+      message.success(response.message || '업로드 완료');
+
+      // Show detailed results
+      if (result.failed && result.failed.length > 0) {
+        Modal.info({
+          title: '업로드 결과',
+          width: 600,
+          content: (
+            <div>
+              <p>성공: {result.success}개</p>
+              <p>실패: {result.failed.length}개</p>
+              <div style={{ maxHeight: 300, overflow: 'auto' }}>
+                {result.failed.map((fail: any, index: number) => (
+                  <div key={index} style={{ marginTop: 8, padding: 8, background: '#fff1f0', border: '1px solid #ffa39e', borderRadius: 4 }}>
+                    <strong>행 {fail.row}:</strong> {fail.error}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ),
+        });
+      }
+
+      setUploadModalVisible(false);
+      setFileList([]);
+      queryClient.invalidateQueries({ queryKey: ['sites'] });
+    },
+    onError: (error: any) => {
+      message.error(error.message || '업로드 실패');
+    },
+  });
+
+  // Handle Excel template download
+  const handleDownloadTemplate = async () => {
+    try {
+      await downloadExcelTemplate();
+      message.success('템플릿 다운로드 완료');
+    } catch (error: any) {
+      message.error(error.message || '다운로드 실패');
+    }
+  };
+
+  // Handle Excel upload
+  const handleUpload = async () => {
+    if (fileList.length === 0) {
+      message.error('엑셀 파일을 선택해주세요');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const file = fileList[0].originFileObj as File;
+      await uploadMutation.mutateAsync(file);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const columns = [
     {
@@ -96,13 +162,27 @@ export default function SiteListPage() {
         }}
       >
         <h1 style={{ margin: 0 }}>사업장 관리</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/sites/new')}
-        >
-          사업장 등록
-        </Button>
+        <Space>
+          <Button
+            icon={<DownloadOutlined />}
+            onClick={handleDownloadTemplate}
+          >
+            템플릿 다운로드
+          </Button>
+          <Button
+            icon={<FileExcelOutlined />}
+            onClick={() => setUploadModalVisible(true)}
+          >
+            엑셀 업로드
+          </Button>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/sites/new')}
+          >
+            사업장 등록
+          </Button>
+        </Space>
       </div>
 
       {/* 검색 및 필터 */}
@@ -144,6 +224,59 @@ export default function SiteListPage() {
         rowKey="id"
         pagination={{ pageSize: 10 }}
       />
+
+      {/* Excel Upload Modal */}
+      <Modal
+        title="사업장 일괄 등록"
+        open={uploadModalVisible}
+        onOk={handleUpload}
+        onCancel={() => {
+          setUploadModalVisible(false);
+          setFileList([]);
+        }}
+        confirmLoading={uploading}
+        okText="업로드"
+        cancelText="취소"
+        width={600}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 8 }}>1. 상단의 "템플릿 다운로드" 버튼을 클릭하여 엑셀 템플릿을 다운로드하세요.</p>
+          <p style={{ marginBottom: 8 }}>2. 템플릿에 사업장 정보를 입력하세요. (최대 500개)</p>
+          <p style={{ marginBottom: 8 }}>3. 작성한 엑셀 파일을 아래에 업로드하세요.</p>
+        </div>
+
+        <Upload
+          accept=".xlsx,.xls"
+          fileList={fileList}
+          beforeUpload={(file) => {
+            const isExcel =
+              file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+              file.type === 'application/vnd.ms-excel';
+
+            if (!isExcel) {
+              message.error('엑셀 파일만 업로드 가능합니다');
+              return false;
+            }
+
+            setFileList([file]);
+            return false;
+          }}
+          onRemove={() => {
+            setFileList([]);
+          }}
+          maxCount={1}
+        >
+          <Button icon={<UploadOutlined />} disabled={fileList.length >= 1}>
+            파일 선택
+          </Button>
+        </Upload>
+
+        {fileList.length > 0 && (
+          <div style={{ marginTop: 16, padding: 8, background: '#f0f0f0', borderRadius: 4 }}>
+            <strong>선택된 파일:</strong> {fileList[0].name}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

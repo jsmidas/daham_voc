@@ -3,7 +3,7 @@
  * @description 사업장 등록/수정 페이지
  */
 
-import { Form, Input, Button, Card, message, Select, Alert, Space, DatePicker, InputNumber } from 'antd';
+import { Form, Input, Button, Card, message, Select, Alert, Space, DatePicker, InputNumber, Row, Col } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -123,6 +123,7 @@ export default function SiteFormPage() {
             <Input />
           </Form.Item>
 
+          {/* 사업장명 */}
           <Form.Item
             label="사업장명"
             name="name"
@@ -131,29 +132,35 @@ export default function SiteFormPage() {
             <Input placeholder="예: 삼성전자 본사" />
           </Form.Item>
 
-          <Form.Item
-            label="유형"
-            name="type"
-            rules={[{ required: true, message: '유형을 선택하세요' }]}
-          >
-            <Select placeholder="유형 선택">
-              <Select.Option value="CONSIGNMENT">위탁</Select.Option>
-              <Select.Option value="DELIVERY">운반급식</Select.Option>
-              <Select.Option value="LUNCHBOX">도시락</Select.Option>
-              <Select.Option value="EVENT">행사</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            label="부문"
-            name="division"
-            rules={[{ required: true, message: '부문을 선택하세요' }]}
-          >
-            <Select placeholder="부문 선택">
-              <Select.Option value="HQ">본사</Select.Option>
-              <Select.Option value="YEONGNAM">영남지사</Select.Option>
-            </Select>
-          </Form.Item>
+          {/* 유형, 부문 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="유형"
+                name="type"
+                rules={[{ required: true, message: '유형을 선택하세요' }]}
+              >
+                <Select placeholder="유형 선택">
+                  <Select.Option value="CONSIGNMENT">위탁</Select.Option>
+                  <Select.Option value="DELIVERY">운반급식</Select.Option>
+                  <Select.Option value="LUNCHBOX">도시락</Select.Option>
+                  <Select.Option value="EVENT">행사</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="부문"
+                name="division"
+                rules={[{ required: true, message: '부문을 선택하세요' }]}
+              >
+                <Select placeholder="부문 선택">
+                  <Select.Option value="HQ">본사</Select.Option>
+                  <Select.Option value="YEONGNAM">영남지사</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item label="주소" required>
             <Space.Compact style={{ width: '100%' }}>
@@ -258,50 +265,69 @@ export default function SiteFormPage() {
             </Space.Compact>
           </Form.Item>
 
-          <Form.Item
-            label="위도"
-            name="latitude"
-            rules={[{ required: true, message: '위도를 입력하세요' }]}
-          >
-            <Input type="number" step="0.000001" placeholder="예: 37.5012767 (주소 검색 시 자동 입력)" />
-          </Form.Item>
+          {/* 위도, 경도 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="위도"
+                name="latitude"
+                rules={[{ required: true, message: '위도를 입력하세요' }]}
+              >
+                <Input type="number" step="0.000001" placeholder="예: 37.5012767" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="경도"
+                name="longitude"
+                rules={[{ required: true, message: '경도를 입력하세요' }]}
+              >
+                <Input type="number" step="0.000001" placeholder="예: 127.0396597" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label="경도"
-            name="longitude"
-            rules={[{ required: true, message: '경도를 입력하세요' }]}
-          >
-            <Input type="number" step="0.000001" placeholder="예: 127.0396597 (주소 검색 시 자동 입력)" />
-          </Form.Item>
+          {/* 담당자 1 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="담당자명 1"
+                name="contactPerson1"
+              >
+                <Input placeholder="예: 홍길동" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="연락처 1"
+                name="contactPhone1"
+              >
+                <Input placeholder="예: 010-1234-5678" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label="담당자명 1"
-            name="contactPerson1"
-          >
-            <Input placeholder="예: 홍길동" />
-          </Form.Item>
+          {/* 담당자 2 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="담당자명 2"
+                name="contactPerson2"
+              >
+                <Input placeholder="예: 김철수" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="연락처 2"
+                name="contactPhone2"
+              >
+                <Input placeholder="예: 010-9876-5432" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label="연락처 1"
-            name="contactPhone1"
-          >
-            <Input placeholder="예: 010-1234-5678" />
-          </Form.Item>
-
-          <Form.Item
-            label="담당자명 2"
-            name="contactPerson2"
-          >
-            <Input placeholder="예: 김철수" />
-          </Form.Item>
-
-          <Form.Item
-            label="연락처 2"
-            name="contactPhone2"
-          >
-            <Input placeholder="예: 010-9876-5432" />
-          </Form.Item>
-
+          {/* 식단유형 */}
           <Form.Item
             label="식단유형"
             name="mealTypes"
@@ -319,41 +345,53 @@ export default function SiteFormPage() {
             />
           </Form.Item>
 
-          <Form.Item
-            label="단가 (원)"
-            name="pricePerMeal"
-            tooltip="1인당 식사 단가를 입력하세요"
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              min={0}
-              placeholder="예: 7000"
-              formatter={value => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={value => value!.replace(/₩\s?|(,*)/g, '')}
-            />
-          </Form.Item>
+          {/* 단가, 배송코스 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="단가 (원)"
+                name="pricePerMeal"
+                tooltip="1인당 식사 단가를 입력하세요"
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={0}
+                  placeholder="예: 7000"
+                  formatter={value => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value!.replace(/₩\s?|(,*)/g, '')}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="배송코스"
+                name="deliveryRoute"
+                tooltip="배송 경로나 구역을 입력하세요"
+              >
+                <Input placeholder="예: A코스, 강남구역" />
+              </Form.Item>
+            </Col>
+          </Row>
 
-          <Form.Item
-            label="배송코스"
-            name="deliveryRoute"
-            tooltip="배송 경로나 구역을 입력하세요"
-          >
-            <Input placeholder="예: A코스, 강남구역" />
-          </Form.Item>
-
-          <Form.Item
-            label="계약시작일"
-            name="contractStartDate"
-          >
-            <DatePicker style={{ width: '100%' }} placeholder="계약 시작일 선택" />
-          </Form.Item>
-
-          <Form.Item
-            label="계약종료일"
-            name="contractEndDate"
-          >
-            <DatePicker style={{ width: '100%' }} placeholder="계약 종료일 선택" />
-          </Form.Item>
+          {/* 계약기간 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="계약시작일"
+                name="contractStartDate"
+              >
+                <DatePicker style={{ width: '100%' }} placeholder="계약 시작일 선택" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="계약종료일"
+                name="contractEndDate"
+              >
+                <DatePicker style={{ width: '100%' }} placeholder="계약 종료일 선택" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item>
             <Button

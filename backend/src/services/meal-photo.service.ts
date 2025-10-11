@@ -371,6 +371,80 @@ export async function deleteMealPhoto(photoId: string, _userId: string): Promise
 }
 
 /**
+ * 식사 사진 일괄 삭제 (조건별)
+ * @description 날짜, 끼니, 사진타입 기준으로 여러 사진을 한번에 삭제
+ */
+export async function bulkDeleteMealPhotos(
+  siteId: string,
+  date: string,
+  mealType?: MealType,
+  photoType?: PhotoType,
+  _userId?: string
+): Promise<{ deleted: number }> {
+  // 삭제 조건 구성
+  const where: any = {
+    siteId,
+    deletedAt: null,
+  };
+
+  // 날짜 범위 (하루 전체)
+  const startOfDay = new Date(date);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(date);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  where.capturedAt = {
+    gte: startOfDay,
+    lte: endOfDay,
+  };
+
+  // 선택적 필터
+  if (mealType) where.mealType = mealType;
+  if (photoType) where.photoType = photoType;
+
+  // 삭제할 사진들 조회
+  const photos = await prisma.mealPhoto.findMany({
+    where,
+    select: {
+      id: true,
+      imageUrl: true,
+      thumbnailUrl: true,
+    },
+  });
+
+  if (photos.length === 0) {
+    return { deleted: 0 };
+  }
+
+  // 이미지 파일 삭제 (병렬 처리)
+  const deletePromises = photos.map((photo) => {
+    if (photo.imageUrl && photo.thumbnailUrl) {
+      const path = extractPathFromUrl(photo.imageUrl);
+      const thumbPath = extractPathFromUrl(photo.thumbnailUrl);
+      return deleteImage(path, thumbPath);
+    }
+    return Promise.resolve();
+  });
+
+  await Promise.allSettled(deletePromises);
+
+  // DB에서 Soft Delete
+  const result = await prisma.mealPhoto.updateMany({
+    where: {
+      id: { in: photos.map((p) => p.id) },
+    },
+    data: {
+      deletedAt: new Date(),
+    },
+  });
+
+  // 캐시 무효화
+  await invalidateMealPhotoCache(siteId);
+
+  return { deleted: result.count };
+}
+
+/**
  * 캐시 무효화
  */
 async function invalidateMealPhotoCache(siteId: string): Promise<void> {

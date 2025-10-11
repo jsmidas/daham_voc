@@ -1,13 +1,18 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import path from 'path';
 import { env } from './config/env';
 
 // Create Express app
 const app: Application = express();
 
 // Security middleware
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 // CORS middleware
 app.use(cors({
@@ -18,6 +23,9 @@ app.use(cors({
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Mock storage (개발 환경) - 정적 파일 서빙
+app.use('/mock-images', express.static(path.join(process.cwd(), 'mock-images')));
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {

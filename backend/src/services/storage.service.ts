@@ -5,6 +5,8 @@
 
 import { getBucket, generateImagePath, getPublicUrl } from '../config/gcp-storage';
 import { compressImage, generateThumbnail } from '../utils/image-processor.util';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface UploadedImage {
   originalUrl: string;
@@ -49,7 +51,11 @@ export async function uploadImage(
         uploadToGCP(bucket, thumbnailPath, thumbnail.buffer, file.mimetype),
       ]);
     } else {
-      // Mock storage (개발 환경)
+      // Mock storage (개발 환경) - 로컬에 실제 파일 저장
+      await Promise.all([
+        uploadToLocal(originalPath, compressed.buffer),
+        uploadToLocal(thumbnailPath, thumbnail.buffer),
+      ]);
       console.log(`Mock upload: ${originalPath} (${compressed.size} bytes)`);
       console.log(`Mock upload: ${thumbnailPath} (${thumbnail.size} bytes)`);
     }
@@ -87,6 +93,22 @@ async function uploadToGCP(
     public: true, // 공개 URL 생성
     resumable: false, // 작은 파일은 단일 요청으로 업로드
   });
+}
+
+/**
+ * 로컬 업로드 헬퍼 (Mock Storage용)
+ */
+async function uploadToLocal(filePath: string, buffer: Buffer): Promise<void> {
+  const fullPath = path.join(process.cwd(), 'mock-images', filePath);
+  const dir = path.dirname(fullPath);
+
+  // 디렉토리가 없으면 생성
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  // 파일 저장
+  fs.writeFileSync(fullPath, buffer);
 }
 
 /**
@@ -151,13 +173,29 @@ export async function deleteImage(
         bucket.file(thumbnailPath).delete({ ignoreNotFound: true }),
       ]);
     } else {
-      // Mock storage (개발 환경)
+      // Mock storage (개발 환경) - 로컬 파일 삭제
+      deleteFromLocal(originalPath);
+      deleteFromLocal(thumbnailPath);
       console.log(`Mock delete: ${originalPath}`);
       console.log(`Mock delete: ${thumbnailPath}`);
     }
   } catch (error) {
     console.error('Image deletion failed:', error);
     // 삭제 실패 시에도 계속 진행 (파일이 이미 없을 수 있음)
+  }
+}
+
+/**
+ * 로컬 삭제 헬퍼 (Mock Storage용)
+ */
+function deleteFromLocal(filePath: string): void {
+  try {
+    const fullPath = path.join(process.cwd(), 'mock-images', filePath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  } catch (error) {
+    // 에러 무시 (파일이 없을 수 있음)
   }
 }
 

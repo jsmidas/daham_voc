@@ -156,4 +156,50 @@ export class SiteController {
       res.status(400).json(errorResponse(error.message, 'UPDATE_ORDER_ERROR'));
     }
   };
+
+  /**
+   * GET /api/v1/sites/excel-template
+   * Download Excel template for bulk site registration
+   */
+  downloadExcelTemplate = async (_req: Request, res: Response): Promise<void> => {
+    try {
+      const buffer = await this.siteService.generateExcelTemplate();
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=site-template.xlsx');
+      res.send(buffer);
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message, 'EXCEL_TEMPLATE_ERROR'));
+    }
+  };
+
+  /**
+   * POST /api/v1/sites/excel-upload
+   * Upload and process Excel file for bulk site creation
+   */
+  uploadExcelFile = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = req.user?.userId;
+
+      if (!userId) {
+        res.status(401).json(errorResponse('인증되지 않은 사용자입니다', 'UNAUTHORIZED'));
+        return;
+      }
+
+      if (!req.file) {
+        res.status(400).json(errorResponse('엑셀 파일이 필요합니다', 'FILE_REQUIRED'));
+        return;
+      }
+
+      const result = await this.siteService.bulkCreateFromExcel(req.file.buffer, userId);
+
+      const message = result.failed.length > 0
+        ? `${result.success}개 생성 완료, ${result.failed.length}개 실패`
+        : `${result.success}개 사업장이 생성되었습니다`;
+
+      res.json(successResponse(result, message));
+    } catch (error: any) {
+      res.status(400).json(errorResponse(error.message, 'EXCEL_UPLOAD_ERROR'));
+    }
+  };
 }

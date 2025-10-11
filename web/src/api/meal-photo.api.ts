@@ -94,3 +94,20 @@ export async function deleteMealPhoto(id: string) {
   const response = await apiClient.delete(`/meal-photos/${id}`);
   return response.data;
 }
+
+/**
+ * 배식사진 일괄 삭제
+ */
+export interface BulkDeleteMealPhotoDto {
+  siteId: string;
+  date: string; // YYYY-MM-DD
+  mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
+  photoType?: 'SERVING' | 'LEFTOVER';
+}
+
+export async function bulkDeleteMealPhotos(dto: BulkDeleteMealPhotoDto) {
+  const response = await apiClient.delete('/meal-photos/bulk-delete', {
+    data: dto,
+  });
+  return response.data;
+}

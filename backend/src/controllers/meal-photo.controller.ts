@@ -179,6 +179,35 @@ export async function deleteMealPhoto(req: Request, res: Response): Promise<void
 }
 
 /**
+ * 식사 사진 일괄 삭제
+ * DELETE /api/v1/meal-photos/bulk-delete
+ */
+export async function bulkDeleteMealPhotos(req: Request, res: Response): Promise<void> {
+  try {
+    const { siteId, date, mealType, photoType } = req.body;
+    const userId = req.user!.userId;
+
+    if (!siteId || !date) {
+      res.status(400).json(errorResponse('siteId and date are required'));
+      return;
+    }
+
+    const result = await mealPhotoService.bulkDeleteMealPhotos(
+      siteId,
+      date,
+      mealType as MealType | undefined,
+      photoType as PhotoType | undefined,
+      userId
+    );
+
+    res.json(successResponse(result, `${result.deleted}개의 사진이 삭제되었습니다.`));
+  } catch (error: any) {
+    console.error('Bulk delete meal photos error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
  * 일간 사진 조회
  * GET /api/v1/meal-photos/daily
  */

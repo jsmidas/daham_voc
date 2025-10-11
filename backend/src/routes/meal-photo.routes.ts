@@ -62,6 +62,14 @@ router.patch(
   mealPhotoController.updateMealPhoto
 );
 
+// DELETE /api/v1/meal-photos/bulk-delete - 식사 사진 일괄 삭제 (Admin + STAFF)
+router.delete(
+  '/bulk-delete',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SITE_STAFF', 'DELIVERY_DRIVER']),
+  mealPhotoController.bulkDeleteMealPhotos
+);
+
 // DELETE /api/v1/meal-photos/:id - 식사 사진 삭제 (Admin + STAFF)
 router.delete(
   '/:id',

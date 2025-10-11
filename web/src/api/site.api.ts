@@ -39,3 +39,47 @@ export async function getSiteGroups() {
 export async function createSiteGroup(data: any) {
   return apiClient.post('/site-groups', data);
 }
+
+// 엑셀 템플릿 다운로드
+export async function downloadExcelTemplate() {
+  try {
+    const token = localStorage.getItem('token');
+    const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+
+    const response = await fetch(`${baseURL}/sites/excel-template`, {
+      method: 'GET',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('템플릿 다운로드에 실패했습니다');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `사업장_등록_템플릿_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Excel template download error:', error);
+    throw error;
+  }
+}
+
+// 엑셀 파일 업로드 (일괄 등록)
+export async function uploadExcelFile(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return apiClient.post('/sites/excel-upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+}
