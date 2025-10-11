@@ -1,25 +1,28 @@
-# 구현 가이드 - Phase 2: 식단 및 사진 관리 (2주)
+# 구현 가이드 - Phase 2: 식단 및 사진 관리 (2주) ✅ 완료
 
 > **⚠️ 필수 선행 작업**: Phase 1 완료 필수
-> **📅 예상 기간**: 2주 (Week 3-4)
-> **📊 예상 작업량**: ~20개 파일, ~3,500 라인
+> **📅 실제 소요 기간**: 2주 (Week 3-4)
+> **📊 실제 작업량**: ~20개 파일, ~3,000 라인
+> **✅ 상태**: 완료 (실제 구현 기준으로 문서 업데이트됨)
 
 ---
 
 ## 📋 Phase 2 개요
 
 ### 주요 목표
-1. **이미지 기반 식단 관리 시스템** 구축
-2. **GCP Storage 연동** 및 이미지 최적화
-3. **사업장 그룹별 일괄 업로드** 기능
-4. **배식 사진 관리** (GPS 검증 포함)
-5. **이미지 압축 및 썸네일** 자동 생성
+1. ✅ **날짜 범위 기반 식단 관리 시스템** 구축
+2. ✅ **GCP Storage 연동** (Mock 개발 환경 포함)
+3. ✅ **이미지 압축 및 썸네일** 자동 생성
+4. ✅ **사업장 그룹별 일괄 업로드** 기능
+5. ✅ **배식/잔반/시설 사진 관리** (PhotoType 구분)
+6. ✅ **GPS 검증 기능** (Geofencing)
+7. ✅ **주간 식단표 템플릿** 관리
 
 ### 기술 스택
-- **파일 저장소**: Google Cloud Storage
+- **파일 저장소**: Google Cloud Storage (Mock 로컬 저장소 포함)
 - **이미지 처리**: Sharp (압축, 리사이징, 썸네일)
-- **GPS 검증**: Geofencing (Phase 1에서 구현된 유틸리티 활용)
-- **캐싱**: Redis (이미지 메타데이터)
+- **GPS 검증**: Geofencing 유틸리티 (100m 반경)
+- **캐싱**: Redis (식단: 10분, 사진: 10분)
 
 ---
 
@@ -104,43 +107,62 @@ async uploadMenuImage(file: Express.Multer.File) {
 #### 구현 내용
 
 ```prisma
-// Menu 모델 추가
+// Menu 모델 (실제 구현)
 model Menu {
-  id          String   @id @default(uuid())
-  siteId      String   @map("site_id")
-  date        DateTime
-  mealType    MealType @map("meal_type") // BREAKFAST, LUNCH, DINNER, SNACK
+  id           String    @id @default(uuid())
+  siteId       String
+  startDate    DateTime  @db.Date  // 날짜 범위 시작
+  endDate      DateTime  @db.Date  // 날짜 범위 종료
+  mealType     MealType
 
-  // 이미지 정보
-  imageUrl1   String?  @map("image_url_1")
-  imageUrl2   String?  @map("image_url_2")
-  thumbnailUrl1 String? @map("thumbnail_url_1")
-  thumbnailUrl2 String? @map("thumbnail_url_2")
+  // 이미지 정보 (1개만)
+  imageUrl     String?
+  thumbnailUrl String?
 
-  // 메뉴 텍스트 (선택 사항)
-  menuText    String?  @map("menu_text") @db.Text
+  // 메뉴 아이템
+  menuItems    String?   @db.Text
+
+  // MongoDB 메타데이터 연동
+  mongoMetaId  String?
 
   // 메타데이터
-  createdBy   String   @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  deletedAt   DateTime? @map("deleted_at")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   // Relations
-  site        Site     @relation(fields: [siteId], references: [id])
-  creator     User     @relation(fields: [createdBy], references: [id])
+  site Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
-  @@unique([siteId, date, mealType])
-  @@index([siteId, date])
-  @@index([date])
-  @@map("menus")
+  @@index([siteId, startDate])
+  @@index([startDate])
 }
 
 enum MealType {
-  BREAKFAST
-  LUNCH
-  DINNER
-  SNACK
+  BREAKFAST  // 조식
+  LUNCH      // 중식
+  DINNER     // 석식
+  SUPPER     // 야식 (SNACK 대신)
+}
+
+// 주간 식단표 템플릿 (추가 기능)
+model WeeklyMenuTemplate {
+  id           String    @id @default(uuid())
+  menuTypeId   String
+  year         Int       // 년도 (예: 2025)
+  weekNumber   Int       // 주차 (1-53)
+  imageUrl     String
+  thumbnailUrl String?
+  description  String?   @db.Text
+  createdBy    String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  menuType MenuType @relation(fields: [menuTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([menuTypeId, year, weekNumber])
+  @@index([menuTypeId])
+  @@index([year, weekNumber])
 }
 ```
 
@@ -570,19 +592,23 @@ import { ForbiddenError, NotFoundError } from '../utils/errors.util';
 
 const prisma = new PrismaClient();
 
-// Lines 1-40: 타입 정의
+// Lines 1-40: 타입 정의 (실제 구현)
 export interface CreateMenuDto {
   siteId: string;
-  date: Date;
+  startDate: Date;  // 날짜 범위 시작
+  endDate: Date;    // 날짜 범위 종료
   mealType: MealType;
-  menuText?: string;
-  images?: Express.Multer.File[]; // 최대 2개
+  menuItems?: string;  // menuText → menuItems
+  image?: Express.Multer.File;  // 이미지 1개만
 }
 
 export interface UpdateMenuDto {
-  menuText?: string;
-  images?: Express.Multer.File[];
-  deleteImages?: boolean; // 기존 이미지 삭제 여부
+  startDate?: Date;
+  endDate?: Date;
+  mealType?: MealType;
+  menuItems?: string;
+  image?: Express.Multer.File;
+  deleteImage?: boolean;  // 이미지 삭제 (단수)
 }
 
 export interface MenuFilter {
@@ -1315,61 +1341,72 @@ app.use('/api/menus', menuRoutes);
 **예상 라인**: +60 라인
 
 ```prisma
-// MealPhoto 모델 추가
+// MealPhoto 모델 (실제 구현)
 model MealPhoto {
-  id          String   @id @default(uuid())
-  siteId      String   @map("site_id")
+  id           String    @id @default(uuid())
+  siteId       String
+  uploaderId   String
 
-  // 촬영 정보
-  photoDate   DateTime @map("photo_date") // 촬영 날짜
-  photoTime   DateTime @map("photo_time") // 촬영 시간
-  mealType    MealType @map("meal_type") // 끼니 구분
+  // 촬영 정보 (단일 timestamp)
+  capturedAt   DateTime   // 촬영 일시 (날짜+시간 통합)
+  mealType     MealType?  // 끼니 구분 (선택사항)
+  photoType    PhotoType @default(SERVING)  // 사진 타입 구분
 
   // 이미지 정보
-  imageUrl    String   @map("image_url")
-  thumbnailUrl String  @map("thumbnail_url")
+  imageUrl     String
+  thumbnailUrl String?
 
-  // GPS 정보
-  latitude    Float
-  longitude   Float
-  isValidLocation Boolean @default(true) @map("is_valid_location") // Geofencing 검증 결과
-
-  // 메타데이터
-  uploadedBy  String   @map("uploaded_by")
-  uploadedAt  DateTime @default(now()) @map("uploaded_at")
+  // GPS 정보 (선택사항)
+  latitude     Float?
+  longitude    Float?
 
   // 관리자 피드백
-  feedback    String?  @db.Text
-  feedbackBy  String?  @map("feedback_by")
-  feedbackAt  DateTime? @map("feedback_at")
+  feedback     String?   @db.Text
 
-  deletedAt   DateTime? @map("deleted_at")
+  // MongoDB 메타데이터 연동
+  mongoMetaId  String?
+
+  // 메타데이터
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
 
   // Relations
-  site        Site     @relation(fields: [siteId], references: [id])
-  uploader    User     @relation("PhotoUploader", fields: [uploadedBy], references: [id])
-  feedbackUser User?   @relation("PhotoFeedback", fields: [feedbackBy], references: [id])
+  site     Site @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
-  @@index([siteId, photoDate])
-  @@index([uploadedBy])
-  @@map("meal_photos")
+  @@index([siteId, capturedAt])
+  @@index([uploaderId])
+  @@index([capturedAt])
 }
 
-// User 모델에 relation 추가
-model User {
-  // 기존 필드들...
-
-  uploadedPhotos MealPhoto[] @relation("PhotoUploader")
-  photoFeedbacks MealPhoto[] @relation("PhotoFeedback")
+// 사진 타입 구분 (실제 구현에 추가됨)
+enum PhotoType {
+  SERVING   // 배식 준비
+  LEFTOVER  // 잔반
+  FACILITY  // 시설
 }
 
 // Site 모델에 relation 추가
 model Site {
   // 기존 필드들...
+  mealPhotos MealPhoto[]
+}
 
-  mealPhotos  MealPhoto[]
+// User 모델에 relation 추가
+model User {
+  // 기존 필드들...
+  mealPhotos MealPhoto[]
 }
 ```
+
+**주요 변경사항**:
+- ✅ `photoDate`/`photoTime` → `capturedAt` (단일 timestamp)
+- ✅ `photoType` 필드 추가 (배식/잔반/시설 구분)
+- ✅ `mealType`이 선택사항으로 변경
+- ✅ GPS 좌표가 선택사항으로 변경
+- ❌ `isValidLocation` 필드 제거 (GPS 검증 실패 시 저장 안 함)
+- ❌ `feedbackBy`/`feedbackAt` 필드 제거 (단순화)
 
 **마이그레이션**:
 ```bash
@@ -1393,29 +1430,43 @@ import { ForbiddenError, NotFoundError } from '../utils/errors.util';
 
 const prisma = new PrismaClient();
 
-// Lines 1-40: 타입 정의
+// Lines 1-40: 타입 정의 (실제 구현)
 export interface CreateMealPhotoDto {
   siteId: string;
-  photoDate: Date;
-  photoTime: Date;
-  mealType: MealType;
+  mealType?: MealType;  // 선택사항
+  photoType: PhotoType;  // 배식/잔반/시설
+  capturedAt: Date;  // 날짜+시간 통합
+  latitude?: number;  // 선택사항
+  longitude?: number;  // 선택사항
   image: Express.Multer.File;
-  latitude: number;
-  longitude: number;
+}
+
+export interface BulkCreateMealPhotoDto {
+  siteId: string;
+  mealType?: MealType;
+  photoType: PhotoType;
+  capturedAt: Date;
+  latitude?: number;
+  longitude?: number;
+  images: Express.Multer.File[];  // 여러 이미지
 }
 
 export interface UpdateMealPhotoDto {
-  image?: Express.Multer.File;
+  mealType?: MealType;
+  photoType?: PhotoType;
+  capturedAt?: Date;
   feedback?: string;
+  image?: Express.Multer.File;
 }
 
-export interface PhotoFilter {
+export interface MealPhotoFilter {
   siteId?: string;
-  uploadedBy?: string;
+  siteIds?: string[];
+  uploaderId?: string;
+  photoType?: PhotoType;
+  mealType?: MealType;
   dateFrom?: Date;
   dateTo?: Date;
-  mealType?: MealType;
-  isValidLocation?: boolean;
 }
 
 // Lines 45-180: 배식 사진 생성
@@ -2023,30 +2074,33 @@ app.use('/api/meal-photos', mealPhotoRoutes);
 
 ## ✅ Phase 2 완료 체크리스트
 
-### Week 3: 식단 관리 (7개 작업)
-- [ ] Task 3.1: Prisma 스키마 확장 (Menu 모델)
-- [ ] Task 3.2: GCP Storage 설정
-- [ ] Task 3.3: 이미지 처리 유틸리티
-- [ ] Task 3.4: Storage Service
-- [ ] Task 3.5: Menu Service
-- [ ] Task 3.6: Menu Controller
-- [ ] Task 3.7: Menu Routes
+### Week 3: 식단 관리 (8개 작업)
+- [x] Task 3.1: Prisma 스키마 확장 (Menu 모델) ✅
+- [x] Task 3.2: GCP Storage 설정 (Mock 포함) ✅
+- [x] Task 3.3: 이미지 처리 유틸리티 ✅
+- [x] Task 3.4: Storage Service ✅
+- [x] Task 3.5: Menu Service ✅
+- [x] Task 3.6: Menu Controller ✅
+- [x] Task 3.7: Menu Routes ✅
+- [x] Task 3.8: 주간 식단표 템플릿 (추가 기능) ✅
 
-### Week 4: 배식 사진 관리 (4개 작업)
-- [ ] Task 4.1: Prisma 스키마 확장 (MealPhoto 모델)
-- [ ] Task 4.2: MealPhoto Service
-- [ ] Task 4.3: MealPhoto Controller
-- [ ] Task 4.4: MealPhoto Routes
+### Week 4: 배식 사진 관리 (5개 작업)
+- [x] Task 4.1: Prisma 스키마 확장 (MealPhoto + PhotoType) ✅
+- [x] Task 4.2: MealPhoto Service ✅
+- [x] Task 4.3: MealPhoto Controller ✅
+- [x] Task 4.4: MealPhoto Routes ✅
+- [x] Task 4.5: 일괄 삭제 기능 ✅
 
 ### 통합 테스트
-- [ ] 단일 식단 이미지 업로드 테스트
-- [ ] 그룹별 일괄 식단 업로드 테스트
-- [ ] 이미지 압축/썸네일 생성 확인
-- [ ] 배식 사진 GPS 검증 테스트
-- [ ] 비정상 위치 사진 필터링 테스트
-- [ ] 본인 사진만 수정/삭제 가능한지 테스트
-- [ ] 관리자 피드백 기능 테스트
-- [ ] Redis 캐싱 동작 확인
+- [x] 단일 식단 이미지 업로드 테스트 ✅
+- [x] 그룹별 일괄 식단 업로드 테스트 ✅
+- [x] 이미지 압축/썸네일 생성 확인 ✅
+- [x] 배식 사진 GPS 검증 테스트 ✅
+- [x] 사진 타입별 필터링 테스트 (SERVING/LEFTOVER/FACILITY) ✅
+- [x] 본인 사진만 수정/삭제 가능한지 테스트 ✅
+- [x] 관리자 피드백 기능 테스트 ✅
+- [x] Redis 캐싱 동작 확인 ✅
+- [x] MongoDB 메타데이터 연동 확인 ✅
 
 ---
 
@@ -2107,3 +2161,113 @@ app.use('/api/meal-photos', mealPhotoRoutes);
 - Week 7: 통계 및 대시보드
 
 **파일**: `구현_가이드_Phase3.md` 참조
+
+---
+
+## 📊 Phase 2 실제 구현 상태 (2025-10-12 기준)
+
+### ✅ 완료된 기능
+
+| 기능 분류 | 상세 기능 | 구현 상태 | 참고 |
+|---------|---------|----------|------|
+| **식단 관리** | 날짜 범위 기반 식단 등록 | ✅ 완료 | startDate/endDate 사용 |
+| | 이미지 업로드 (1개) | ✅ 완료 | imageUrl/thumbnailUrl |
+| | 그룹별 일괄 등록 | ✅ 완료 | createMenuForGroup |
+| | 식단 조회/수정/삭제 | ✅ 완료 | CRUD 완성 |
+| | 주간/월간 식단 조회 | ✅ 완료 | getWeeklyMenus, getMonthlyMenus |
+| **주간 식단표** | 템플릿 관리 | ✅ 완료 | WeeklyMenuTemplate 모델 |
+| | 식단 유형별 템플릿 | ✅ 완료 | MenuType 연동 |
+| **배식 사진** | 사진 업로드 | ✅ 완료 | 단일/일괄 지원 |
+| | 사진 타입 구분 | ✅ 완료 | SERVING/LEFTOVER/FACILITY |
+| | GPS 검증 (100m) | ✅ 완료 | Geofencing 유틸리티 사용 |
+| | 사진 수정/삭제 (본인) | ✅ 완료 | 권한 검증 포함 |
+| | 관리자 피드백 | ✅ 완료 | feedback 필드 |
+| | 일괄 삭제 | ✅ 완료 | bulkDeleteMealPhotos |
+| | 갤러리 조회 | ✅ 완료 | 날짜별 그룹핑 |
+| **이미지 처리** | Sharp 압축 (1200px) | ✅ 완료 | compressImage |
+| | 썸네일 생성 (300px) | ✅ 완료 | generateThumbnail |
+| | 이미지 검증 | ✅ 완료 | 타입/크기 체크 |
+| **저장소** | GCP Storage 연동 | ✅ 완료 | @google-cloud/storage |
+| | Mock 로컬 저장소 | ✅ 완료 | 개발 환경 지원 |
+| | 공개 URL 생성 | ✅ 완료 | getPublicUrl |
+| **캐싱** | Redis 캐싱 | ✅ 완료 | 식단 10분, 사진 10분 |
+| | 캐시 무효화 | ✅ 완료 | 생성/수정/삭제 시 |
+| **통합** | MongoDB 메타데이터 | ✅ 완료 | mongoMetaId 필드 |
+
+### ⚠️ 가이드와 다른 부분
+
+| 항목 | 가이드 명세 | 실제 구현 | 영향 |
+|------|-----------|----------|------|
+| Menu 날짜 | `date` (단일) | `startDate`, `endDate` (범위) | 🟡 기능 확장 |
+| Menu 이미지 | 2개 지원 | 1개만 지원 | 🟡 단순화 |
+| Menu 텍스트 | `menuText` | `menuItems` | 🟢 명명 변경 |
+| MealPhoto 시간 | `photoDate`, `photoTime` (분리) | `capturedAt` (통합) | 🟢 단순화 |
+| MealPhoto 타입 | 없음 | `PhotoType` 추가 | 🟢 기능 확장 |
+| GPS 검증 저장 | `isValidLocation` 필드 | 필드 없음 (에러만) | 🟡 단순화 |
+| 피드백 메타 | `feedbackBy`, `feedbackAt` | 없음 | 🟢 단순화 |
+| MealType | SNACK | SUPPER | 🟢 명명 변경 |
+
+### 📁 생성된 파일 목록
+
+**Backend (13개 파일)**:
+```
+backend/src/
+├── services/
+│   ├── menu.service.ts (398 라인) ✅
+│   ├── meal-photo.service.ts (556 라인) ✅
+│   ├── storage.service.ts (227 라인) ✅
+│   └── weekly-menu-template.service.ts ✅
+├── controllers/
+│   ├── menu.controller.ts ✅
+│   ├── meal-photo.controller.ts ✅
+│   └── weekly-menu-template.controller.ts ✅
+├── routes/
+│   ├── menu.routes.ts ✅
+│   ├── meal-photo.routes.ts ✅
+│   └── weekly-menu-template.routes.ts ✅
+├── utils/
+│   └── image-processor.util.ts ✅
+└── config/
+    └── gcp-storage.ts (통합 구현) ✅
+
+backend/prisma/
+└── schema.prisma (Menu, MealPhoto, WeeklyMenuTemplate, PhotoType) ✅
+```
+
+**Frontend (5개 파일)**:
+```
+web/src/
+├── api/
+│   ├── menu.api.ts ✅
+│   ├── meal-photo.api.ts ✅
+│   └── weekly-menu-template.api.ts ✅
+└── pages/
+    ├── menu/
+    │   ├── MenuListPage.tsx ✅
+    │   ├── MenuFormPage.tsx ✅
+    │   └── WeeklyMenuPage.tsx ✅
+    └── photo/
+        └── MealPhotoManagementPage.tsx ✅
+```
+
+### 💡 주요 설계 결정 사항
+
+1. **날짜 범위 기반 식단**: 단일 날짜 대신 startDate/endDate로 한 번 등록으로 여러 날 적용 가능
+2. **PhotoType 추가**: 배식 준비/잔반/시설 사진을 명확히 구분
+3. **GPS 검증 간소화**: isValidLocation 필드 제거, 검증 실패 시 에러 반환으로 단순화
+4. **Mock Storage 지원**: 개발 환경에서 GCP 없이도 로컬 파일 저장소로 테스트 가능
+5. **MealType SUPPER**: SNACK 대신 SUPPER(야식) 사용으로 한식 환경에 적합
+6. **MongoDB 연동**: 확장성을 위해 mongoMetaId 필드 추가
+
+### 📝 참고 문서
+
+- **Phase2_실제구현_vs_가이드_차이점.md**: 상세한 차이점 분석 문서
+- **backend/prisma/schema.prisma**: 실제 데이터 모델 정의
+- **backend/src/services/\*.service.ts**: 실제 비즈니스 로직 구현
+
+### 🎯 다음 작업
+
+Phase 3 (VOC 및 근태 관리) 진행 전에:
+1. ✅ Phase 2 가이드를 실제 구현에 맞춰 업데이트 완료
+2. ✅ 구현_가이드_목차.md 업데이트 완료
+3. ⏭️ Phase 3, 4, 5, 6 가이드도 실제 구현 기준으로 검토 필요

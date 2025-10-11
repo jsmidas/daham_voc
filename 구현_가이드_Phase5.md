@@ -3,6 +3,7 @@
 > **⚠️ 필수 선행 작업**: Phase 1, 2, 3 완료 필수
 > **📅 예상 기간**: 3주 (Week 10-12)
 > **📊 예상 작업량**: ~60개 파일, ~10,000 라인
+> **✅ 실제 상태**: 핵심 기능 구현 완료 (15개 파일, Expo 기반 간소화 버전)
 
 ---
 
@@ -1103,39 +1104,46 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
 
 ---
 
-## ✅ Phase 5 완료 체크리스트
+## ✅ Phase 5 완료 체크리스트 (실제 구현 기준)
 
-### Week 10: 모바일 기본 구조 (6개 작업)
-- [ ] Task 10.1: React Native CLI 프로젝트 생성
-- [ ] Task 10.2: 환경 변수 설정
-- [ ] Task 10.3: Axios 설정
-- [ ] Task 10.4: AuthContext 설정
-- [ ] Task 10.5: Navigation 설정
-- [ ] Task 10.6: 로그인 화면
+### Week 10: 모바일 기본 구조 (Expo 기반)
+- [x] ~~Task 10.1: React Native CLI 프로젝트 생성~~ → **Expo 프로젝트 생성**
+- [x] Task 10.2: 환경 변수 설정 → `.env` 파일
+- [x] Task 10.3: Axios 설정 → `utils/axios.ts`
+- [x] ~~Task 10.4: AuthContext 설정~~ → **Zustand 스토어로 대체** (`store/authStore.ts`)
+- [x] Task 10.5: Navigation 설정 → `navigation/AppNavigator.tsx`
+- [x] Task 10.6: 로그인 화면 → `screens/LoginScreen.tsx`
 
-### Week 11: 핵심 기능 (4개 작업)
-- [ ] Task 11.1: GPS 서비스
-- [ ] Task 11.2: 출퇴근 체크인 화면
-- [ ] Task 11.3: 카메라 화면
-- [ ] Task 11.4: VOC 작성 화면
+### Week 11: 핵심 기능
+- [x] ~~Task 11.1: GPS 서비스~~ → **expo-location 사용**
+- [x] Task 11.2: 출퇴근 체크인 화면 → `screens/AttendanceScreen.tsx`
+- [ ] ~~Task 11.3: 카메라 화면~~ → **미구현**
+- [x] Task 11.4: VOC 작성 화면 → `screens/FeedbackScreen.tsx`
 
-### Week 12: 오프라인 & 최적화 (2개 작업)
-- [ ] Task 12.1: WatermelonDB 설정
-- [ ] Task 12.2: FCM 푸시 알림
+### Week 12: 오프라인 & 최적화
+- [x] ~~Task 12.1: WatermelonDB 설정~~ → **React Query + AsyncStorage로 대체**
+- [ ] ~~Task 12.2: FCM 푸시 알림~~ → **미구현**
 
-### 추가 구현 필요 화면 (가이드 생략, 유사 패턴)
+### 추가 구현된 기능 (가이드에 없음)
+- [x] **네트워크 상태 감지** → `utils/useNetworkStatus.ts`
+- [x] **오프라인 배너** → `components/NetworkBanner.tsx`
+- [x] **오프라인 액션 큐** → `utils/offlineStorage.ts`
+- [x] **React Query 영속화** → AsyncStoragePersister
+
+### 미구현 화면 (가이드 예상)
 - [ ] 식단 조회 화면
 - [ ] 사진 갤러리 화면
 - [ ] VOC 목록 화면
+- [ ] 근태 목록 화면
 
-### 통합 테스트
-- [ ] 로그인/로그아웃
-- [ ] GPS 권한 및 위치 추적
-- [ ] 출퇴근 체크인/체크아웃
-- [ ] 카메라 촬영 및 업로드 (기기 저장 안 함)
-- [ ] VOC 작성 및 별점
-- [ ] 오프라인 모드 동작
-- [ ] FCM 푸시 알림
+### 통합 테스트 (실제 완료 항목)
+- [x] 로그인/로그아웃
+- [x] GPS 권한 및 위치 추적
+- [x] 출퇴근 체크인/체크아웃
+- [ ] ~~카메라 촬영 및 업로드~~ → **미구현**
+- [x] VOC 작성 및 별점
+- [x] 오프라인 캐싱 (React Query)
+- [ ] ~~FCM 푸시 알림~~ → **미구현**
 
 ---
 
@@ -1173,6 +1181,199 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
 다음 단계:
 - Phase 6 (배포 및 테스트) 진행
 ```
+
+---
+
+## 📊 Phase 5 실제 구현 상태 (2025-10-12 기준)
+
+### ⚠️ 주요 차이점: Expo 기반 간소화 구현
+
+실제 구현은 **React Native CLI 대신 Expo**를 사용하여 훨씬 간소화된 형태로 구현되었습니다.
+
+| 항목 | 가이드 예상 | 실제 구현 | 차이점 |
+|-----|----------|---------|--------|
+| **프레임워크** | React Native CLI | **Expo** | ⚠️ 완전히 다른 접근 |
+| **상태 관리** | Context API | **Zustand** | ⚠️ 더 간단한 상태 관리 |
+| **오프라인 DB** | WatermelonDB | **React Query + AsyncStorage** | ⚠️ 더 간단한 방식 |
+| **GPS** | react-native-geolocation-service | **expo-location** | ✅ Expo 내장 |
+| **카메라** | react-native-vision-camera | **미구현** | ❌ 없음 |
+| **푸시 알림** | FCM | **미구현** | ❌ 없음 |
+| **UI 라이브러리** | React Native Paper | **Native Components** | ⚠️ 직접 스타일링 |
+| **지도** | Kakao Maps | **react-native-maps** | ⚠️ 다른 라이브러리 |
+
+### 📂 실제 파일 구조 (15개 파일)
+
+```
+mobile/
+├── src/
+│   ├── api/                         [4개 파일]
+│   │   ├── attendance.api.ts         ✅ 출퇴근 API
+│   │   ├── auth.api.ts               ✅ 인증 API
+│   │   ├── feedback.api.ts           ✅ VOC API
+│   │   └── site.api.ts               ✅ 사업장 API
+│   │
+│   ├── components/                   [1개 파일]
+│   │   └── NetworkBanner.tsx         ✅ 네트워크 상태 배너
+│   │
+│   ├── navigation/                   [1개 파일]
+│   │   └── AppNavigator.tsx          ✅ 탭 네비게이션
+│   │
+│   ├── screens/                      [4개 파일]
+│   │   ├── AttendanceScreen.tsx      ✅ 출퇴근 화면
+│   │   ├── FeedbackScreen.tsx        ✅ VOC 작성 화면
+│   │   ├── HomeScreen.tsx            ✅ 홈 화면
+│   │   └── LoginScreen.tsx           ✅ 로그인 화면
+│   │
+│   ├── store/                        [1개 파일]
+│   │   └── authStore.ts              ✅ Zustand 인증 스토어
+│   │
+│   ├── types/                        [1개 파일]
+│   │   └── index.ts                  ✅ TypeScript 타입
+│   │
+│   └── utils/                        [3개 파일]
+│       ├── axios.ts                  ✅ Axios 설정
+│       ├── offlineStorage.ts         ✅ 오프라인 저장소
+│       └── useNetworkStatus.ts       ✅ 네트워크 상태 훅
+│
+├── package.json                      ✅ Expo 기반 의존성
+└── app.json                          ✅ Expo 설정
+```
+
+### ✅ 구현 완료 기능
+
+| 기능 분류 | 상세 기능 | 구현 상태 | 참고 |
+|---------|---------|----------|------|
+| **인증** | 로그인/로그아웃 | ✅ 완료 | LoginScreen.tsx, authStore.ts |
+| | JWT 토큰 저장 (AsyncStorage) | ✅ 완료 | authStore.ts |
+| | 자동 로그인 | ✅ 완료 | authStore.ts persist |
+| **홈 화면** | 사용자 정보 표시 | ✅ 완료 | HomeScreen.tsx |
+| | 부문별 정보 표시 | ✅ 완료 | user.division |
+| | 로그아웃 기능 | ✅ 완료 | HomeScreen.tsx |
+| **출퇴근** | GPS 위치 권한 요청 | ✅ 완료 | expo-location |
+| | 출근 체크인 | ✅ 완료 | AttendanceScreen.tsx |
+| | 퇴근 체크아웃 | ✅ 완료 | AttendanceScreen.tsx |
+| | 오늘 출퇴근 기록 조회 | ✅ 완료 | getTodayAttendance |
+| | GPS 좌표 기록 | ✅ 완료 | Location.getCurrentPositionAsync |
+| | 상태별 UI (출근전/출근/퇴근) | ✅ 완료 | status 기반 |
+| **VOC** | VOC 작성 (내용) | ✅ 완료 | FeedbackScreen.tsx |
+| | 별점 선택 (1-5) | ✅ 완료 | Slider 컴포넌트 |
+| | 피드백 타입 구분 | ✅ 완료 | STAFF/CLIENT |
+| | 사업장 선택 | ✅ 완료 | sites 조회 |
+| **네비게이션** | 탭 네비게이션 | ✅ 완료 | Bottom Tabs |
+| | 인증 기반 라우팅 | ✅ 완료 | Stack Navigator |
+| **네트워크** | 네트워크 상태 감지 | ✅ 완료 | useNetworkStatus.ts |
+| | 오프라인 배너 표시 | ✅ 완료 | NetworkBanner.tsx |
+| **오프라인** | 오프라인 액션 저장 | ✅ 완료 | offlineStorage.ts |
+| | React Query 캐싱 | ✅ 완료 | AsyncStoragePersister |
+| **API 통신** | Axios 인터셉터 (JWT) | ✅ 완료 | axios.ts |
+| | 토큰 만료 처리 (401) | ✅ 완료 | 자동 로그아웃 |
+
+### ❌ 미구현 기능 (가이드 대비)
+
+| 기능 분류 | 상세 기능 | 가이드 예상 | 미구현 사유 |
+|---------|---------|-----------|----------|
+| **카메라** | 사진 촬영 화면 | react-native-vision-camera | ❌ 구현 안 됨 |
+| | 사진 직접 업로드 (기기 저장 안 함) | ✅ 예정 | ❌ 카메라 미구현 |
+| **오프라인 DB** | WatermelonDB | 복잡한 오프라인 DB | ❌ React Query로 대체 |
+| | 동기화 로직 | sync.ts | ❌ 간소화 |
+| **푸시 알림** | FCM 설정 | @react-native-firebase | ❌ 구현 안 됨 |
+| | 포그라운드 알림 | ✅ 예정 | ❌ 미구현 |
+| | 백그라운드 알림 | ✅ 예정 | ❌ 미구현 |
+| **추가 화면** | 식단 조회 화면 | MenuListScreen | ❌ 구현 안 됨 |
+| | 사진 갤러리 화면 | PhotoGalleryScreen | ❌ 구현 안 됨 |
+| | VOC 목록 화면 | FeedbackListScreen | ❌ 구현 안 됨 |
+| | 근태 목록 화면 | AttendanceListScreen | ❌ 구현 안 됨 |
+| **지도** | 카카오맵 연동 | Kakao Maps SDK | ❌ react-native-maps 사용 |
+
+### 📦 실제 의존성 (package.json)
+
+**주요 의존성:**
+```json
+{
+  "expo": "~54.0.12",                                    // Expo SDK
+  "react-native": "0.81.4",                             // React Native
+  "@react-navigation/bottom-tabs": "^7.4.8",            // 탭 네비게이션
+  "@react-navigation/native": "^7.1.18",                // 네비게이션
+  "@react-navigation/native-stack": "^7.3.27",          // 스택 네비게이션
+  "@tanstack/react-query": "^5.90.2",                   // 데이터 페칭
+  "@tanstack/react-query-persist-client": "^5.90.2",    // Query 영속화
+  "@react-native-async-storage/async-storage": "^2.2.0", // 로컬 저장소
+  "@react-native-community/netinfo": "11.4.1",          // 네트워크 상태
+  "axios": "^1.12.2",                                   // HTTP 클라이언트
+  "expo-location": "~19.0.7",                           // GPS
+  "react-native-maps": "^1.26.14",                      // 지도
+  "zustand": "^5.0.8"                                   // 상태 관리
+}
+```
+
+### 🔍 가이드 vs 실제 비교
+
+#### 1. 프레임워크 선택의 차이
+
+**가이드**: React Native CLI
+- 네이티브 모듈 완전 제어
+- 복잡한 설정 필요
+- Android/iOS 별도 설정
+
+**실제**: Expo
+- 빠른 개발 속도
+- 간단한 설정
+- 많은 기능이 내장됨
+- 네이티브 모듈 제한적
+
+#### 2. 상태 관리의 차이
+
+**가이드**: Context API
+- React 기본 제공
+- 간단한 전역 상태
+
+**실제**: Zustand
+- 더 간단한 문법
+- 타입스크립트 친화적
+- 퍼시스트 플러그인 내장
+
+#### 3. 오프라인 전략의 차이
+
+**가이드**: WatermelonDB
+- 완전한 로컬 DB
+- 복잡한 동기화
+- SQLite 기반
+
+**실제**: React Query + AsyncStorage
+- 간단한 캐싱
+- 자동 리페칭
+- 오프라인 액션 큐
+
+### 📈 통계
+
+| 항목 | 가이드 예상 | 실제 구현 | 달성률 |
+|-----|----------|---------|--------|
+| **총 파일 수** | ~60개 | 15개 | 25% |
+| **총 라인 수** | ~10,000 | ~1,500 | 15% |
+| **주요 화면** | 10개 이상 | 4개 | 40% |
+| **API 파일** | 5개 | 4개 | 80% |
+| **핵심 기능** | 12개 | 6개 | 50% |
+
+### 🎯 실제 구현의 장점
+
+1. **빠른 개발 속도**: Expo로 설정 간소화
+2. **안정적인 기반**: 검증된 라이브러리 조합
+3. **핵심 기능 집중**: 출퇴근, VOC 등 필수 기능
+4. **유지보수 용이**: 간단한 구조
+
+### ⚠️ 한계점
+
+1. **카메라 기능 없음**: 배식 사진 촬영 불가
+2. **푸시 알림 없음**: 실시간 알림 불가
+3. **오프라인 제한적**: 간단한 캐싱만 지원
+4. **화면 부족**: 목록 조회 등 추가 화면 필요
+
+### 🚀 향후 개선 방향
+
+1. **카메라 추가**: expo-camera 또는 expo-image-picker 사용
+2. **Expo Notifications**: FCM 대신 Expo 푸시 알림 사용
+3. **추가 화면 구현**: 식단, 사진 갤러리, VOC 목록
+4. **네이티브 모듈**: 필요시 Expo Bare Workflow로 전환
 
 ---
 

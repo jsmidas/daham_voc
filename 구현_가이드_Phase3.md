@@ -1,71 +1,91 @@
-# 구현 가이드 - Phase 3: VOC 및 근태 관리 (2-3주)
+# 구현 가이드 - Phase 3: VOC 및 근태 관리 (2-3주) ✅ 핵심 완료
 
+> **✅ 상태**: 핵심 기능 완료 (실제 구현 기준으로 문서 업데이트됨)
 > **⚠️ 필수 선행 작업**: Phase 1, Phase 2 완료 필수
-> **📅 예상 기간**: 2-3주 (Week 5-7)
-> **📊 예상 작업량**: ~25개 파일, ~4,500 라인
+> **📅 실제 소요**: 약 2주 (VOC 및 근태 핵심 기능)
+> **📊 실제 작업량**: ~11개 파일 (feedback 4 + attendance 4 + dashboard 3)
 
 ---
 
 ## 📋 Phase 3 개요
 
 ### 주요 목표
-1. **VOC (Voice of Customer) 시스템** 구축
-2. **별점 평가 시스템** (1-5점)
-3. **GPS 기반 근태 관리** (출퇴근 체크인)
-4. **통계 및 대시보드 API** 구현
-5. **Redis 캐싱** 적용
+1. ✅ **VOC (Voice of Customer) 시스템** 구축
+   - **이미지 첨부 기능 추가됨** (최대 6개, FeedbackImage 모델)
+   - 별점 평가 시스템 (1-5점)
+   - 관리자 답변 기능
+2. ✅ **GPS 기반 근태 관리** (출퇴근 체크인)
+   - AttendanceSetting 별도 모델로 분리
+   - Status Enum으로 상태 관리
+3. 🟡 **통계 및 대시보드 API** (기본 요약만)
+4. ✅ **Redis 캐싱** 적용
+5. ❌ **알림 시스템** (로그만, 미구현)
 
 ### 기술 스택
 - **GPS 검증**: Geofencing (Phase 1 재사용)
 - **캐싱**: Redis (통계 데이터)
-- **알림**: 기본 로직 구현 (FCM은 Phase 5에서)
-- **통계**: 집계 쿼리 최적화
+- **이미지 저장**: GCP Storage (Phase 2 재사용)
+- **알림**: 기본 로직만 (FCM은 Phase 5)
+- **통계**: 집계 쿼리 (기본 요약만)
+
+### ⚠️ 가이드와 다른 주요 변경사항
+1. **CustomerFeedback**: 이미지 첨부 기능 추가 (FeedbackImage 모델)
+2. **Attendance**: Status Enum으로 통합 (Boolean 필드 제거)
+3. **AttendanceSetting**: 별도 모델로 분리
+4. **파일명**: customer-feedback → feedback로 간소화
+5. **Dashboard**: 기본 요약 통계만 구현 (상세 통계 미구현)
 
 ---
 
 ## 🗂️ Phase 3 파일 맵
 
-### 신규 생성 파일 (Week 5-7)
+### 실제 생성된 파일 (Week 5-7)
 
 ```
 backend/
 ├── src/
 │   ├── services/
-│   │   ├── customer-feedback.service.ts  [700-900 라인] VOC CRUD 및 통계
-│   │   ├── attendance.service.ts         [700-900 라인] 근태 CRUD 및 통계
-│   │   └── dashboard.service.ts          [600-800 라인] 대시보드 통계
+│   │   ├── feedback.service.ts  ✅ [실제 구현] VOC CRUD 및 통계
+│   │   ├── attendance.service.ts ✅ [실제 구현] 근태 CRUD 및 통계
+│   │   └── dashboard.service.ts  ✅ [기본만] 대시보드 요약 통계
 │   │
 │   ├── controllers/
-│   │   ├── customer-feedback.controller.ts [400-500 라인] VOC API
-│   │   ├── attendance.controller.ts        [400-500 라인] 근태 API
-│   │   └── dashboard.controller.ts         [300-400 라인] 대시보드 API
+│   │   ├── feedback.controller.ts ✅ [실제 구현] VOC API
+│   │   ├── attendance.controller.ts ✅ [실제 구현] 근태 API
+│   │   └── dashboard.controller.ts  ✅ [기본만] 대시보드 API
 │   │
 │   ├── routes/
-│   │   ├── customer-feedback.routes.ts  [100-150 라인] VOC 라우팅
-│   │   ├── attendance.routes.ts         [100-150 라인] 근태 라우팅
-│   │   └── dashboard.routes.ts          [80-100 라인] 대시보드 라우팅
+│   │   ├── feedback.routes.ts ✅ [실제 구현] VOC 라우팅
+│   │   ├── attendance.routes.ts ✅ [실제 구현] 근태 라우팅
+│   │   └── dashboard.routes.ts  ✅ [기본만] 대시보드 라우팅
 │   │
 │   ├── validators/
-│   │   ├── customer-feedback.validator.ts [150-200 라인] VOC 검증
-│   │   └── attendance.validator.ts        [150-200 라인] 근태 검증
+│   │   ├── feedback.validator.ts ✅ [실제 구현] VOC 검증
+│   │   └── attendance.validator.ts ✅ [실제 구현] 근태 검증
 │   │
 │   ├── utils/
-│   │   ├── notification.util.ts  [200-300 라인] 알림 로직 (기본)
-│   │   └── statistics.util.ts    [300-400 라인] 통계 계산 헬퍼
+│   │   ├── notification.util.ts  ❌ [미생성] 알림 로직 (Phase 5 예정)
+│   │   └── statistics.util.ts    ❌ [미생성] Service에 inline 처리
 │   │
 │   └── types/
-│       ├── customer-feedback.types.ts  [100-150 라인] VOC 타입
-│       ├── attendance.types.ts         [100-150 라인] 근태 타입
-│       └── dashboard.types.ts          [100-150 라인] 대시보드 타입
+│       ├── feedback.types.ts  ❌ [미생성] Service에 inline 정의
+│       ├── attendance.types.ts ❌ [미생성] Service에 inline 정의
+│       └── dashboard.types.ts  ❌ [미생성] Service에 inline 정의
 │
 ├── prisma/
-│   └── schema.prisma  [기존 파일 확장] CustomerFeedback, Attendance 모델 추가
+│   └── schema.prisma  ✅ [실제 구현]
+│       - CustomerFeedback, FeedbackImage 모델
+│       - Attendance, AttendanceSetting 모델
 ```
 
+### 파일명 변경 사항
+- ❌ `customer-feedback.*` → ✅ `feedback.*` (간소화)
+
 ### 기존 파일 활용
-- `utils/geofencing.util.ts` - GPS 검증 (Phase 1)
-- `config/redis.ts` - Redis 연결 (Phase 1)
-- `utils/api-response.util.ts` - API 응답 (Phase 1)
+- ✅ `utils/geofencing.util.ts` - GPS 검증 (Phase 1)
+- ✅ `config/redis.ts` - Redis 연결 (Phase 1)
+- ✅ `utils/api-response.util.ts` - API 응답 (Phase 1)
+- ✅ `services/storage.service.ts` - 이미지 업로드 (Phase 2)
 
 ---
 
@@ -2368,30 +2388,41 @@ export function formatNotificationMessage(type: string, data: Record<string, any
 ## ✅ Phase 3 완료 체크리스트
 
 ### Week 5: VOC 시스템 (4개 작업)
-- [ ] Task 5.1: Prisma 스키마 확장 (CustomerFeedback 모델)
-- [ ] Task 5.2: CustomerFeedback Service
-- [ ] Task 5.3: CustomerFeedback Controller
-- [ ] Task 5.4: CustomerFeedback Routes
+- [x] Task 5.1: Prisma 스키마 확장 (CustomerFeedback + **FeedbackImage**) ✅
+- [x] Task 5.2: Feedback Service (**이미지 업로드 포함**) ✅
+- [x] Task 5.3: Feedback Controller ✅
+- [x] Task 5.4: Feedback Routes & Validator ✅
+- [ ] ~~Task 5.5: 담당자 평균 별점 자동 계산~~ ⚠️ 미구현
+- [ ] ~~Task 5.6: 미처리 VOC 알림~~ ⚠️ 미구현
 
-### Week 6: 근태 관리 (3개 작업)
-- [ ] Task 6.1: Prisma 스키마 확장 (Attendance 모델)
-- [ ] Task 6.2: Attendance Service
-- [ ] Task 6.3: Attendance Controller & Routes
+### Week 6: 근태 관리 (4개 작업)
+- [x] Task 6.1: Prisma 스키마 확장 (Attendance + **AttendanceSetting**) ✅
+- [x] Task 6.2: Attendance Service ✅
+- [x] Task 6.3: Attendance Controller & Routes & Validator ✅
+- [x] Task 6.4: **AttendanceSetting CRUD** (추가 구현) ✅
+- [ ] ~~Task 6.5: 비정상 출근 알림~~ ⚠️ 미구현
+- [ ] ~~Task 6.6: 근태 수정 (관리자)~~ ⚠️ 미구현
 
 ### Week 7: 통계 및 대시보드 (3개 작업)
-- [ ] Task 7.1: Dashboard Service
-- [ ] Task 7.2: Dashboard Controller & Routes
-- [ ] Task 7.3: Notification Utility
+- [x] Task 7.1: Dashboard Service (**기본 요약만**) ✅
+- [x] Task 7.2: Dashboard Controller & Routes ✅
+- [ ] ~~Task 7.3: Notification Utility~~ ❌ 미구현 (Phase 5 예정)
+- [ ] ~~Task 7.4: 사업장별 상세 통계~~ ❌ 미구현
+- [ ] ~~Task 7.5: 담당자별 성과 통계~~ ❌ 미구현
+- [ ] ~~Task 7.6: 부문별 비교 통계~~ ❌ 미구현
+- [ ] ~~Task 7.7: 일별 트렌드 데이터~~ ❌ 미구현
 
 ### 통합 테스트
-- [ ] VOC 생성 및 답변 테스트
-- [ ] 별점 시스템 작동 확인
-- [ ] 담당자 평균 별점 자동 계산 확인
-- [ ] 출퇴근 체크인/체크아웃 테스트
-- [ ] GPS 검증 (Geofencing) 테스트
-- [ ] 지각/조퇴 판단 로직 확인
-- [ ] 대시보드 통계 정확성 검증
-- [ ] Redis 캐싱 동작 확인
+- [x] VOC 생성 및 답변 테스트 ✅
+- [x] **VOC 이미지 첨부 테스트** (최대 6개) ✅
+- [x] 별점 시스템 작동 확인 ✅
+- [ ] ~~담당자 평균 별점 자동 계산 확인~~ ⚠️ 미구현
+- [x] 출퇴근 체크인/체크아웃 테스트 ✅
+- [x] GPS 검증 (Geofencing) 테스트 ✅
+- [x] **Status Enum 기반 상태 관리** ✅
+- [x] **AttendanceSetting 관리** ✅
+- [x] 대시보드 기본 통계 확인 ✅
+- [x] Redis 캐싱 동작 확인 ✅
 
 ---
 
@@ -2443,3 +2474,227 @@ export function formatNotificationMessage(type: string, data: Record<string, any
 - Week 9: 관리자 웹 핵심 기능
 
 **파일**: `구현_가이드_Phase4.md` 참조
+
+---
+
+## 📊 Phase 3 실제 구현 상태 (2025-10-12 기준)
+
+### ✅ 완료된 기능
+
+| 기능 분류 | 상세 기능 | 구현 상태 | 참고 |
+|---------|---------|----------|------|
+| **VOC 시스템** | 기본 CRUD | ✅ 완료 | feedback.service.ts |
+| | **이미지 첨부** (최대 6개) | ✅ 완료 | **FeedbackImage 모델** (가이드에 없음) |
+| | 별점 시스템 (1-5점) | ✅ 완료 | - |
+| | 관리자 답변 | ✅ 완료 | replyToFeedback |
+| | 상태 관리 | ✅ 완료 | PENDING/IN_PROGRESS/RESOLVED/**CLOSED** |
+| | 통계 조회 | ✅ 완료 | getFeedbackStatistics |
+| | 담당자 평균 별점 | ⚠️ 미구현 | updateStaffAverageRating 함수 없음 |
+| | 미처리 VOC 알림 | ⚠️ 미구현 | notifyPendingFeedbacks 함수 없음 |
+| **근태 관리** | 체크인/체크아웃 | ✅ 완료 | checkIn, checkOut |
+| | GPS 검증 (100m) | ✅ 완료 | Geofencing 사용 |
+| | **Status Enum 관리** | ✅ 완료 | **NORMAL/LATE/EARLY_LEAVE/OUTSIDE_RANGE** |
+| | **AttendanceSetting** | ✅ 완료 | **별도 모델** (가이드와 다름) |
+| | 근태 통계 | ✅ 완료 | getAttendanceStatistics |
+| | 사업장별 근태 통계 | ✅ 완료 | getSiteAttendanceStatistics |
+| | 비정상 출근 조회 | ⚠️ 미구현 | getAbnormalAttendances 함수 없음 |
+| | 근태 수정 (관리자) | ⚠️ 미구현 | updateAttendance 함수 없음 |
+| **대시보드** | 기본 요약 통계 | ✅ 완료 | getDashboardSummary (간소화됨) |
+| | 사업장별 상세 통계 | ❌ 미구현 | getSiteDetailStats 함수 없음 |
+| | 담당자별 성과 통계 | ❌ 미구현 | getStaffPerformance 함수 없음 |
+| | 부문별 비교 통계 | ❌ 미구현 | getDivisionComparison 함수 없음 |
+| | 일별 트렌드 데이터 | ❌ 미구현 | getDailyTrends 함수 없음 |
+| **알림 시스템** | 기본 로직 | ❌ 미구현 | notification.util.ts 파일 없음 (Phase 5) |
+| **캐싱** | Redis 캐싱 | ✅ 완료 | 통계 데이터 10-15분 |
+
+### ⚠️ 가이드와 다른 부분
+
+#### 1. CustomerFeedback 모델 차이
+
+| 항목 | 가이드 명세 | 실제 구현 | 영향도 |
+|------|-----------|----------|--------|
+| 작성자 타입 필드 | `feedbackType: FeedbackType` | `authorType: FeedbackAuthorType` | 🟡 중간 |
+| Enum 값 | `CUSTOMER` | `CLIENT` | 🔴 높음 |
+| 작성자 필드 | `createdBy` | `authorId` | 🟡 중간 |
+| 답변자 필드 | `respondedBy`, `respondedAt` | `repliedBy`, `repliedAt` | 🟡 중간 |
+| 답변 내용 | `response` | `adminReply` | 🟡 중간 |
+| 상태 Enum | PENDING, IN_PROGRESS, RESOLVED | + **CLOSED** 추가 | 🟡 중간 |
+| **이미지 첨부** | ❌ 없음 | ✅ **FeedbackImage 모델** (1:N) | 🔴 높음 |
+| 완료 일시 | `resolvedAt` | ❌ 없음 (repliedAt 사용) | 🟢 낮음 |
+
+**실제 구현 스키마:**
+```prisma
+model CustomerFeedback {
+  id           String    @id @default(uuid())
+  siteId       String
+  authorId     String    // createdBy → authorId
+  authorType   FeedbackAuthorType @default(STAFF)  // feedbackType → authorType
+  content      String    @db.Text
+  rating       Int?      // 1-5
+  status       FeedbackStatus @default(PENDING)
+  adminReply   String?   @db.Text  // response → adminReply
+  repliedBy    String?   // respondedBy → repliedBy
+  repliedAt    DateTime? // respondedAt → repliedAt
+
+  // 이미지 (가이드에 없음)
+  images       FeedbackImage[]  // 최대 6개
+}
+
+model FeedbackImage {
+  id           String @id @default(uuid())
+  feedbackId   String
+  imageUrl     String
+  thumbnailUrl String?
+  sortOrder    Int @default(0)  // 0-5
+}
+
+enum FeedbackAuthorType {
+  STAFF
+  CLIENT  // CUSTOMER → CLIENT
+}
+
+enum FeedbackStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED  // 추가됨
+}
+```
+
+#### 2. Attendance 모델 차이
+
+| 항목 | 가이드 명세 | 실제 구현 | 영향도 |
+|------|-----------|----------|--------|
+| 날짜 필드 | `date: DateTime` (별도) | ❌ 없음 (checkInTime 사용) | 🟡 중간 |
+| 예상 출근/퇴근 | Attendance에 포함 | ❌ AttendanceSetting으로 분리 | 🔴 높음 |
+| 지각/조퇴 | `isLate`, `isEarlyLeave` (Boolean) | ❌ 없음 (status로 통합) | 🔴 높음 |
+| GPS 검증 | `checkInValid`, `checkOutValid` | ❌ 없음 (status로 통합) | 🔴 높음 |
+| **상태** | ❌ 없음 | ✅ **status: AttendanceStatus** | 🔴 높음 |
+| **설정 관리** | Site에 workStartTime/workEndTime | ✅ **AttendanceSetting 모델** | 🔴 높음 |
+
+**실제 구현 스키마:**
+```prisma
+model Attendance {
+  id           String @id @default(uuid())
+  userId       String
+  siteId       String
+  // date 필드 없음! checkInTime으로 날짜 판단
+
+  checkInTime  DateTime
+  checkInLat   Float?
+  checkInLng   Float?
+  // checkInValid 없음!
+
+  checkOutTime DateTime?
+  checkOutLat  Float?
+  checkOutLng  Float?
+  // checkOutValid 없음!
+
+  status AttendanceStatus @default(NORMAL)  // 상태로 통합!
+  note   String?
+}
+
+enum AttendanceStatus {
+  NORMAL        // 정상
+  LATE          // 지각 (isLate → LATE)
+  EARLY_LEAVE   // 조퇴 (isEarlyLeave → EARLY_LEAVE)
+  OUTSIDE_RANGE // 사업장 외부 (checkInValid=false → OUTSIDE_RANGE)
+}
+
+// 별도 모델로 분리됨 (가이드: Site 모델에 포함)
+model AttendanceSetting {
+  id               String @id @default(uuid())
+  siteId           String
+  expectedCheckIn  String  // HH:mm (DateTime → String)
+  expectedCheckOut String
+  allowedRadius    Int @default(100)
+  isActive         Boolean @default(true)
+}
+```
+
+#### 3. Dashboard Service 차이
+
+| 기능 | 가이드 | 실제 구현 | 영향도 |
+|------|-------|----------|--------|
+| 기본 요약 통계 | ✅ getDashboardSummary | ✅ 구현 (단순화) | 🟡 중간 |
+| 사업장별 상세 | ✅ getSiteDetailStats | ❌ 미구현 | 🔴 높음 |
+| 담당자별 성과 | ✅ getStaffPerformance | ❌ 미구현 | 🔴 높음 |
+| 부문별 비교 | ✅ getDivisionComparison | ❌ 미구현 | 🔴 높음 |
+| 일별 트렌드 | ✅ getDailyTrends | ❌ 미구현 | 🔴 높음 |
+
+**실제 DashboardSummary (단순화됨):**
+```typescript
+export interface DashboardSummary {
+  totalSites: number;
+  totalFeedbacks: number;
+  pendingFeedbacks: number;
+  resolvedFeedbacks: number;
+  avgRating: number;
+  totalAttendances: number;
+  normalAttendances: number;
+  lateAttendances: number;
+  // 상세 분석, 트렌드 등은 미구현
+}
+```
+
+#### 4. 파일명 및 API 엔드포인트 변경
+
+| 구분 | 가이드 | 실제 구현 | 영향도 |
+|------|-------|----------|--------|
+| 파일명 | `customer-feedback.*` | `feedback.*` | 🟡 중간 |
+| API 답변 | `PATCH /api/feedbacks/:id/respond` | `/api/v1/feedbacks/:id/reply` | 🟡 중간 |
+| API 상태 | `PATCH /api/feedbacks/:id` | `/api/v1/feedbacks/:id/status` | 🟡 중간 |
+
+### 📁 생성된 파일 목록
+
+**Backend (11개 파일)**:
+```
+backend/src/
+├── services/
+│   ├── feedback.service.ts (VOC + 이미지) ✅
+│   ├── attendance.service.ts ✅
+│   └── dashboard.service.ts (기본만) ✅
+├── controllers/
+│   ├── feedback.controller.ts ✅
+│   ├── attendance.controller.ts ✅
+│   └── dashboard.controller.ts ✅
+├── routes/
+│   ├── feedback.routes.ts ✅
+│   ├── attendance.routes.ts ✅
+│   └── dashboard.routes.ts ✅
+└── validators/
+    ├── feedback.validator.ts ✅
+    └── attendance.validator.ts ✅
+
+backend/prisma/
+└── schema.prisma (CustomerFeedback, FeedbackImage, Attendance, AttendanceSetting) ✅
+```
+
+**미생성 파일 (가이드에는 있으나 실제로는 없음)**:
+- `utils/notification.util.ts` (Phase 5 예정)
+- `utils/statistics.util.ts` (Service에 inline)
+- `types/feedback.types.ts` (Service에 inline)
+- `types/attendance.types.ts` (Service에 inline)
+- `types/dashboard.types.ts` (Service에 inline)
+
+### 💡 주요 설계 결정 사항
+
+1. **VOC 이미지 첨부**: 증빙 자료 필요성으로 FeedbackImage 모델 추가 (가이드에 없음)
+2. **Attendance Status Enum**: Boolean 필드 대신 단일 상태로 통합 (쿼리 최적화)
+3. **AttendanceSetting 분리**: 사업장별 다양한 설정 지원, 이력 관리 가능
+4. **파일명 간소화**: customer-feedback → feedback (명확성)
+5. **Dashboard 단순화**: 핵심 통계만 구현, 상세 분석은 추후 확장
+6. **알림 시스템 연기**: FCM 연동은 Phase 5로 연기
+
+### 📝 참고 문서
+
+- **Phase3_실제구현_vs_가이드_차이점.md**: 상세한 차이점 분석 문서
+- **backend/prisma/schema.prisma**: 실제 데이터 모델 정의
+- **backend/src/services/\*.service.ts**: 실제 비즈니스 로직 구현
+
+### 🎯 다음 작업
+
+Phase 4 (웹 프론트엔드) 진행 전에:
+1. ✅ Phase 3 가이드를 실제 구현에 맞춰 업데이트 완료
+2. ✅ 구현_가이드_목차.md 업데이트 필요
+3. ⏭️ Phase 4, 5, 6 가이드도 실제 구현 기준으로 검토 필요
