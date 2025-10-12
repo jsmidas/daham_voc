@@ -305,19 +305,21 @@ enum PhotoType {
 // ===== VOC Management =====
 
 model CustomerFeedback {
-  id         String             @id @default(uuid())
-  siteId     String
-  authorId   String
-  authorType FeedbackAuthorType
-  content    String             @db.Text
-  rating     Int?               @default(0) // 1-5점
-  status     FeedbackStatus     @default(PENDING)
-  adminReply String?            @db.Text
-  repliedAt  DateTime?
-  repliedBy  String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  deletedAt  DateTime?
+  id           String             @id @default(uuid())
+  siteId       String
+  authorId     String
+  authorType   FeedbackAuthorType
+  content      String             @db.Text
+  rating       Int?               @default(0) // 1-5점
+  feedbackDate DateTime           @default(now()) @db.Date // VOC 발생 날짜
+  mealType     MealType?          // 끼니 (아침/점심/저녁)
+  status       FeedbackStatus     @default(PENDING)
+  adminReply   String?            @db.Text
+  repliedAt    DateTime?
+  repliedBy    String?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  deletedAt    DateTime?
 
   // Relations
   site   Site            @relation(fields: [siteId], references: [id], onDelete: Cascade)
@@ -328,6 +330,7 @@ model CustomerFeedback {
   @@index([authorId])
   @@index([status])
   @@index([createdAt])
+  @@index([feedbackDate])
 }
 
 // VOC 첨부 이미지 (최대 6개)
@@ -362,20 +365,22 @@ enum FeedbackStatus {
 // ===== Attendance Management =====
 
 model Attendance {
-  id           String           @id @default(uuid())
-  userId       String
-  siteId       String
-  checkInTime  DateTime
-  checkInLat   Float?
-  checkInLng   Float?
-  checkOutTime DateTime?
-  checkOutLat  Float?
-  checkOutLng  Float?
-  status       AttendanceStatus @default(NORMAL)
-  note         String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-  deletedAt    DateTime?
+  id             String           @id @default(uuid())
+  userId         String
+  siteId         String
+  checkInTime    DateTime
+  checkInLat     Float?
+  checkInLng     Float?
+  checkOutTime   DateTime?
+  checkOutLat    Float?
+  checkOutLng    Float?
+  breakStartTime DateTime? // 휴게 시작 시간
+  breakEndTime   DateTime? // 휴게 종료 시간
+  status         AttendanceStatus @default(NORMAL)
+  note           String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

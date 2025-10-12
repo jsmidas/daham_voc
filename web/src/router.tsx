@@ -26,6 +26,8 @@ import StaffListPage from '@/pages/staff/StaffListPage';
 import StaffFormPage from '@/pages/staff/StaffFormPage';
 import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
 import StatsPage from '@/pages/stats/StatsPage';
+import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
+import MealCountListPage from '@/pages/meal-count/MealCountListPage';
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -119,6 +121,14 @@ export const router = createBrowserRouter([
       {
         path: 'stats',
         element: <StatsPage />,
+      },
+      {
+        path: 'meal-count-settings',
+        element: <MealCountSettingPage />,
+      },
+      {
+        path: 'meal-counts',
+        element: <MealCountListPage />,
       },
     ],
   },

@@ -3,6 +3,7 @@
  * @description 출퇴근 관리 CRUD 및 비즈니스 로직
  */
 
+
 import { prisma } from '../config/database';
 import { cache } from '../config/redis';
 import { AttendanceStatus } from '@prisma/client';
@@ -88,7 +89,7 @@ export async function checkIn(dto: CheckInDto, userId: string): Promise<any> {
     where: { siteId: dto.siteId, isActive: true },
   });
 
-  const allowedRadius = setting?.allowedRadius || 100;
+  const allowedRadius = setting?.allowedRadius || 30;
   const isWithinRange = checkGeofencing(userCoord, siteCoord, allowedRadius);
 
   // 상태 판단
@@ -180,7 +181,7 @@ export async function checkOut(
     where: { siteId: attendance.siteId, isActive: true },
   });
 
-  const allowedRadius = setting?.allowedRadius || 100;
+  const allowedRadius = setting?.allowedRadius || 30;
   const isWithinRange = checkGeofencing(userCoord, siteCoord, allowedRadius);
 
   let status = attendance.status;
@@ -364,7 +365,7 @@ export async function upsertAttendanceSetting(
       data: {
         expectedCheckIn: dto.expectedCheckIn,
         expectedCheckOut: dto.expectedCheckOut,
-        allowedRadius: dto.allowedRadius || 100,
+        allowedRadius: dto.allowedRadius || 30,
       },
       include: {
         site: {
@@ -379,7 +380,7 @@ export async function upsertAttendanceSetting(
         siteId: dto.siteId,
         expectedCheckIn: dto.expectedCheckIn,
         expectedCheckOut: dto.expectedCheckOut,
-        allowedRadius: dto.allowedRadius || 100,
+        allowedRadius: dto.allowedRadius || 30,
       },
       include: {
         site: {
@@ -485,4 +486,177 @@ export async function getUserAttendances(
     },
     orderBy: { checkInTime: 'desc' },
   });
+}
+
+/**
+ * 사용자 조회 (siteId 포함)
+ */
+export async function getUserById(userId: string): Promise<{ id: string; name: string; siteId?: string } | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: {
+      staff: {
+        include: {
+          staffSites: {
+            where: {
+              removedAt: null,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!user) return null;
+
+  // 주 담당 사업장 또는 첫 번째 사업장의 siteId 추출
+  const primarySite = user.staff?.staffSites.find((ss) => ss.isPrimary);
+  const siteId = primarySite?.siteId || user.staff?.staffSites[0]?.siteId;
+
+  return {
+    id: user.id,
+    name: user.name,
+    siteId,
+  };
+}
+
+/**
+ * 첫 번째 활성 사업장 조회
+ */
+export async function getFirstActiveSite(): Promise<{ id: string } | null> {
+  return prisma.site.findFirst({
+    where: {
+      isActive: true,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+}
+
+/**
+ * 출퇴근 테이블 조회 (사업장명, 성명, 평일/주말, 출근/퇴근 시간, 휴게시간)
+ */
+export async function getAttendanceTable(filter: AttendanceFilter): Promise<any[]> {
+  const where: any = {
+    deletedAt: null,
+  };
+
+  if (filter.siteId) {
+    where.siteId = filter.siteId;
+  }
+
+  if (filter.siteIds && filter.siteIds.length > 0) {
+    where.siteId = { in: filter.siteIds };
+  }
+
+  if (filter.userId) {
+    where.userId = filter.userId;
+  }
+
+  if (filter.status) {
+    where.status = filter.status;
+  }
+
+  if (filter.dateFrom || filter.dateTo) {
+    where.checkInTime = {};
+    if (filter.dateFrom) where.checkInTime.gte = filter.dateFrom;
+    if (filter.dateTo) where.checkInTime.lte = filter.dateTo;
+  }
+
+  const attendances = await prisma.attendance.findMany({
+    where,
+    include: {
+      user: {
+        select: { id: true, name: true },
+      },
+      site: {
+        select: { id: true, name: true },
+      },
+    },
+    orderBy: [{ checkInTime: 'desc' }],
+  });
+
+  // 테이블 형식으로 데이터 포맷팅
+  return attendances.map((att) => {
+    const checkInDate = new Date(att.checkInTime);
+    const dayOfWeek = checkInDate.getDay(); // 0 (일요일) ~ 6 (토요일)
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    // 시간 포맷: HH:MM:SS
+    const formatTime = (date: Date | null | undefined): string => {
+      if (!date) return '-';
+      const d = new Date(date);
+      const hours = String(d.getHours()).padStart(2, '0');
+      const minutes = String(d.getMinutes()).padStart(2, '0');
+      const seconds = String(d.getSeconds()).padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    };
+
+    // 휴게시간 계산 (분 단위)
+    let breakDuration = 0;
+    if (att.breakStartTime && att.breakEndTime) {
+      const start = new Date(att.breakStartTime);
+      const end = new Date(att.breakEndTime);
+      breakDuration = Math.floor((end.getTime() - start.getTime()) / 1000 / 60); // 분 단위
+    }
+
+    return {
+      id: att.id,
+      siteName: att.site.name,
+      userName: att.user.name,
+      dayType: isWeekend ? '주말' : '평일',
+      checkInTime: formatTime(att.checkInTime),
+      checkOutTime: formatTime(att.checkOutTime),
+      breakDuration: breakDuration > 0 ? `${breakDuration}분` : '-',
+      status: att.status,
+      date: checkInDate.toISOString().split('T')[0], // YYYY-MM-DD
+    };
+  });
+}
+
+/**
+ * 출퇴근 정보 수정 (휴게시간 등)
+ */
+export async function updateAttendance(
+  id: string,
+  data: {
+    breakStartTime?: Date | null;
+    breakEndTime?: Date | null;
+    note?: string;
+  }
+): Promise<any> {
+  const attendance = await prisma.attendance.findUnique({
+    where: { id },
+  });
+
+  if (!attendance || attendance.deletedAt) {
+    throw new Error('Attendance not found');
+  }
+
+  const updated = await prisma.attendance.update({
+    where: { id },
+    data: {
+      breakStartTime: data.breakStartTime,
+      breakEndTime: data.breakEndTime,
+      note: data.note,
+    },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, role: true },
+      },
+      site: {
+        select: { id: true, name: true, type: true },
+      },
+    },
+  });
+
+  // 캐시 무효화
+  await invalidateAttendanceCache(attendance.siteId);
+
+  return updated;
 }

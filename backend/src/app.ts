@@ -16,7 +16,9 @@ app.use(
 
 // CORS middleware
 app.use(cors({
-  origin: env.CORS_ORIGIN,
+  origin: env.NODE_ENV === 'development'
+    ? true  // 개발 환경에서는 모든 origin 허용
+    : env.CORS_ORIGIN.split(',').map(origin => origin.trim()),
   credentials: true,
 }));
 
@@ -79,3 +81,4 @@ app.use((err: any, _req: Request, res: Response, _next: any) => {
 });
 
 export default app;
+ 

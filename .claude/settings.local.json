@@ -48,7 +48,9 @@
       "Bash(tasklist)",
       "Bash(npm run kill-port:*)",
       "mcp__ide__getDiagnostics",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npm start)",
+      "Bash(start http://localhost:8081)"
     ],
     "deny": [],
     "ask": []

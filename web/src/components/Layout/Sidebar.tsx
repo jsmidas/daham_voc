@@ -15,6 +15,7 @@ import {
   BarChartOutlined,
   EnvironmentOutlined,
   AppstoreOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -57,6 +58,16 @@ export default function Sidebar() {
       label: <span>주간 식단표</span>,
     },
     {
+      key: '/meal-counts',
+      icon: <UserOutlined />,
+      label: <span>식수 조회/수정</span>,
+    },
+    {
+      key: '/meal-count-settings',
+      icon: <ClockCircleOutlined />,
+      label: <span>식수 마감시간</span>,
+    },
+    {
       key: '/meal-photos',
       icon: <CameraOutlined />,
       label: <span>배식사진 관리</span>,
@@ -94,6 +105,8 @@ export default function Sidebar() {
     if (path.startsWith('/sites')) return '/sites';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
+    if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';
+    if (path.startsWith('/meal-counts')) return '/meal-counts';
     if (path.startsWith('/meal-photos')) return '/meal-photos';
     return path;
   };

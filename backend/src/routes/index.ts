@@ -10,6 +10,7 @@ import feedbackRoutes from './feedback.routes';
 import staffRoutes from './staff.routes';
 import attendanceRoutes from './attendance.routes';
 import dashboardRoutes from './dashboard.routes';
+import mealCountRoutes from './meal-count.routes';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.get('/', (_req, res) => {
       feedbacks: '/feedbacks',
       staff: '/staff',
       attendances: '/attendances',
+      mealCounts: '/meal-counts',
     },
   });
 });
@@ -47,6 +49,7 @@ router.use('/meal-photos', mealPhotoRoutes);
 router.use('/feedbacks', feedbackRoutes);
 router.use('/staff', staffRoutes);
 router.use('/attendances', attendanceRoutes);
+router.use('/meal-counts', mealCountRoutes);
 
 // Future routes will be added here:
 // router.use('/stats', statsRoutes);

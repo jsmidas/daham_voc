@@ -23,6 +23,9 @@ router.get(
   attendanceController.getAttendanceStatistics
 );
 
+// GET /api/v1/attendances/table - 출퇴근 테이블 조회 (All authenticated users)
+router.get('/table', authMiddleware, attendanceController.getAttendanceTable);
+
 // GET /api/v1/attendances/today - 오늘의 출퇴근 기록 조회 (All authenticated users)
 router.get('/today', authMiddleware, attendanceController.getTodayAttendance);
 
@@ -69,6 +72,14 @@ router.post(
   roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
   validateRequest(attendanceSettingSchema),
   attendanceController.upsertAttendanceSetting
+);
+
+// PUT /api/v1/attendances/:id - 출퇴근 정보 수정 (휴게시간 등) (Admin only)
+router.put(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  attendanceController.updateAttendance
 );
 
 export default router;

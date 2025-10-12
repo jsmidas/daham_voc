@@ -13,6 +13,8 @@ export interface CreateFeedbackDto {
   authorType: FeedbackAuthorType;
   content: string;
   rating?: number;
+  feedbackDate?: Date;  // VOC 발생 날짜
+  mealType?: string;  // BREAKFAST, LUNCH, DINNER
   imageFiles?: Express.Multer.File[];  // 최대 6개
 }
 
@@ -85,6 +87,8 @@ export async function createFeedback(
         authorType: dto.authorType,
         content: dto.content,
         rating: dto.rating,
+        feedbackDate: dto.feedbackDate || new Date(),
+        mealType: dto.mealType as any,
         status: 'PENDING',
       },
       include: {

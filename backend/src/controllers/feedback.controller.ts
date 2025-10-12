@@ -15,7 +15,7 @@ import { FeedbackAuthorType, FeedbackStatus } from '@prisma/client';
  */
 export async function createFeedback(req: Request, res: Response): Promise<void> {
   try {
-    const { siteId, authorType, content, rating } = req.body;
+    const { siteId, authorType, content, rating, feedbackDate, mealType } = req.body;
     const userId = req.user!.userId;
 
     // 업로드된 파일들 (multer가 req.files에 저장)
@@ -27,6 +27,8 @@ export async function createFeedback(req: Request, res: Response): Promise<void>
         authorType: authorType as FeedbackAuthorType,
         content,
         rating: rating ? parseInt(rating) : undefined,
+        feedbackDate: feedbackDate ? new Date(feedbackDate) : undefined,
+        mealType: mealType || undefined,
         imageFiles: imageFiles || [],
       },
       userId

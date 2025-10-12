@@ -130,3 +130,14 @@ export async function upsertAttendanceSetting(data: {
 }): Promise<any> {
   return apiClient.post('/attendances/settings', data);
 }
+
+/**
+ * 출퇴근 정보 수정 (휴게시간 등)
+ */
+export async function updateAttendance(id: string, data: {
+  breakStartTime?: string;
+  breakEndTime?: string;
+  note?: string;
+}): Promise<any> {
+  return apiClient.put(`/attendances/${id}`, data);
+}

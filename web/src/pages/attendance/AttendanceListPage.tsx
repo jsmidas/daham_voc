@@ -15,28 +15,41 @@ import {
   Row,
   Col,
   Spin,
+  Button,
+  Modal,
+  Form,
+  TimePicker,
+  Input,
+  message,
 } from 'antd';
 import {
   ClockCircleOutlined,
   CheckCircleOutlined,
   WarningOutlined,
   CloseCircleOutlined,
+  EditOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { getAttendances } from '@/api/attendance.api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getAttendances, updateAttendance } from '@/api/attendance.api';
 import { getSites } from '@/api/site.api';
 import dayjs from 'dayjs';
 import type { Dayjs } from 'dayjs';
+import * as XLSX from 'xlsx';
 
 const { RangePicker } = DatePicker;
 
 export default function AttendanceListPage() {
+  const queryClient = useQueryClient();
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(7, 'day'),
     dayjs(),
   ]);
   const [siteFilter, setSiteFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingRecord, setEditingRecord] = useState<any>(null);
+  const [form] = Form.useForm();
 
   // 사업장 목록 조회
   const { data: sites } = useQuery({
@@ -120,6 +133,100 @@ export default function AttendanceListPage() {
     return `${hours.toFixed(1)}시간`;
   };
 
+  // 엑셀 다운로드
+  const handleExcelDownload = () => {
+    if (!attendances?.data || attendances.data.length === 0) {
+      message.warning('다운로드할 데이터가 없습니다');
+      return;
+    }
+
+    const dateStr = `${dateRange[0].format('YYYY-MM-DD')}_${dateRange[1].format('YYYY-MM-DD')}`;
+
+    // 엑셀 데이터 생성
+    const excelData = attendances.data.map((record: any) => ({
+      '직원명': record.user?.name || '-',
+      '사업장': record.site?.name || '-',
+      '체크인': dayjs(record.checkInTime).format('YYYY-MM-DD HH:mm'),
+      '체크아웃': record.checkOutTime ? dayjs(record.checkOutTime).format('YYYY-MM-DD HH:mm') : '근무 중',
+      '휴게시작': record.breakStartTime ? dayjs(record.breakStartTime).format('HH:mm') : '-',
+      '휴게종료': record.breakEndTime ? dayjs(record.breakEndTime).format('HH:mm') : '-',
+      '근무시간': calculateWorkHours(record.checkInTime, record.checkOutTime),
+      '상태': getStatusText(record.status),
+      '비고': record.note || '-',
+    }));
+
+    // 워크북 생성
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, '근태현황');
+
+    // 열 너비 설정
+    worksheet['!cols'] = [
+      { wch: 12 }, // 직원명
+      { wch: 20 }, // 사업장
+      { wch: 18 }, // 체크인
+      { wch: 18 }, // 체크아웃
+      { wch: 10 }, // 휴게시작
+      { wch: 10 }, // 휴게종료
+      { wch: 12 }, // 근무시간
+      { wch: 12 }, // 상태
+      { wch: 30 }, // 비고
+    ];
+
+    // 파일 다운로드
+    XLSX.writeFile(workbook, `근태현황_${dateStr}.xlsx`);
+    message.success('엑셀 파일이 다운로드되었습니다');
+  };
+
+  // 출퇴근 수정 mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      updateAttendance(id, data),
+    onSuccess: () => {
+      message.success('수정되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['attendances'] });
+      setEditModalVisible(false);
+      setEditingRecord(null);
+      form.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.message || '수정에 실패했습니다');
+    },
+  });
+
+  // 수정 버튼 클릭
+  const handleEdit = (record: any) => {
+    setEditingRecord(record);
+    form.setFieldsValue({
+      breakStartTime: record.breakStartTime ? dayjs(record.breakStartTime) : null,
+      breakEndTime: record.breakEndTime ? dayjs(record.breakEndTime) : null,
+      note: record.note || '',
+    });
+    setEditModalVisible(true);
+  };
+
+  // 수정 저장
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+
+      updateMutation.mutate({
+        id: editingRecord.id,
+        data: {
+          breakStartTime: values.breakStartTime
+            ? values.breakStartTime.toISOString()
+            : null,
+          breakEndTime: values.breakEndTime
+            ? values.breakEndTime.toISOString()
+            : null,
+          note: values.note,
+        },
+      });
+    } catch (error) {
+      console.error('Validation failed:', error);
+    }
+  };
+
   const columns = [
     {
       title: '직원명',
@@ -149,6 +256,22 @@ export default function AttendanceListPage() {
         time ? dayjs(time).format('MM-DD HH:mm') : <Tag>근무 중</Tag>,
     },
     {
+      title: '휴게시작',
+      dataIndex: 'breakStartTime',
+      key: 'breakStartTime',
+      width: 120,
+      render: (time?: string) =>
+        time ? dayjs(time).format('HH:mm') : '-',
+    },
+    {
+      title: '휴게종료',
+      dataIndex: 'breakEndTime',
+      key: 'breakEndTime',
+      width: 120,
+      render: (time?: string) =>
+        time ? dayjs(time).format('HH:mm') : '-',
+    },
+    {
       title: '근무시간',
       key: 'workHours',
       width: 100,
@@ -170,6 +293,21 @@ export default function AttendanceListPage() {
       key: 'note',
       ellipsis: true,
       render: (note?: string) => note || '-',
+    },
+    {
+      title: '작업',
+      key: 'action',
+      width: 80,
+      render: (_: any, record: any) => (
+        <Button
+          type="link"
+          icon={<EditOutlined />}
+          onClick={() => handleEdit(record)}
+          size="small"
+        >
+          수정
+        </Button>
+      ),
     },
   ];
 
@@ -261,6 +399,13 @@ export default function AttendanceListPage() {
           <Select.Option value="OUTSIDE_RANGE">범위 밖</Select.Option>
           <Select.Option value="ABSENT">결근</Select.Option>
         </Select>
+        <Button
+          icon={<DownloadOutlined />}
+          onClick={handleExcelDownload}
+          disabled={!attendances?.data || attendances.data.length === 0}
+        >
+          엑셀 다운로드
+        </Button>
       </Space>
 
       {/* 출퇴근 목록 */}
@@ -270,8 +415,55 @@ export default function AttendanceListPage() {
         loading={isLoading}
         rowKey="id"
         pagination={{ pageSize: 20 }}
-        scroll={{ x: 1000 }}
+        scroll={{ x: 1200 }}
       />
+
+      {/* 수정 모달 */}
+      <Modal
+        title="휴게시간 수정"
+        open={editModalVisible}
+        onOk={handleSave}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingRecord(null);
+          form.resetFields();
+        }}
+        confirmLoading={updateMutation.isPending}
+        width={500}
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 20 }}>
+          <Form.Item
+            label="휴게 시작 시간"
+            name="breakStartTime"
+          >
+            <TimePicker
+              format="HH:mm"
+              style={{ width: '100%' }}
+              placeholder="시작 시간 선택"
+              minuteStep={5}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="휴게 종료 시간"
+            name="breakEndTime"
+          >
+            <TimePicker
+              format="HH:mm"
+              style={{ width: '100%' }}
+              placeholder="종료 시간 선택"
+              minuteStep={5}
+            />
+          </Form.Item>
+
+          <Form.Item label="비고" name="note">
+            <Input.TextArea
+              rows={3}
+              placeholder="특이사항을 입력하세요 (선택)"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

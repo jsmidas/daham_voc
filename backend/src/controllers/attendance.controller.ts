@@ -111,12 +111,24 @@ export async function getAttendanceById(req: Request, res: Response): Promise<vo
  */
 export async function getTodayAttendance(req: Request, res: Response): Promise<void> {
   try {
-    const { siteId } = req.query;
     const userId = req.user!.userId;
+    let { siteId } = req.query;
 
+    // siteId가 없으면 사용자의 siteId 사용
     if (!siteId) {
-      res.status(400).json(errorResponse('siteId is required'));
-      return;
+      const user = await attendanceService.getUserById(userId);
+      siteId = user?.siteId;
+
+      // Staff로 등록되지 않은 사용자(관리자 등)의 경우 첫 번째 활성 사업장 사용
+      if (!siteId) {
+        const firstSite = await attendanceService.getFirstActiveSite();
+        siteId = firstSite?.id;
+      }
+
+      if (!siteId) {
+        res.status(400).json(errorResponse('사업장 정보가 없습니다'));
+        return;
+      }
     }
 
     const attendance = await attendanceService.getTodayAttendance(
@@ -222,6 +234,57 @@ export async function getAttendanceSetting(req: Request, res: Response): Promise
     res.json(successResponse(setting));
   } catch (error: any) {
     console.error('Get attendance setting error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 출퇴근 테이블 조회 (사업장명, 성명, 평일/주말, 출근/퇴근 시간, 휴게시간)
+ * GET /api/v1/attendances/table
+ */
+export async function getAttendanceTable(req: Request, res: Response): Promise<void> {
+  try {
+    const { siteId, siteIds, userId, status, dateFrom, dateTo } = req.query;
+
+    const filter: attendanceService.AttendanceFilter = {};
+
+    if (siteId) filter.siteId = siteId as string;
+    if (siteIds) {
+      filter.siteIds = (siteIds as string).split(',');
+    }
+    if (userId) filter.userId = userId as string;
+    if (status) filter.status = status as AttendanceStatus;
+    if (dateFrom) filter.dateFrom = new Date(dateFrom as string);
+    if (dateTo) filter.dateTo = new Date(dateTo as string);
+
+    const tableData = await attendanceService.getAttendanceTable(filter);
+
+    res.json(successResponse(tableData));
+  } catch (error: any) {
+    console.error('Get attendance table error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 출퇴근 정보 수정 (휴게시간 등)
+ * PUT /api/v1/attendances/:id
+ */
+export async function updateAttendance(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { breakStartTime, breakEndTime, note } = req.body;
+
+    const updateData: any = {};
+    if (breakStartTime !== undefined) updateData.breakStartTime = breakStartTime ? new Date(breakStartTime) : null;
+    if (breakEndTime !== undefined) updateData.breakEndTime = breakEndTime ? new Date(breakEndTime) : null;
+    if (note !== undefined) updateData.note = note;
+
+    const attendance = await attendanceService.updateAttendance(id, updateData);
+
+    res.json(successResponse(attendance, '수정되었습니다'));
+  } catch (error: any) {
+    console.error('Update attendance error:', error);
     res.status(400).json(errorResponse(error.message));
   }
 }
