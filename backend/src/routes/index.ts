@@ -13,6 +13,28 @@ import dashboardRoutes from './dashboard.routes';
 
 const router = Router();
 
+// Root API info endpoint
+router.get('/', (_req, res) => {
+  res.json({
+    success: true,
+    message: 'Daham VOC API v1',
+    version: '1.0.0',
+    endpoints: {
+      auth: '/auth',
+      dashboard: '/dashboard',
+      sites: '/sites',
+      siteGroups: '/site-groups',
+      menus: '/menus',
+      menuTypes: '/menu-types',
+      weeklyMenuTemplates: '/weekly-menu-templates',
+      mealPhotos: '/meal-photos',
+      feedbacks: '/feedbacks',
+      staff: '/staff',
+      attendances: '/attendances',
+    },
+  });
+});
+
 // API v1 routes
 router.use('/auth', authRoutes);
 router.use('/dashboard', dashboardRoutes);
