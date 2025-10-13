@@ -50,7 +50,12 @@
       "mcp__ide__getDiagnostics",
       "Bash(find:*)",
       "Bash(npm start)",
-      "Bash(start http://localhost:8081)"
+      "Bash(start http://localhost:8081)",
+      "Bash(node:*)",
+      "Bash(npm:*)",
+      "Bash(git checkout:*)",
+      "Bash(cat:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []
