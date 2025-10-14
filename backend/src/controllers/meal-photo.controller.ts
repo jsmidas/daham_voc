@@ -308,3 +308,45 @@ export async function getPhotoStatistics(req: Request, res: Response): Promise<v
     res.status(400).json(errorResponse(error.message));
   }
 }
+
+/**
+ * 사진 일괄 확인 완료
+ * POST /api/v1/meal-photos/bulk-check
+ */
+export async function bulkCheckMealPhotos(req: Request, res: Response): Promise<void> {
+  try {
+    const { photoIds } = req.body;
+    const userId = req.user!.userId;
+
+    if (!photoIds || !Array.isArray(photoIds) || photoIds.length === 0) {
+      res.status(400).json(errorResponse('photoIds array is required'));
+      return;
+    }
+
+    const result = await mealPhotoService.bulkCheckMealPhotos(photoIds, userId);
+
+    res.json(successResponse(result, `${result.checked}개의 사진이 확인 완료되었습니다.`));
+  } catch (error: any) {
+    console.error('Bulk check meal photos error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 단일 사진 확인 상태 토글
+ * PATCH /api/v1/meal-photos/:id/check-status
+ */
+export async function toggleCheckStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    const photo = await mealPhotoService.toggleCheckStatus(id, userId);
+
+    const message = photo.isChecked ? '확인 완료되었습니다.' : '확인 취소되었습니다.';
+    res.json(successResponse(photo, message));
+  } catch (error: any) {
+    console.error('Toggle check status error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}

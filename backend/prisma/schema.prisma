@@ -282,6 +282,9 @@ model MealPhoto {
   latitude     Float?
   longitude    Float?
   feedback     String?   @db.Text // 관리자 피드백
+  isChecked    Boolean   @default(false) // 확인 완료 여부
+  checkedBy    String? // 확인한 관리자 ID
+  checkedAt    DateTime? // 확인한 시간
   mongoMetaId  String? // MongoDB 메타데이터 ID
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -294,6 +297,7 @@ model MealPhoto {
   @@index([siteId, capturedAt])
   @@index([uploaderId])
   @@index([capturedAt])
+  @@index([isChecked])
 }
 
 enum PhotoType {

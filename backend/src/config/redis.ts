@@ -15,14 +15,23 @@ export function getRedisClient(): RedisClientType | null {
  */
 export async function connectRedis(): Promise<void> {
   try {
-    // Redis is optional for development
-    if (!env.REDIS_URL || env.REDIS_URL === 'redis://localhost:6379') {
-      console.log('⚠️  Redis URL not configured or using default - Caching disabled');
+    // Skip Redis if URL is not configured
+    if (!env.REDIS_URL) {
+      console.log('⚠️  Redis URL not configured - Caching disabled');
       return;
     }
 
     redisClient = createClient({
       url: env.REDIS_URL,
+      socket: {
+        reconnectStrategy: (retries) => {
+          if (retries > 3) {
+            console.log('⚠️  Redis reconnection failed - Caching disabled');
+            return new Error('Redis reconnection limit exceeded');
+          }
+          return retries * 100;
+        },
+      },
     });
 
     redisClient.on('error', (err) => {

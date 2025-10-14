@@ -78,4 +78,20 @@ router.delete(
   mealPhotoController.deleteMealPhoto
 );
 
+// POST /api/v1/meal-photos/bulk-check - 식사 사진 일괄 확인 완료 (Admin only)
+router.post(
+  '/bulk-check',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  mealPhotoController.bulkCheckMealPhotos
+);
+
+// PATCH /api/v1/meal-photos/:id/check-status - 확인 상태 토글 (Admin only)
+router.patch(
+  '/:id/check-status',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  mealPhotoController.toggleCheckStatus
+);
+
 export default router;

@@ -4,13 +4,22 @@
  */
 
 import React, { useState } from 'react';
-import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table } from 'antd';
-import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table, Checkbox } from 'antd';
+import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
-import { bulkUploadMealPhotos, getDailyMealPhotos, deleteMealPhoto, bulkDeleteMealPhotos } from '@/api/meal-photo.api';
+import {
+  bulkUploadMealPhotos,
+  getDailyMealPhotos,
+  deleteMealPhoto,
+  bulkDeleteMealPhotos,
+  bulkCheckMealPhotos,
+  toggleCheckStatus,
+  getMealPhotos
+} from '@/api/meal-photo.api';
 import dayjs, { Dayjs } from 'dayjs';
 import type { UploadFile } from 'antd';
+import * as XLSX from 'xlsx';
 
 type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
 type PhotoType = 'SERVING' | 'LEFTOVER';
@@ -19,6 +28,8 @@ interface PhotoState {
   SERVING: UploadFile[];
   LEFTOVER: UploadFile[];
 }
+
+const { RangePicker } = DatePicker;
 
 export default function MealPhotoManagementPage() {
   const queryClient = useQueryClient();
@@ -31,6 +42,14 @@ export default function MealPhotoManagementPage() {
   // 필터 상태
   const [mealTypeFilter, setMealTypeFilter] = useState<MealType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETE' | 'PARTIAL' | 'PENDING'>('ALL');
+  const [checkedFilter, setCheckedFilter] = useState<'ALL' | 'CHECKED' | 'UNCHECKED'>('ALL');
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
+    dayjs().subtract(7, 'days'),
+    dayjs(),
+  ]);
+
+  // 일괄 선택 상태
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
 
   // 각 끼니별 사진 상태 관리
   const [photos, setPhotos] = useState<Record<MealType, PhotoState>>({
@@ -91,6 +110,19 @@ export default function MealPhotoManagementPage() {
     },
     onError: (error: any) => {
       message.error(error.message || '일괄 삭제 실패');
+    },
+  });
+
+  // 일괄 확인 완료 mutation
+  const bulkCheckMutation = useMutation({
+    mutationFn: bulkCheckMealPhotos,
+    onSuccess: () => {
+      message.success('선택한 사진이 확인 완료되었습니다');
+      setSelectedPhotoIds([]);
+      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+    },
+    onError: (error: any) => {
+      message.error(error.message || '확인 완료 실패');
     },
   });
 
@@ -190,6 +222,93 @@ export default function MealPhotoManagementPage() {
         });
       },
     });
+  };
+
+  // 일괄 확인 완료 핸들러
+  const handleBulkCheck = () => {
+    if (selectedPhotoIds.length === 0) {
+      message.warning('확인 완료할 사진을 선택해주세요');
+      return;
+    }
+
+    Modal.confirm({
+      title: '일괄 확인 완료',
+      content: `선택한 ${selectedPhotoIds.length}개의 사진을 확인 완료하시겠습니까?`,
+      okText: '확인 완료',
+      cancelText: '취소',
+      onOk: () => {
+        bulkCheckMutation.mutate(selectedPhotoIds);
+      },
+    });
+  };
+
+  // 체크박스 변경 핸들러
+  const handleCheckboxChange = (photoId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedPhotoIds([...selectedPhotoIds, photoId]);
+    } else {
+      setSelectedPhotoIds(selectedPhotoIds.filter((id) => id !== photoId));
+    }
+  };
+
+  // 전체 선택/해제 핸들러
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allPhotoIds = filteredData.flatMap((item: any) => [
+        ...item.servingPhotos.map((p: any) => p.id),
+        ...item.leftoverPhotos.map((p: any) => p.id),
+      ]);
+      setSelectedPhotoIds(allPhotoIds);
+    } else {
+      setSelectedPhotoIds([]);
+    }
+  };
+
+  // 엑셀 다운로드 핸들러
+  const handleExcelDownload = () => {
+    if (!dailyPhotos?.data || dailyPhotos.data.length === 0) {
+      message.warning('다운로드할 데이터가 없습니다');
+      return;
+    }
+
+    const excelData = dailyPhotos.data.map((photo: any) => ({
+      '사업장': photo.site?.name || '-',
+      '날짜': dayjs(photo.capturedAt).format('YYYY-MM-DD'),
+      '끼니': getMealTypeLabel(photo.mealType),
+      '사진 타입': photo.photoType === 'SERVING' ? '배식준비' : photo.photoType === 'LEFTOVER' ? '잔반' : '시설',
+      '업로더': photo.uploader?.name || '-',
+      '업로드 시간': dayjs(photo.createdAt).format('YYYY-MM-DD HH:mm'),
+      '확인 상태': photo.isChecked ? '확인 완료' : '미확인',
+      '확인자': photo.checkedBy || '-',
+      '확인 시간': photo.checkedAt ? dayjs(photo.checkedAt).format('YYYY-MM-DD HH:mm') : '-',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '배식사진');
+    XLSX.writeFile(wb, `배식사진_${dayjs().format('YYYY-MM-DD')}.xlsx`);
+    message.success('엑셀 파일이 다운로드되었습니다');
+  };
+
+  // 확인 상태 텍스트 반환
+  const getCheckStatusText = (isChecked: boolean) => {
+    return isChecked ? '확인 완료' : '미확인';
+  };
+
+  // 끼니 타입 레이블 반환
+  const getMealTypeLabel = (mealType: string) => {
+    switch (mealType) {
+      case 'BREAKFAST':
+        return '조식';
+      case 'LUNCH':
+        return '중식';
+      case 'DINNER':
+        return '석식';
+      case 'SUPPER':
+        return '야식';
+      default:
+        return '-';
+    }
   };
 
   // 업로드 버튼
@@ -376,12 +495,50 @@ export default function MealPhotoManagementPage() {
         }
       }
 
+      // 확인 상태 필터
+      if (checkedFilter !== 'ALL') {
+        const allPhotos = [...item.servingPhotos, ...item.leftoverPhotos];
+        const hasMatchingStatus = allPhotos.some((photo: any) =>
+          checkedFilter === 'CHECKED' ? photo.isChecked : !photo.isChecked
+        );
+        if (!hasMatchingStatus) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [groupedData, mealTypeFilter, statusFilter]);
+  }, [groupedData, mealTypeFilter, statusFilter, checkedFilter]);
 
   // 테이블 컬럼 정의
   const columns = [
+    {
+      title: <Checkbox onChange={(e) => handleSelectAll(e.target.checked)} />,
+      key: 'checkbox',
+      width: 50,
+      render: (_: any, record: any) => {
+        const photoIds = [
+          ...record.servingPhotos.map((p: any) => p.id),
+          ...record.leftoverPhotos.map((p: any) => p.id),
+        ];
+        const allSelected = photoIds.every((id: string) => selectedPhotoIds.includes(id));
+        const someSelected = photoIds.some((id: string) => selectedPhotoIds.includes(id));
+
+        return (
+          <Checkbox
+            indeterminate={someSelected && !allSelected}
+            checked={allSelected}
+            onChange={(e) => {
+              if (e.target.checked) {
+                setSelectedPhotoIds([...new Set([...selectedPhotoIds, ...photoIds])]);
+              } else {
+                setSelectedPhotoIds(selectedPhotoIds.filter((id) => !photoIds.includes(id)));
+              }
+            }}
+          />
+        );
+      },
+    },
     {
       title: '날짜',
       dataIndex: 'capturedAt',
@@ -420,6 +577,29 @@ export default function MealPhotoManagementPage() {
             {photos.length > 0 ? (
               photos.map((photo: any) => (
                 <div key={photo.id} style={{ position: 'relative' }}>
+                  <Checkbox
+                    checked={selectedPhotoIds.includes(photo.id)}
+                    onChange={(e) => handleCheckboxChange(photo.id, e.target.checked)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: 2,
+                      zIndex: 10,
+                    }}
+                  />
+                  <Tag
+                    color={photo.isChecked ? 'green' : 'default'}
+                    style={{
+                      position: 'absolute',
+                      bottom: 2,
+                      left: 2,
+                      fontSize: 10,
+                      padding: '0 4px',
+                      zIndex: 10,
+                    }}
+                  >
+                    {getCheckStatusText(photo.isChecked)}
+                  </Tag>
                   <Image
                     src={photo.thumbnailUrl}
                     alt="배식준비"
@@ -465,6 +645,29 @@ export default function MealPhotoManagementPage() {
             {photos.length > 0 ? (
               photos.map((photo: any) => (
                 <div key={photo.id} style={{ position: 'relative' }}>
+                  <Checkbox
+                    checked={selectedPhotoIds.includes(photo.id)}
+                    onChange={(e) => handleCheckboxChange(photo.id, e.target.checked)}
+                    style={{
+                      position: 'absolute',
+                      top: 2,
+                      left: 2,
+                      zIndex: 10,
+                    }}
+                  />
+                  <Tag
+                    color={photo.isChecked ? 'green' : 'default'}
+                    style={{
+                      position: 'absolute',
+                      bottom: 2,
+                      left: 2,
+                      fontSize: 10,
+                      padding: '0 4px',
+                      zIndex: 10,
+                    }}
+                  >
+                    {getCheckStatusText(photo.isChecked)}
+                  </Tag>
                   <Image
                     src={photo.thumbnailUrl}
                     alt="잔반"
@@ -620,9 +823,16 @@ export default function MealPhotoManagementPage() {
       {/* 업로드 내역 테이블 */}
       {selectedSiteId && (
         <Card
-          title="업로드 내역"
+          title={
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span>업로드 내역</span>
+              {selectedPhotoIds.length > 0 && (
+                <Tag color="blue">{selectedPhotoIds.length}개 선택됨</Tag>
+              )}
+            </div>
+          }
           extra={
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
               <Select
                 style={{ width: 120 }}
                 value={mealTypeFilter}
@@ -646,6 +856,32 @@ export default function MealPhotoManagementPage() {
                   { value: 'PENDING', label: '대기' },
                 ]}
               />
+              <Select
+                style={{ width: 120 }}
+                value={checkedFilter}
+                onChange={setCheckedFilter}
+                options={[
+                  { value: 'ALL', label: '전체' },
+                  { value: 'CHECKED', label: '확인 완료' },
+                  { value: 'UNCHECKED', label: '미확인' },
+                ]}
+              />
+              {selectedPhotoIds.length > 0 && (
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={handleBulkCheck}
+                  loading={bulkCheckMutation.isPending}
+                >
+                  일괄 확인 완료
+                </Button>
+              )}
+              <Button
+                icon={<DownloadOutlined />}
+                onClick={handleExcelDownload}
+              >
+                엑셀 다운로드
+              </Button>
             </div>
           }
           style={{ marginBottom: 24 }}

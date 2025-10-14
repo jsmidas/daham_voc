@@ -111,3 +111,21 @@ export async function bulkDeleteMealPhotos(dto: BulkDeleteMealPhotoDto) {
   });
   return response.data;
 }
+
+/**
+ * 배식사진 일괄 확인 완료
+ */
+export async function bulkCheckMealPhotos(photoIds: string[]) {
+  const response = await apiClient.post('/meal-photos/bulk-check', {
+    photoIds,
+  });
+  return response.data;
+}
+
+/**
+ * 배식사진 확인 상태 토글
+ */
+export async function toggleCheckStatus(photoId: string) {
+  const response = await apiClient.patch(`/meal-photos/${photoId}/check-status`);
+  return response.data;
+}

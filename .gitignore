@@ -1,3 +1,17 @@
 
 # Windows null device file
 nul
+
+# GCP Service Account Keys
+sample/*.json
+*-key.json
+*service-account*.json
+
+# Local Settings
+.claude/settings.local.json
+
+# Test/Sample Images
+sample/*.jpg
+sample/*.png
+sample/*.JPG
+sample/*.PNG

@@ -11,9 +11,38 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { getDashboardSummary } from '@/api/dashboard.api';
+import {
+  getDashboardSummary,
+  getDailyVOCTrend,
+  getSiteComparison,
+  getStaffPerformanceStats,
+} from '@/api/dashboard.api';
 import { useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+// Chart.js 등록
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 const { RangePicker } = DatePicker;
 
@@ -27,6 +56,36 @@ export default function DashboardPage() {
     queryKey: ['dashboard-summary', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
     queryFn: () =>
       getDashboardSummary(
+        dateRange[0].format('YYYY-MM-DD'),
+        dateRange[1].format('YYYY-MM-DD')
+      ),
+    retry: false,
+  });
+
+  const { data: vocTrend } = useQuery({
+    queryKey: ['daily-voc-trend', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryFn: () =>
+      getDailyVOCTrend(
+        dateRange[0].format('YYYY-MM-DD'),
+        dateRange[1].format('YYYY-MM-DD')
+      ),
+    retry: false,
+  });
+
+  const { data: siteComparison } = useQuery({
+    queryKey: ['site-comparison', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryFn: () =>
+      getSiteComparison(
+        dateRange[0].format('YYYY-MM-DD'),
+        dateRange[1].format('YYYY-MM-DD')
+      ),
+    retry: false,
+  });
+
+  const { data: staffPerformance } = useQuery({
+    queryKey: ['staff-performance', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryFn: () =>
+      getStaffPerformanceStats(
         dateRange[0].format('YYYY-MM-DD'),
         dateRange[1].format('YYYY-MM-DD')
       ),
@@ -143,6 +202,145 @@ export default function DashboardPage() {
                 valueStyle={{ color: '#cf1322' }}
               />
             </div>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 일별 VOC 트렌드 */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24}>
+          <Card title="일별 VOC 트렌드">
+            {vocTrend?.data && vocTrend.data.length > 0 ? (
+              <Line
+                data={{
+                  labels: vocTrend.data.map((d: any) =>
+                    dayjs(d.date).format('MM/DD')
+                  ),
+                  datasets: [
+                    {
+                      label: 'VOC 건수',
+                      data: vocTrend.data.map((d: any) => d.count),
+                      borderColor: 'rgb(75, 192, 192)',
+                      backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                      yAxisID: 'y',
+                    },
+                    {
+                      label: '평균 별점',
+                      data: vocTrend.data.map((d: any) => d.avgRating),
+                      borderColor: 'rgb(255, 99, 132)',
+                      backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                      yAxisID: 'y1',
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  interaction: {
+                    mode: 'index' as const,
+                    intersect: false,
+                  },
+                  scales: {
+                    y: {
+                      type: 'linear' as const,
+                      display: true,
+                      position: 'left' as const,
+                      title: {
+                        display: true,
+                        text: 'VOC 건수',
+                      },
+                    },
+                    y1: {
+                      type: 'linear' as const,
+                      display: true,
+                      position: 'right' as const,
+                      grid: {
+                        drawOnChartArea: false,
+                      },
+                      title: {
+                        display: true,
+                        text: '평균 별점',
+                      },
+                      min: 0,
+                      max: 5,
+                    },
+                  },
+                }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                데이터가 없습니다
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 사업장별 비교 및 담당자별 평점 */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <Card title="사업장별 VOC 현황">
+            {siteComparison?.data && siteComparison.data.length > 0 ? (
+              <Bar
+                data={{
+                  labels: siteComparison.data.map((d: any) => d.siteName),
+                  datasets: [
+                    {
+                      label: 'VOC 건수',
+                      data: siteComparison.data.map((d: any) => d.feedbackCount),
+                      backgroundColor: 'rgba(53, 162, 235, 0.5)',
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    },
+                  },
+                }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                데이터가 없습니다
+              </div>
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="담당자별 평점">
+            {staffPerformance?.data && staffPerformance.data.length > 0 ? (
+              <Bar
+                data={{
+                  labels: staffPerformance.data.map((d: any) => d.userName),
+                  datasets: [
+                    {
+                      label: '평균 별점',
+                      data: staffPerformance.data.map((d: any) => d.avgRating),
+                      backgroundColor: 'rgba(255, 206, 86, 0.5)',
+                    },
+                  ],
+                }}
+                options={{
+                  responsive: true,
+                  plugins: {
+                    legend: {
+                      position: 'top' as const,
+                    },
+                  },
+                  scales: {
+                    y: {
+                      min: 0,
+                      max: 5,
+                    },
+                  },
+                }}
+              />
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                데이터가 없습니다
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

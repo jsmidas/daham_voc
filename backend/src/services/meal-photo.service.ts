@@ -299,6 +299,11 @@ export async function updateMealPhoto(
     throw new Error('Meal photo not found');
   }
 
+  // 확인 완료된 사진은 수정 불가
+  if (photo.isChecked) {
+    throw new Error('확인 완료된 사진은 수정할 수 없습니다');
+  }
+
   // 업데이트 데이터 준비
   const updateData: any = {};
 
@@ -353,6 +358,11 @@ export async function deleteMealPhoto(photoId: string, _userId: string): Promise
     throw new Error('Meal photo not found');
   }
 
+  // 확인 완료된 사진은 삭제 불가
+  if (photo.isChecked) {
+    throw new Error('확인 완료된 사진은 삭제할 수 없습니다');
+  }
+
   // 이미지 삭제
   if (photo.imageUrl) {
     const path = extractPathFromUrl(photo.imageUrl);
@@ -385,6 +395,7 @@ export async function bulkDeleteMealPhotos(
   const where: any = {
     siteId,
     deletedAt: null,
+    isChecked: false, // 확인 완료되지 않은 사진만 삭제
   };
 
   // 날짜 범위 (하루 전체)
@@ -552,4 +563,82 @@ export async function getPhotoStatistics(
   });
 
   return stats;
+}
+
+/**
+ * 사진 일괄 확인 완료 처리
+ */
+export async function bulkCheckMealPhotos(
+  photoIds: string[],
+  checkedBy: string
+): Promise<{ checked: number }> {
+  if (!photoIds || photoIds.length === 0) {
+    throw new Error('Photo IDs are required');
+  }
+
+  // 확인 완료 처리
+  const result = await prisma.mealPhoto.updateMany({
+    where: {
+      id: { in: photoIds },
+      deletedAt: null,
+      isChecked: false, // 아직 확인되지 않은 사진만
+    },
+    data: {
+      isChecked: true,
+      checkedBy,
+      checkedAt: new Date(),
+    },
+  });
+
+  // 캐시 무효화 (모든 관련 사진의 사업장)
+  const photos = await prisma.mealPhoto.findMany({
+    where: { id: { in: photoIds } },
+    select: { siteId: true },
+    distinct: ['siteId'],
+  });
+
+  await Promise.all(photos.map((p) => invalidateMealPhotoCache(p.siteId)));
+
+  return { checked: result.count };
+}
+
+/**
+ * 단일 사진 확인 상태 토글
+ */
+export async function toggleCheckStatus(
+  photoId: string,
+  checkedBy: string
+): Promise<any> {
+  const photo = await prisma.mealPhoto.findUnique({
+    where: { id: photoId },
+  });
+
+  if (!photo || photo.deletedAt) {
+    throw new Error('Meal photo not found');
+  }
+
+  // 현재 상태의 반대로 토글
+  const newCheckedStatus = !photo.isChecked;
+
+  const updated = await prisma.mealPhoto.update({
+    where: { id: photoId },
+    data: {
+      isChecked: newCheckedStatus,
+      checkedBy: newCheckedStatus ? checkedBy : null,
+      checkedAt: newCheckedStatus ? new Date() : null,
+    },
+    include: {
+      site: {
+        select: { id: true, name: true, type: true },
+      },
+      uploader: {
+        select: { id: true, name: true, email: true },
+      },
+    },
+  });
+
+  // 캐시 무효화
+  await invalidateMealPhotoCache(photo.siteId);
+
+  return updated;
 }

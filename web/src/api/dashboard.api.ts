@@ -40,3 +40,24 @@ export async function getDivisionComparison(dateFrom: string, dateTo: string) {
     params: { dateFrom, dateTo },
   });
 }
+
+// 일별 VOC 트렌드
+export async function getDailyVOCTrend(dateFrom: string, dateTo: string) {
+  return apiClient.get('/dashboard/daily-voc-trend', {
+    params: { dateFrom, dateTo },
+  });
+}
+
+// 사업장별 비교 통계
+export async function getSiteComparison(dateFrom: string, dateTo: string) {
+  return apiClient.get('/dashboard/site-comparison', {
+    params: { dateFrom, dateTo },
+  });
+}
+
+// 담당자별 평점 통계
+export async function getStaffPerformanceStats(dateFrom: string, dateTo: string) {
+  return apiClient.get('/dashboard/staff-performance', {
+    params: { dateFrom, dateTo },
+  });
+}
