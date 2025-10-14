@@ -56,7 +56,13 @@
       "Bash(git checkout:*)",
       "Bash(cat:*)",
       "Bash(git restore:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(ipconfig)",
+      "Bash(start http://localhost:8115)",
+      "Bash(ping:*)",
+      "Bash(dir:*)",
+      "Bash(powershell:*)",
+      "Bash(git log:*)"
     ],
     "deny": [],
     "ask": []
