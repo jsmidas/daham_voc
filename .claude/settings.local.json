@@ -78,7 +78,14 @@
       "Read(//c/Users/js/Desktop/dev/**)",
       "Bash(git rm:*)",
       "Bash(adb:*)",
-      "Bash(start http://localhost:5555)"
+      "Bash(start http://localhost:5555)",
+      "Bash(redis-server:*)",
+      "Bash(docker:*)",
+      "Bash(where ngrok)",
+      "Bash(where adb)",
+      "Bash(git merge:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git rebase:*)"
     ],
     "deny": [],
     "ask": []
