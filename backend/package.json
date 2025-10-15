@@ -21,6 +21,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "prisma": {
+    "seed": "ts-node prisma/seed.ts"
+  },
   "dependencies": {
     "@google-cloud/storage": "^7.17.2",
     "@prisma/client": "^5.22.0",
