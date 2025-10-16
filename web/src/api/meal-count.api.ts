@@ -16,6 +16,10 @@ export interface MealCountSetting {
   breakfastStartTime?: string;
   lunchStartTime?: string;
   dinnerStartTime?: string;
+  lunchMenuCount: number;
+  lunchMenu1Name?: string;
+  lunchMenu2Name?: string;
+  lunchMenu3Name?: string;
   allowLateSubmission: boolean;
   isActive: boolean;
   createdAt?: string;

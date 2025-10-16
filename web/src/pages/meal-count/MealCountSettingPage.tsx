@@ -3,7 +3,7 @@
  * @description 사업장별 식수 입력 마감시간 설정 페이지
  */
 
-import { Table, Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag } from 'antd';
+import { Table, Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input } from 'antd';
 import { SettingOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
@@ -16,6 +16,7 @@ export default function MealCountSettingPage() {
   const queryClient = useQueryClient();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [lunchMenuCount, setLunchMenuCount] = useState(1);
   const [form] = Form.useForm();
 
   // 사업장 목록 조회
@@ -55,17 +56,28 @@ export default function MealCountSettingPage() {
     const currentSetting = setting?.data;
 
     if (currentSetting) {
+      const menuCount = currentSetting.lunchMenuCount || 1;
+      setLunchMenuCount(menuCount);
       form.setFieldsValue({
         deadlineHoursBefore: currentSetting.deadlineHoursBefore || 24,
         breakfastStartTime: currentSetting.breakfastStartTime ? dayjs(currentSetting.breakfastStartTime, 'HH:mm') : undefined,
         lunchStartTime: currentSetting.lunchStartTime ? dayjs(currentSetting.lunchStartTime, 'HH:mm') : undefined,
         dinnerStartTime: currentSetting.dinnerStartTime ? dayjs(currentSetting.dinnerStartTime, 'HH:mm') : undefined,
+        lunchMenuCount: menuCount,
+        lunchMenu1Name: currentSetting.lunchMenu1Name || '',
+        lunchMenu2Name: currentSetting.lunchMenu2Name || '',
+        lunchMenu3Name: currentSetting.lunchMenu3Name || '',
         allowLateSubmission: currentSetting.allowLateSubmission ?? false,
         isActive: currentSetting.isActive ?? true,
       });
     } else {
+      setLunchMenuCount(1);
       form.setFieldsValue({
         deadlineHoursBefore: 24,
+        lunchMenuCount: 1,
+        lunchMenu1Name: '',
+        lunchMenu2Name: '',
+        lunchMenu3Name: '',
         allowLateSubmission: false,
         isActive: true,
       });
@@ -83,6 +95,10 @@ export default function MealCountSettingPage() {
         breakfastStartTime: values.breakfastStartTime ? values.breakfastStartTime.format('HH:mm') : undefined,
         lunchStartTime: values.lunchStartTime ? values.lunchStartTime.format('HH:mm') : undefined,
         dinnerStartTime: values.dinnerStartTime ? values.dinnerStartTime.format('HH:mm') : undefined,
+        lunchMenuCount: values.lunchMenuCount,
+        lunchMenu1Name: values.lunchMenu1Name,
+        lunchMenu2Name: values.lunchMenu2Name,
+        lunchMenu3Name: values.lunchMenu3Name,
         allowLateSubmission: values.allowLateSubmission,
         isActive: values.isActive,
       };
@@ -200,6 +216,24 @@ export default function MealCountSettingPage() {
             <Descriptions.Item label="석식 입력 마감 시간">
               {calculateDeadline(currentSetting.dinnerStartTime, deadlineHours)}
             </Descriptions.Item>
+            <Descriptions.Item label="중식 메뉴 개수" span={2}>
+              {currentSetting.lunchMenuCount}개
+            </Descriptions.Item>
+            {currentSetting.lunchMenu1Name && (
+              <Descriptions.Item label="중식 메뉴 1" span={2}>
+                <Tag color="blue">{currentSetting.lunchMenu1Name}</Tag>
+              </Descriptions.Item>
+            )}
+            {currentSetting.lunchMenu2Name && (
+              <Descriptions.Item label="중식 메뉴 2" span={2}>
+                <Tag color="blue">{currentSetting.lunchMenu2Name}</Tag>
+              </Descriptions.Item>
+            )}
+            {currentSetting.lunchMenu3Name && (
+              <Descriptions.Item label="중식 메뉴 3" span={2}>
+                <Tag color="blue">{currentSetting.lunchMenu3Name}</Tag>
+              </Descriptions.Item>
+            )}
           </Descriptions>
 
           <div style={{ marginTop: 16, padding: 12, background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
@@ -246,6 +280,10 @@ export default function MealCountSettingPage() {
           layout="vertical"
           initialValues={{
             deadlineHoursBefore: 24,
+            lunchMenuCount: 1,
+            lunchMenu1Name: '',
+            lunchMenu2Name: '',
+            lunchMenu3Name: '',
             allowLateSubmission: false,
             isActive: true,
           }}
@@ -306,6 +344,53 @@ export default function MealCountSettingPage() {
               minuteStep={10}
             />
           </Form.Item>
+
+          <Form.Item
+            label="중식 메뉴 개수"
+            name="lunchMenuCount"
+            rules={[{ required: true, message: '중식 메뉴 개수를 선택하세요' }]}
+            extra="중식에 제공되는 메뉴의 종류 개수를 선택합니다 (예: 베이직/플러스, 죽/미음/일반)"
+          >
+            <Select
+              style={{ width: '100%' }}
+              onChange={(value) => setLunchMenuCount(value)}
+              options={[
+                { label: '1개', value: 1 },
+                { label: '2개', value: 2 },
+                { label: '3개', value: 3 },
+              ]}
+            />
+          </Form.Item>
+
+          {lunchMenuCount >= 1 && (
+            <Form.Item
+              label="중식 메뉴 1 명칭"
+              name="lunchMenu1Name"
+              extra="첫 번째 중식 메뉴의 이름 (예: 베이직, 죽, 1종)"
+            >
+              <Input placeholder="예: 베이직" maxLength={20} />
+            </Form.Item>
+          )}
+
+          {lunchMenuCount >= 2 && (
+            <Form.Item
+              label="중식 메뉴 2 명칭"
+              name="lunchMenu2Name"
+              extra="두 번째 중식 메뉴의 이름 (예: 플러스, 미음)"
+            >
+              <Input placeholder="예: 플러스" maxLength={20} />
+            </Form.Item>
+          )}
+
+          {lunchMenuCount >= 3 && (
+            <Form.Item
+              label="중식 메뉴 3 명칭"
+              name="lunchMenu3Name"
+              extra="세 번째 중식 메뉴의 이름 (예: 갈식, 일반)"
+            >
+              <Input placeholder="예: 일반" maxLength={20} />
+            </Form.Item>
+          )}
 
           <Form.Item
             label="마감 후 입력 허용"
