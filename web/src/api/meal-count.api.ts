@@ -31,6 +31,7 @@ export interface MealCount {
   siteId: string;
   date: string;
   mealType: MealType;
+  menuNumber: number;
   count: number;
   submittedBy: string;
   submittedAt: string;
@@ -62,6 +63,7 @@ export async function createMealCount(data: {
   siteId: string;
   date: string;
   mealType: MealType;
+  menuNumber?: number;
   count: number;
   note?: string;
 }) {

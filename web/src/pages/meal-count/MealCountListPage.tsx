@@ -10,7 +10,7 @@ const { RangePicker } = DatePicker;
 import { EditOutlined, DeleteOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
-import { getMealCountsByDate, getMealCountsByRange, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
+import { getMealCountsByDate, getMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
 import * as XLSX from 'xlsx';
@@ -37,6 +37,13 @@ export default function MealCountListPage() {
   const { data: sites } = useQuery({
     queryKey: ['sites'],
     queryFn: () => getSites({ isActive: true }),
+  });
+
+  // 사업장 식수 설정 조회
+  const { data: settingData } = useQuery({
+    queryKey: ['meal-count-setting', selectedSiteId],
+    queryFn: () => getMealCountSetting(selectedSiteId!),
+    enabled: !!selectedSiteId,
   });
 
   // 식수 데이터 조회 (날짜 범위)
@@ -155,15 +162,31 @@ export default function MealCountListPage() {
     return MEAL_TYPES.find((m) => m.value === type)?.label || type;
   };
 
-  // 날짜별로 데이터 그룹화
+  // 메뉴명 가져오기
+  const getMenuName = (mealType: MealType, menuNumber: number) => {
+    if (mealType === 'LUNCH' && settingData?.data) {
+      const lunchMenuNames = [
+        settingData.data.lunchMenu1Name,
+        settingData.data.lunchMenu2Name,
+        settingData.data.lunchMenu3Name,
+      ];
+      return lunchMenuNames[menuNumber - 1] || `메뉴${menuNumber}`;
+    }
+    return menuNumber > 1 ? `메뉴${menuNumber}` : undefined;
+  };
+
+  // 날짜별로 데이터 그룹화 (메뉴별로 배열로 저장)
   const groupByDate = (data: MealCount[]) => {
-    const grouped: { [date: string]: { [mealType: string]: MealCount } } = {};
+    const grouped: { [date: string]: { [mealType: string]: MealCount[] } } = {};
 
     data.forEach((item) => {
       if (!grouped[item.date]) {
         grouped[item.date] = {};
       }
-      grouped[item.date][item.mealType] = item;
+      if (!grouped[item.date][item.mealType]) {
+        grouped[item.date][item.mealType] = [];
+      }
+      grouped[item.date][item.mealType].push(item);
     });
 
     return grouped;
@@ -190,7 +213,9 @@ export default function MealCountListPage() {
     const dateData = groupedData[date];
     if (!dateData) return 0;
 
-    return Object.values(dateData).reduce((sum, item) => sum + item.count, 0);
+    return Object.values(dateData).reduce((sum, items) => {
+      return sum + items.reduce((itemSum, item) => itemSum + item.count, 0);
+    }, 0);
   };
 
   // 엑셀 다운로드
@@ -207,6 +232,7 @@ export default function MealCountListPage() {
     const excelData = mealCounts.data.map((record: MealCount) => ({
       '날짜': dayjs(record.date).format('YYYY-MM-DD'),
       '식사 유형': getMealTypeLabel(record.mealType),
+      '메뉴명': getMenuName(record.mealType, record.menuNumber) || '-',
       '인원': record.count,
       '등록자': record.submitter?.name || '-',
       '등록시간': dayjs(record.submittedAt).format('YYYY-MM-DD HH:mm'),
@@ -223,6 +249,7 @@ export default function MealCountListPage() {
     worksheet['!cols'] = [
       { wch: 12 }, // 날짜
       { wch: 12 }, // 식사 유형
+      { wch: 15 }, // 메뉴명
       { wch: 10 }, // 인원
       { wch: 12 }, // 등록자
       { wch: 18 }, // 등록시간
@@ -261,36 +288,61 @@ export default function MealCountListPage() {
     ...MEAL_TYPES.map((mealType) => ({
       title: mealType.label,
       key: mealType.value,
-      width: 120,
+      width: 150,
       render: (_: any, record: any) => {
-        const mealData = record.mealData[mealType.value];
-        if (!mealData) return <div style={{ color: '#999' }}>-</div>;
+        const mealDataArray = record.mealData[mealType.value];
+        if (!mealDataArray || mealDataArray.length === 0) {
+          return <div style={{ color: '#999' }}>-</div>;
+        }
+
+        // 메뉴 번호 순으로 정렬
+        const sortedData = [...mealDataArray].sort((a, b) => a.menuNumber - b.menuNumber);
 
         return (
-          <div>
-            <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 4 }}>
-              {mealData.count}명
-            </div>
-            <div style={{ fontSize: 12, color: '#666' }}>
-              {mealData.submitter?.name || '-'}
-            </div>
-            <Space size={4} style={{ marginTop: 4 }}>
-              <Button
-                type="link"
-                size="small"
-                icon={<EditOutlined />}
-                onClick={() => handleEdit(mealData)}
-                style={{ padding: 0, height: 'auto' }}
-              />
-              <Button
-                type="link"
-                danger
-                size="small"
-                icon={<DeleteOutlined />}
-                onClick={() => handleDelete(mealData.id)}
-                style={{ padding: 0, height: 'auto' }}
-              />
-            </Space>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {sortedData.map((mealData) => {
+              const menuName = getMenuName(mealType.value as MealType, mealData.menuNumber);
+              return (
+                <div
+                  key={mealData.id}
+                  style={{
+                    padding: 8,
+                    backgroundColor: '#f9f9f9',
+                    borderRadius: 4,
+                    borderLeft: '3px solid #1890ff',
+                  }}
+                >
+                  {menuName && (
+                    <div style={{ fontSize: 11, color: '#666', marginBottom: 2, fontWeight: 600 }}>
+                      {menuName}
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 4 }}>
+                    {mealData.count}명
+                  </div>
+                  <div style={{ fontSize: 11, color: '#666' }}>
+                    {mealData.submitter?.name || '-'}
+                  </div>
+                  <Space size={4} style={{ marginTop: 4 }}>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => handleEdit(mealData)}
+                      style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                    />
+                    <Button
+                      type="link"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDelete(mealData.id)}
+                      style={{ padding: 0, height: 'auto', fontSize: 12 }}
+                    />
+                  </Space>
+                </div>
+              );
+            })}
           </div>
         );
       },
