@@ -307,6 +307,10 @@ model MealCountSetting {
   breakfastStartTime  String?
   lunchStartTime      String?
   dinnerStartTime     String?
+  breakfastMenuCount  Int      @default(1)
+  lunchMenuCount      Int      @default(1)
+  dinnerMenuCount     Int      @default(1)
+  supperMenuCount     Int      @default(1)
   allowLateSubmission Boolean  @default(false)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())
@@ -321,6 +325,7 @@ model MealCount {
   siteId      String
   date        DateTime @db.Date
   mealType    MealType
+  menuNumber  Int      @default(1)
   count       Int
   submittedBy String
   submittedAt DateTime @default(now())
@@ -331,7 +336,7 @@ model MealCount {
   site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
   submitter   User     @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
 
-  @@unique([siteId, date, mealType])
+  @@unique([siteId, date, mealType, menuNumber])
   @@index([siteId, date])
   @@index([date])
 }

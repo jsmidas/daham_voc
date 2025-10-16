@@ -85,7 +85,10 @@
       "Bash(where adb)",
       "Bash(git merge:*)",
       "Bash(git cherry-pick:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(eas whoami:*)",
+      "Bash(ngrok config:*)",
+      "Bash(ngrok http:*)"
     ],
     "deny": [],
     "ask": []

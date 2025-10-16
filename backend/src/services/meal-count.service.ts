@@ -11,6 +11,7 @@ export interface CreateMealCountDTO {
   siteId: string;
   date: string; // YYYY-MM-DD
   mealType: MealType;
+  menuNumber?: number;
   count: number;
   submittedBy: string;
   note?: string;
@@ -61,6 +62,7 @@ export async function createMealCount(data: CreateMealCountDTO) {
       siteId: data.siteId,
       date: new Date(data.date),
       mealType: data.mealType,
+      menuNumber: data.menuNumber || 1,
       count: data.count,
       submittedBy: data.submittedBy,
       note: data.note,
