@@ -311,9 +311,26 @@ model MealCountSetting {
   lunchMenuCount      Int      @default(1)
   dinnerMenuCount     Int      @default(1)
   supperMenuCount     Int      @default(1)
+  breakfastMenu1Name  String?
+  breakfastMenu2Name  String?
+  breakfastMenu3Name  String?
+  breakfastMenu4Name  String?
+  breakfastMenu5Name  String?
   lunchMenu1Name      String?
   lunchMenu2Name      String?
   lunchMenu3Name      String?
+  lunchMenu4Name      String?
+  lunchMenu5Name      String?
+  dinnerMenu1Name     String?
+  dinnerMenu2Name     String?
+  dinnerMenu3Name     String?
+  dinnerMenu4Name     String?
+  dinnerMenu5Name     String?
+  supperMenu1Name     String?
+  supperMenu2Name     String?
+  supperMenu3Name     String?
+  supperMenu4Name     String?
+  supperMenu5Name     String?
   allowLateSubmission Boolean  @default(false)
   isActive            Boolean  @default(true)
   createdAt           DateTime @default(now())

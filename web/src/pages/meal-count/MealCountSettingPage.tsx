@@ -3,7 +3,7 @@
  * @description 사업장별 식수 입력 마감시간 설정 페이지
  */
 
-import { Table, Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input } from 'antd';
+import { Table, Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input, Collapse, Row, Col } from 'antd';
 import { SettingOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
@@ -16,7 +16,10 @@ export default function MealCountSettingPage() {
   const queryClient = useQueryClient();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [breakfastMenuCount, setBreakfastMenuCount] = useState(1);
   const [lunchMenuCount, setLunchMenuCount] = useState(1);
+  const [dinnerMenuCount, setDinnerMenuCount] = useState(1);
+  const [supperMenuCount, setSupperMenuCount] = useState(1);
   const [form] = Form.useForm();
 
   // 사업장 목록 조회
@@ -55,32 +58,66 @@ export default function MealCountSettingPage() {
 
     const currentSetting = setting?.data;
 
+    // 먼저 폼을 리셋
+    form.resetFields();
+
     if (currentSetting) {
-      const menuCount = currentSetting.lunchMenuCount || 1;
-      setLunchMenuCount(menuCount);
-      form.setFieldsValue({
-        deadlineHoursBefore: currentSetting.deadlineHoursBefore || 24,
-        breakfastStartTime: currentSetting.breakfastStartTime ? dayjs(currentSetting.breakfastStartTime, 'HH:mm') : undefined,
-        lunchStartTime: currentSetting.lunchStartTime ? dayjs(currentSetting.lunchStartTime, 'HH:mm') : undefined,
-        dinnerStartTime: currentSetting.dinnerStartTime ? dayjs(currentSetting.dinnerStartTime, 'HH:mm') : undefined,
-        lunchMenuCount: menuCount,
-        lunchMenu1Name: currentSetting.lunchMenu1Name || '',
-        lunchMenu2Name: currentSetting.lunchMenu2Name || '',
-        lunchMenu3Name: currentSetting.lunchMenu3Name || '',
-        allowLateSubmission: currentSetting.allowLateSubmission ?? false,
-        isActive: currentSetting.isActive ?? true,
-      });
+      setBreakfastMenuCount(currentSetting.breakfastMenuCount || 1);
+      setLunchMenuCount(currentSetting.lunchMenuCount || 1);
+      setDinnerMenuCount(currentSetting.dinnerMenuCount || 1);
+      setSupperMenuCount(currentSetting.supperMenuCount || 1);
+
+      // 약간의 지연을 두고 값 설정
+      setTimeout(() => {
+        form.setFieldsValue({
+          deadlineHoursBefore: currentSetting.deadlineHoursBefore || 24,
+          breakfastStartTime: currentSetting.breakfastStartTime ? dayjs(currentSetting.breakfastStartTime, 'HH:mm') : undefined,
+          lunchStartTime: currentSetting.lunchStartTime ? dayjs(currentSetting.lunchStartTime, 'HH:mm') : undefined,
+          dinnerStartTime: currentSetting.dinnerStartTime ? dayjs(currentSetting.dinnerStartTime, 'HH:mm') : undefined,
+          breakfastMenuCount: currentSetting.breakfastMenuCount || 1,
+          lunchMenuCount: currentSetting.lunchMenuCount || 1,
+          dinnerMenuCount: currentSetting.dinnerMenuCount || 1,
+          supperMenuCount: currentSetting.supperMenuCount || 1,
+          breakfastMenu1Name: currentSetting.breakfastMenu1Name || '',
+          breakfastMenu2Name: currentSetting.breakfastMenu2Name || '',
+          breakfastMenu3Name: currentSetting.breakfastMenu3Name || '',
+          breakfastMenu4Name: currentSetting.breakfastMenu4Name || '',
+          breakfastMenu5Name: currentSetting.breakfastMenu5Name || '',
+          lunchMenu1Name: currentSetting.lunchMenu1Name || '',
+          lunchMenu2Name: currentSetting.lunchMenu2Name || '',
+          lunchMenu3Name: currentSetting.lunchMenu3Name || '',
+          lunchMenu4Name: currentSetting.lunchMenu4Name || '',
+          lunchMenu5Name: currentSetting.lunchMenu5Name || '',
+          dinnerMenu1Name: currentSetting.dinnerMenu1Name || '',
+          dinnerMenu2Name: currentSetting.dinnerMenu2Name || '',
+          dinnerMenu3Name: currentSetting.dinnerMenu3Name || '',
+          dinnerMenu4Name: currentSetting.dinnerMenu4Name || '',
+          dinnerMenu5Name: currentSetting.dinnerMenu5Name || '',
+          supperMenu1Name: currentSetting.supperMenu1Name || '',
+          supperMenu2Name: currentSetting.supperMenu2Name || '',
+          supperMenu3Name: currentSetting.supperMenu3Name || '',
+          supperMenu4Name: currentSetting.supperMenu4Name || '',
+          supperMenu5Name: currentSetting.supperMenu5Name || '',
+          allowLateSubmission: currentSetting.allowLateSubmission ?? false,
+          isActive: currentSetting.isActive ?? true,
+        });
+      }, 0);
     } else {
+      setBreakfastMenuCount(1);
       setLunchMenuCount(1);
-      form.setFieldsValue({
-        deadlineHoursBefore: 24,
-        lunchMenuCount: 1,
-        lunchMenu1Name: '',
-        lunchMenu2Name: '',
-        lunchMenu3Name: '',
-        allowLateSubmission: false,
-        isActive: true,
-      });
+      setDinnerMenuCount(1);
+      setSupperMenuCount(1);
+      setTimeout(() => {
+        form.setFieldsValue({
+          deadlineHoursBefore: 24,
+          breakfastMenuCount: 1,
+          lunchMenuCount: 1,
+          dinnerMenuCount: 1,
+          supperMenuCount: 1,
+          allowLateSubmission: false,
+          isActive: true,
+        });
+      }, 0);
     }
 
     setModalVisible(true);
@@ -95,10 +132,30 @@ export default function MealCountSettingPage() {
         breakfastStartTime: values.breakfastStartTime ? values.breakfastStartTime.format('HH:mm') : undefined,
         lunchStartTime: values.lunchStartTime ? values.lunchStartTime.format('HH:mm') : undefined,
         dinnerStartTime: values.dinnerStartTime ? values.dinnerStartTime.format('HH:mm') : undefined,
+        breakfastMenuCount: values.breakfastMenuCount,
         lunchMenuCount: values.lunchMenuCount,
+        dinnerMenuCount: values.dinnerMenuCount,
+        supperMenuCount: values.supperMenuCount,
+        breakfastMenu1Name: values.breakfastMenu1Name,
+        breakfastMenu2Name: values.breakfastMenu2Name,
+        breakfastMenu3Name: values.breakfastMenu3Name,
+        breakfastMenu4Name: values.breakfastMenu4Name,
+        breakfastMenu5Name: values.breakfastMenu5Name,
         lunchMenu1Name: values.lunchMenu1Name,
         lunchMenu2Name: values.lunchMenu2Name,
         lunchMenu3Name: values.lunchMenu3Name,
+        lunchMenu4Name: values.lunchMenu4Name,
+        lunchMenu5Name: values.lunchMenu5Name,
+        dinnerMenu1Name: values.dinnerMenu1Name,
+        dinnerMenu2Name: values.dinnerMenu2Name,
+        dinnerMenu3Name: values.dinnerMenu3Name,
+        dinnerMenu4Name: values.dinnerMenu4Name,
+        dinnerMenu5Name: values.dinnerMenu5Name,
+        supperMenu1Name: values.supperMenu1Name,
+        supperMenu2Name: values.supperMenu2Name,
+        supperMenu3Name: values.supperMenu3Name,
+        supperMenu4Name: values.supperMenu4Name,
+        supperMenu5Name: values.supperMenu5Name,
         allowLateSubmission: values.allowLateSubmission,
         isActive: values.isActive,
       };
@@ -121,6 +178,25 @@ export default function MealCountSettingPage() {
     const deadlineMinutes = deadline.getMinutes().toString().padStart(2, '0');
 
     return `${deadlineHours}:${deadlineMinutes}`;
+  };
+
+  // 메뉴명 렌더링 헬퍼 함수
+  const renderMenuInputs = (mealType: string, count: number) => {
+    const inputs = [];
+    for (let i = 1; i <= count; i++) {
+      inputs.push(
+        <Col span={12} key={i}>
+          <Form.Item
+            label={`메뉴 ${i}`}
+            name={`${mealType}Menu${i}Name`}
+            style={{ marginBottom: 12 }}
+          >
+            <Input placeholder={`메뉴 ${i}`} maxLength={20} />
+          </Form.Item>
+        </Col>
+      );
+    }
+    return inputs;
   };
 
   const currentSetting = setting?.data;
@@ -188,8 +264,8 @@ export default function MealCountSettingPage() {
           loading={settingLoading}
         >
           <Descriptions column={2} bordered>
-            <Descriptions.Item label="마감 시간 (조리 시작 전)">
-              {currentSetting.deadlineHoursBefore}시간
+            <Descriptions.Item label="마감 시간">
+              조리 시작 {currentSetting.deadlineHoursBefore}시간 전
             </Descriptions.Item>
             <Descriptions.Item label="마감 후 입력 허용">
               {currentSetting.allowLateSubmission ? (
@@ -198,52 +274,41 @@ export default function MealCountSettingPage() {
                 <Tag color="red">불허</Tag>
               )}
             </Descriptions.Item>
-            <Descriptions.Item label="조식 조리 시작 시간">
-              {currentSetting.breakfastStartTime || '-'}
+            <Descriptions.Item label="조식">
+              {currentSetting.breakfastStartTime || '-'} (마감: {calculateDeadline(currentSetting.breakfastStartTime, deadlineHours)}) / 메뉴 {currentSetting.breakfastMenuCount}개
             </Descriptions.Item>
-            <Descriptions.Item label="조식 입력 마감 시간">
-              {calculateDeadline(currentSetting.breakfastStartTime, deadlineHours)}
+            <Descriptions.Item label="조식 메뉴">
+              {[1, 2, 3, 4, 5].map(i => currentSetting[`breakfastMenu${i}Name` as keyof MealCountSetting]).filter(Boolean).map((name, idx) => (
+                <Tag key={idx} color="blue">{name as string}</Tag>
+              ))}
             </Descriptions.Item>
-            <Descriptions.Item label="중식 조리 시작 시간">
-              {currentSetting.lunchStartTime || '-'}
+            <Descriptions.Item label="중식">
+              {currentSetting.lunchStartTime || '-'} (마감: {calculateDeadline(currentSetting.lunchStartTime, deadlineHours)}) / 메뉴 {currentSetting.lunchMenuCount}개
             </Descriptions.Item>
-            <Descriptions.Item label="중식 입력 마감 시간">
-              {calculateDeadline(currentSetting.lunchStartTime, deadlineHours)}
+            <Descriptions.Item label="중식 메뉴">
+              {[1, 2, 3, 4, 5].map(i => currentSetting[`lunchMenu${i}Name` as keyof MealCountSetting]).filter(Boolean).map((name, idx) => (
+                <Tag key={idx} color="blue">{name as string}</Tag>
+              ))}
             </Descriptions.Item>
-            <Descriptions.Item label="석식 조리 시작 시간">
-              {currentSetting.dinnerStartTime || '-'}
+            <Descriptions.Item label="석식">
+              {currentSetting.dinnerStartTime || '-'} (마감: {calculateDeadline(currentSetting.dinnerStartTime, deadlineHours)}) / 메뉴 {currentSetting.dinnerMenuCount}개
             </Descriptions.Item>
-            <Descriptions.Item label="석식 입력 마감 시간">
-              {calculateDeadline(currentSetting.dinnerStartTime, deadlineHours)}
+            <Descriptions.Item label="석식 메뉴">
+              {[1, 2, 3, 4, 5].map(i => currentSetting[`dinnerMenu${i}Name` as keyof MealCountSetting]).filter(Boolean).map((name, idx) => (
+                <Tag key={idx} color="blue">{name as string}</Tag>
+              ))}
             </Descriptions.Item>
-            <Descriptions.Item label="중식 메뉴 개수" span={2}>
-              {currentSetting.lunchMenuCount}개
+            <Descriptions.Item label="야식 메뉴 개수" span={2}>
+              {currentSetting.supperMenuCount}개
+              {[1, 2, 3, 4, 5].map(i => currentSetting[`supperMenu${i}Name` as keyof MealCountSetting]).filter(Boolean).length > 0 && (
+                <span style={{ marginLeft: 8 }}>
+                  {[1, 2, 3, 4, 5].map(i => currentSetting[`supperMenu${i}Name` as keyof MealCountSetting]).filter(Boolean).map((name, idx) => (
+                    <Tag key={idx} color="blue">{name as string}</Tag>
+                  ))}
+                </span>
+              )}
             </Descriptions.Item>
-            {currentSetting.lunchMenu1Name && (
-              <Descriptions.Item label="중식 메뉴 1" span={2}>
-                <Tag color="blue">{currentSetting.lunchMenu1Name}</Tag>
-              </Descriptions.Item>
-            )}
-            {currentSetting.lunchMenu2Name && (
-              <Descriptions.Item label="중식 메뉴 2" span={2}>
-                <Tag color="blue">{currentSetting.lunchMenu2Name}</Tag>
-              </Descriptions.Item>
-            )}
-            {currentSetting.lunchMenu3Name && (
-              <Descriptions.Item label="중식 메뉴 3" span={2}>
-                <Tag color="blue">{currentSetting.lunchMenu3Name}</Tag>
-              </Descriptions.Item>
-            )}
           </Descriptions>
-
-          <div style={{ marginTop: 16, padding: 12, background: '#e6f7ff', borderRadius: 4, border: '1px solid #91d5ff' }}>
-            <strong>💡 안내</strong>
-            <ul style={{ marginTop: 8, marginBottom: 0, paddingLeft: 20 }}>
-              <li>조리 시작 시간 기준으로 설정한 시간 전까지 식수 입력이 가능합니다</li>
-              <li>예: 조리 시작 06:00, 마감 24시간 전 → 입력 마감 시간은 전날 06:00</li>
-              <li>마감 후 입력을 허용하면 늦은 제출로 표시되지만 등록은 가능합니다</li>
-            </ul>
-          </div>
         </Card>
       )}
 
@@ -273,142 +338,174 @@ export default function MealCountSettingPage() {
         confirmLoading={saveMutation.isPending}
         okText="저장"
         cancelText="취소"
-        width={700}
+        width={900}
+        style={{ top: 20 }}
       >
         <Form
           form={form}
           layout="vertical"
-          initialValues={{
-            deadlineHoursBefore: 24,
-            lunchMenuCount: 1,
-            lunchMenu1Name: '',
-            lunchMenu2Name: '',
-            lunchMenu3Name: '',
-            allowLateSubmission: false,
-            isActive: true,
-          }}
         >
-          <Form.Item
-            label="마감 시간 (조리 시작 전)"
-            name="deadlineHoursBefore"
-            rules={[
-              { required: true, message: '마감 시간을 입력하세요' },
-              { type: 'number', min: 1, max: 72, message: '1~72 사이의 값을 입력하세요' },
-            ]}
-            extra="조리 시작 시간 기준으로 몇 시간 전까지 입력을 받을지 설정합니다"
-          >
-            <InputNumber
-              style={{ width: '100%' }}
-              min={1}
-              max={72}
-              addonAfter="시간"
-              placeholder="예: 24"
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="조식 조리 시작 시간"
-            name="breakfastStartTime"
-            extra="조식을 조리하기 시작하는 시간을 설정합니다"
-          >
-            <TimePicker
-              style={{ width: '100%' }}
-              format="HH:mm"
-              placeholder="시간 선택"
-              minuteStep={10}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="중식 조리 시작 시간"
-            name="lunchStartTime"
-            extra="중식을 조리하기 시작하는 시간을 설정합니다"
-          >
-            <TimePicker
-              style={{ width: '100%' }}
-              format="HH:mm"
-              placeholder="시간 선택"
-              minuteStep={10}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="석식 조리 시작 시간"
-            name="dinnerStartTime"
-            extra="석식을 조리하기 시작하는 시간을 설정합니다"
-          >
-            <TimePicker
-              style={{ width: '100%' }}
-              format="HH:mm"
-              placeholder="시간 선택"
-              minuteStep={10}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="중식 메뉴 개수"
-            name="lunchMenuCount"
-            rules={[{ required: true, message: '중식 메뉴 개수를 선택하세요' }]}
-            extra="중식에 제공되는 메뉴의 종류 개수를 선택합니다 (예: 베이직/플러스, 죽/미음/일반)"
-          >
-            <Select
-              style={{ width: '100%' }}
-              onChange={(value) => setLunchMenuCount(value)}
-              options={[
-                { label: '1개', value: 1 },
-                { label: '2개', value: 2 },
-                { label: '3개', value: 3 },
-              ]}
-            />
-          </Form.Item>
-
-          {lunchMenuCount >= 1 && (
-            <Form.Item
-              label="중식 메뉴 1 명칭"
-              name="lunchMenu1Name"
-              extra="첫 번째 중식 메뉴의 이름 (예: 베이직, 죽, 1종)"
-            >
-              <Input placeholder="예: 베이직" maxLength={20} />
-            </Form.Item>
-          )}
-
-          {lunchMenuCount >= 2 && (
-            <Form.Item
-              label="중식 메뉴 2 명칭"
-              name="lunchMenu2Name"
-              extra="두 번째 중식 메뉴의 이름 (예: 플러스, 미음)"
-            >
-              <Input placeholder="예: 플러스" maxLength={20} />
-            </Form.Item>
-          )}
-
-          {lunchMenuCount >= 3 && (
-            <Form.Item
-              label="중식 메뉴 3 명칭"
-              name="lunchMenu3Name"
-              extra="세 번째 중식 메뉴의 이름 (예: 갈식, 일반)"
-            >
-              <Input placeholder="예: 일반" maxLength={20} />
-            </Form.Item>
-          )}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                label="마감 시간"
+                name="deadlineHoursBefore"
+                rules={[
+                  { required: true, message: '마감 시간을 입력하세요' },
+                  { type: 'number', min: 1, max: 72, message: '1~72 사이' },
+                ]}
+                style={{ marginBottom: 12 }}
+              >
+                <InputNumber
+                  style={{ width: '100%' }}
+                  min={1}
+                  max={72}
+                  addonAfter="시간 전"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="설정 활성화"
+                name="isActive"
+                valuePropName="checked"
+                style={{ marginBottom: 12 }}
+              >
+                <Switch checkedChildren="활성" unCheckedChildren="비활성" />
+              </Form.Item>
+            </Col>
+          </Row>
 
           <Form.Item
             label="마감 후 입력 허용"
             name="allowLateSubmission"
             valuePropName="checked"
-            extra="허용 시 마감 후에도 입력 가능하지만 '늦은 제출'로 표시됩니다"
+            style={{ marginBottom: 16 }}
           >
             <Switch checkedChildren="허용" unCheckedChildren="불허" />
           </Form.Item>
 
-          <Form.Item
-            label="설정 활성화"
-            name="isActive"
-            valuePropName="checked"
-            extra="비활성화 시 마감 시간 체크가 적용되지 않습니다"
-          >
-            <Switch checkedChildren="활성" unCheckedChildren="비활성" />
-          </Form.Item>
+          <Collapse
+            defaultActiveKey={['breakfast', 'lunch', 'dinner']}
+            style={{ marginBottom: 16 }}
+            items={[
+              {
+                key: 'breakfast',
+                label: '조식 설정',
+                children: (
+                  <>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label="조리 시작 시간" name="breakfastStartTime" style={{ marginBottom: 12 }}>
+                          <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="메뉴 개수"
+                          name="breakfastMenuCount"
+                          rules={[{ required: true }]}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <Select onChange={(value) => setBreakfastMenuCount(value)}>
+                            {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      {renderMenuInputs('breakfast', breakfastMenuCount)}
+                    </Row>
+                  </>
+                ),
+              },
+              {
+                key: 'lunch',
+                label: '중식 설정',
+                children: (
+                  <>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label="조리 시작 시간" name="lunchStartTime" style={{ marginBottom: 12 }}>
+                          <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="메뉴 개수"
+                          name="lunchMenuCount"
+                          rules={[{ required: true }]}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <Select onChange={(value) => setLunchMenuCount(value)}>
+                            {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      {renderMenuInputs('lunch', lunchMenuCount)}
+                    </Row>
+                  </>
+                ),
+              },
+              {
+                key: 'dinner',
+                label: '석식 설정',
+                children: (
+                  <>
+                    <Row gutter={16}>
+                      <Col span={12}>
+                        <Form.Item label="조리 시작 시간" name="dinnerStartTime" style={{ marginBottom: 12 }}>
+                          <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} />
+                        </Form.Item>
+                      </Col>
+                      <Col span={12}>
+                        <Form.Item
+                          label="메뉴 개수"
+                          name="dinnerMenuCount"
+                          rules={[{ required: true }]}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <Select onChange={(value) => setDinnerMenuCount(value)}>
+                            {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      {renderMenuInputs('dinner', dinnerMenuCount)}
+                    </Row>
+                  </>
+                ),
+              },
+              {
+                key: 'supper',
+                label: '야식 설정',
+                children: (
+                  <>
+                    <Row gutter={16}>
+                      <Col span={24}>
+                        <Form.Item
+                          label="메뉴 개수"
+                          name="supperMenuCount"
+                          rules={[{ required: true }]}
+                          style={{ marginBottom: 12 }}
+                        >
+                          <Select onChange={(value) => setSupperMenuCount(value)}>
+                            {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
+                          </Select>
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={16}>
+                      {renderMenuInputs('supper', supperMenuCount)}
+                    </Row>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Form>
       </Modal>
     </div>

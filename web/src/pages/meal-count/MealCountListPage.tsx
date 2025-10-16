@@ -164,15 +164,56 @@ export default function MealCountListPage() {
 
   // 메뉴명 가져오기
   const getMenuName = (mealType: MealType, menuNumber: number) => {
-    if (mealType === 'LUNCH' && settingData?.data) {
-      const lunchMenuNames = [
-        settingData.data.lunchMenu1Name,
-        settingData.data.lunchMenu2Name,
-        settingData.data.lunchMenu3Name,
-      ];
-      return lunchMenuNames[menuNumber - 1] || `메뉴${menuNumber}`;
+    if (!settingData?.data) {
+      return menuNumber > 1 ? `메뉴${menuNumber}` : undefined;
     }
-    return menuNumber > 1 ? `메뉴${menuNumber}` : undefined;
+
+    const setting = settingData.data;
+    let menuNames: (string | undefined)[] = [];
+
+    switch (mealType) {
+      case 'BREAKFAST':
+        menuNames = [
+          setting.breakfastMenu1Name,
+          setting.breakfastMenu2Name,
+          setting.breakfastMenu3Name,
+          setting.breakfastMenu4Name,
+          setting.breakfastMenu5Name,
+        ];
+        break;
+      case 'LUNCH':
+        menuNames = [
+          setting.lunchMenu1Name,
+          setting.lunchMenu2Name,
+          setting.lunchMenu3Name,
+          setting.lunchMenu4Name,
+          setting.lunchMenu5Name,
+        ];
+        break;
+      case 'DINNER':
+        menuNames = [
+          setting.dinnerMenu1Name,
+          setting.dinnerMenu2Name,
+          setting.dinnerMenu3Name,
+          setting.dinnerMenu4Name,
+          setting.dinnerMenu5Name,
+        ];
+        break;
+      case 'SUPPER':
+        menuNames = [
+          setting.supperMenu1Name,
+          setting.supperMenu2Name,
+          setting.supperMenu3Name,
+          setting.supperMenu4Name,
+          setting.supperMenu5Name,
+        ];
+        break;
+      default:
+        return menuNumber > 1 ? `메뉴${menuNumber}` : undefined;
+    }
+
+    const menuName = menuNames[menuNumber - 1];
+    return menuName || (menuNumber > 1 ? `메뉴${menuNumber}` : undefined);
   };
 
   // 날짜별로 데이터 그룹화 (메뉴별로 배열로 저장)
