@@ -14,8 +14,9 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://api.dahamvoc.co.kr',
         changeOrigin: true,
+        secure: false,
       },
     },
   },
