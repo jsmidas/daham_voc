@@ -42,19 +42,19 @@ export const createSiteSchema = Joi.object({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone1: Joi.string()
-    .pattern(/^010-\d{4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
     .optional()
     .messages({
-      'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678)',
+      'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 02-123-4567, 051-123-4567)',
     }),
   contactPerson2: Joi.string().max(50).optional().messages({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone2: Joi.string()
-    .pattern(/^010-\d{4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
     .optional()
     .messages({
-      'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678)',
+      'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 02-123-4567, 051-123-4567)',
     }),
   staffIds: Joi.array().items(Joi.string().uuid()).optional().messages({
     'array.base': '담당자 ID는 배열 형식이어야 합니다',
@@ -97,12 +97,12 @@ export const updateSiteSchema = Joi.object({
   longitude: Joi.number().min(-180).max(180).optional(),
   contactPerson1: Joi.string().max(50).allow(null, '').optional(),
   contactPhone1: Joi.string()
-    .pattern(/^010-\d{4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
     .allow(null, '')
     .optional(),
   contactPerson2: Joi.string().max(50).allow(null, '').optional(),
   contactPhone2: Joi.string()
-    .pattern(/^010-\d{4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
     .allow(null, '')
     .optional(),
   staffIds: Joi.array().items(Joi.string().uuid()).optional(),

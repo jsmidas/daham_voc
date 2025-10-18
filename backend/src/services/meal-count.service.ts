@@ -212,12 +212,20 @@ export async function getMealCountSetting(siteId: string) {
  * 사업장 식수 설정 생성/수정
  */
 export async function upsertMealCountSetting(siteId: string, data: any) {
+  // undefined 값 제거 (Prisma는 undefined를 허용하지 않음)
+  const cleanData = Object.entries(data).reduce((acc, [key, value]) => {
+    if (value !== undefined) {
+      acc[key] = value;
+    }
+    return acc;
+  }, {} as any);
+
   return await prisma.mealCountSetting.upsert({
     where: { siteId },
     create: {
       siteId,
-      ...data,
+      ...cleanData,
     },
-    update: data,
+    update: cleanData,
   });
 }

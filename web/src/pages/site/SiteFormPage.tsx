@@ -74,20 +74,44 @@ export default function SiteFormPage() {
       navigate('/sites');
     },
     onError: (error: any) => {
+      console.error('=== Update Error ===');
+      console.error('Error object:', error);
+      console.error('Error message:', error.message);
+      console.error('Error status:', error.status);
+      console.error('Error data:', error.data);
       message.error(error.message || '수정 실패');
     },
   });
 
   const onFinish = (values: any) => {
+    console.log('=== onFinish 호출 ===');
+    console.log('Form values:', values);
+
     // 좌표를 숫자로 변환하고 날짜를 ISO 문자열로 변환
     const payload = {
       ...values,
+      groupId: values.groupId || undefined, // 빈 문자열을 undefined로 변환
       latitude: parseFloat(values.latitude),
       longitude: parseFloat(values.longitude),
+      contactPerson1: values.contactPerson1 || undefined,
+      contactPhone1: values.contactPhone1 || undefined,
+      contactPerson2: values.contactPerson2 || undefined,
+      contactPhone2: values.contactPhone2 || undefined,
+      deliveryRoute: values.deliveryRoute || undefined,
       pricePerMeal: values.pricePerMeal ? parseFloat(values.pricePerMeal) : undefined,
       contractStartDate: values.contractStartDate ? values.contractStartDate.toISOString() : undefined,
       contractEndDate: values.contractEndDate ? values.contractEndDate.toISOString() : undefined,
     };
+
+    console.log('Payload to send:', payload);
+    console.log('Payload types:', {
+      latitude: typeof payload.latitude,
+      longitude: typeof payload.longitude,
+      pricePerMeal: typeof payload.pricePerMeal,
+      contractStartDate: typeof payload.contractStartDate,
+      contractEndDate: typeof payload.contractEndDate,
+      groupId: typeof payload.groupId,
+    });
 
     if (isEditMode) {
       updateMutation.mutate({ id, data: payload });

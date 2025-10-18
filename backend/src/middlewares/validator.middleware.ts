@@ -18,6 +18,11 @@ export function validateRequest(schema: Joi.ObjectSchema) {
         message: detail.message,
       }));
 
+      console.error('=== Validation Error ===');
+      console.error('Request URL:', req.method, req.originalUrl);
+      console.error('Request Body:', JSON.stringify(req.body, null, 2));
+      console.error('Validation Details:', JSON.stringify(details, null, 2));
+
       res.status(422).json(
         errorResponse('입력값 검증에 실패했습니다', 'VALIDATION_ERROR', details)
       );

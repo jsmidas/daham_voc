@@ -12,6 +12,74 @@ import type { MealCountSetting } from '@/api/meal-count.api';
 import { useState } from 'react';
 import dayjs from 'dayjs';
 
+// 마감 시간 계산 함수
+const calculateDeadlineTime = (startTime: string | undefined, hoursBefore: number): string => {
+  if (!startTime) return '-';
+
+  const [hours, minutes] = startTime.split(':').map(Number);
+  const deadline = new Date();
+  deadline.setHours(hours, minutes, 0, 0);
+  deadline.setHours(deadline.getHours() - hoursBefore);
+
+  const deadlineHours = deadline.getHours().toString().padStart(2, '0');
+  const deadlineMinutes = deadline.getMinutes().toString().padStart(2, '0');
+
+  return `${deadlineHours}:${deadlineMinutes}`;
+};
+
+// 미리보기 컴포넌트
+function DeadlinePreview({ form }: { form: any }) {
+  const deadlineHours = Form.useWatch('deadlineHoursBefore', form) || 24;
+  const breakfastStart = Form.useWatch('breakfastStartTime', form);
+  const lunchStart = Form.useWatch('lunchStartTime', form);
+  const dinnerStart = Form.useWatch('dinnerStartTime', form);
+
+  return (
+    <Card
+      size="small"
+      style={{ marginBottom: 16, backgroundColor: '#f0f5ff' }}
+      title={
+        <Space>
+          <ClockCircleOutlined />
+          <span>마감 시간 미리보기</span>
+        </Space>
+      }
+    >
+      <Space direction="vertical" style={{ width: '100%' }}>
+        {breakfastStart && (
+          <div>
+            <strong>조식:</strong> {breakfastStart.format('HH:mm')} 조리 시작 →
+            <Tag color="blue" style={{ marginLeft: 8 }}>
+              {calculateDeadlineTime(breakfastStart.format('HH:mm'), deadlineHours)} 마감
+            </Tag>
+          </div>
+        )}
+        {lunchStart && (
+          <div>
+            <strong>중식:</strong> {lunchStart.format('HH:mm')} 조리 시작 →
+            <Tag color="green" style={{ marginLeft: 8 }}>
+              {calculateDeadlineTime(lunchStart.format('HH:mm'), deadlineHours)} 마감
+            </Tag>
+          </div>
+        )}
+        {dinnerStart && (
+          <div>
+            <strong>석식:</strong> {dinnerStart.format('HH:mm')} 조리 시작 →
+            <Tag color="orange" style={{ marginLeft: 8 }}>
+              {calculateDeadlineTime(dinnerStart.format('HH:mm'), deadlineHours)} 마감
+            </Tag>
+          </div>
+        )}
+        {!breakfastStart && !lunchStart && !dinnerStart && (
+          <div style={{ color: '#999', fontSize: 12 }}>
+            * 조리 시작 시간을 설정하면 마감 시간이 자동으로 계산됩니다
+          </div>
+        )}
+      </Space>
+    </Card>
+  );
+}
+
 export default function MealCountSettingPage() {
   const queryClient = useQueryClient();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
@@ -264,15 +332,20 @@ export default function MealCountSettingPage() {
           loading={settingLoading}
         >
           <Descriptions column={2} bordered>
-            <Descriptions.Item label="마감 시간">
-              조리 시작 {currentSetting.deadlineHoursBefore}시간 전
-            </Descriptions.Item>
-            <Descriptions.Item label="마감 후 입력 허용">
-              {currentSetting.allowLateSubmission ? (
-                <Tag color="orange">허용</Tag>
-              ) : (
-                <Tag color="red">불허</Tag>
-              )}
+            <Descriptions.Item label="마감 시간" span={2}>
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div>
+                  <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
+                    조리 시작 {currentSetting.deadlineHoursBefore}시간 전
+                  </Tag>
+                </div>
+                <div style={{ fontSize: 12, color: '#666' }}>
+                  💡 예: 조식 07:00 조리 시작 → {calculateDeadline('07:00', deadlineHours)} 마감
+                  {currentSetting.allowLateSubmission &&
+                    <span style={{ marginLeft: 8, color: '#fa8c16' }}>(마감 후에도 입력 가능)</span>
+                  }
+                </div>
+              </Space>
             </Descriptions.Item>
             <Descriptions.Item label="조식">
               {currentSetting.breakfastStartTime || '-'} (마감: {calculateDeadline(currentSetting.breakfastStartTime, deadlineHours)}) / 메뉴 {currentSetting.breakfastMenuCount}개
@@ -348,19 +421,21 @@ export default function MealCountSettingPage() {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="마감 시간"
+                label="마감 시간 (조리 시작 몇 시간 전에 입력 마감)"
                 name="deadlineHoursBefore"
                 rules={[
                   { required: true, message: '마감 시간을 입력하세요' },
                   { type: 'number', min: 1, max: 72, message: '1~72 사이' },
                 ]}
                 style={{ marginBottom: 12 }}
+                tooltip="식사 조리 시작 시간 기준으로 몇 시간 전에 식수 입력을 마감할지 설정합니다. 예: 24시간 전 = 하루 전"
               >
                 <InputNumber
                   style={{ width: '100%' }}
                   min={1}
                   max={72}
                   addonAfter="시간 전"
+                  placeholder="예: 24"
                 />
               </Form.Item>
             </Col>
@@ -375,6 +450,9 @@ export default function MealCountSettingPage() {
               </Form.Item>
             </Col>
           </Row>
+
+          {/* 마감 시간 미리보기 */}
+          <DeadlinePreview form={form} />
 
           <Form.Item
             label="마감 후 입력 허용"
@@ -407,7 +485,7 @@ export default function MealCountSettingPage() {
                           rules={[{ required: true }]}
                           style={{ marginBottom: 12 }}
                         >
-                          <Select onChange={(value) => setBreakfastMenuCount(value)}>
+                          <Select onChange={setBreakfastMenuCount}>
                             {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
                           </Select>
                         </Form.Item>
@@ -437,7 +515,7 @@ export default function MealCountSettingPage() {
                           rules={[{ required: true }]}
                           style={{ marginBottom: 12 }}
                         >
-                          <Select onChange={(value) => setLunchMenuCount(value)}>
+                          <Select onChange={setLunchMenuCount}>
                             {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
                           </Select>
                         </Form.Item>
@@ -467,7 +545,7 @@ export default function MealCountSettingPage() {
                           rules={[{ required: true }]}
                           style={{ marginBottom: 12 }}
                         >
-                          <Select onChange={(value) => setDinnerMenuCount(value)}>
+                          <Select onChange={setDinnerMenuCount}>
                             {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
                           </Select>
                         </Form.Item>
@@ -492,7 +570,7 @@ export default function MealCountSettingPage() {
                           rules={[{ required: true }]}
                           style={{ marginBottom: 12 }}
                         >
-                          <Select onChange={(value) => setSupperMenuCount(value)}>
+                          <Select onChange={setSupperMenuCount}>
                             {[1, 2, 3, 4, 5].map(n => <Select.Option key={n} value={n}>{n}개</Select.Option>)}
                           </Select>
                         </Form.Item>
