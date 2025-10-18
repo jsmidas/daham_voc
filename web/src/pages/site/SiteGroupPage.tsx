@@ -10,6 +10,7 @@ import {
   Modal,
   Form,
   Input,
+  InputNumber,
   Select,
   message,
   Space,
@@ -18,7 +19,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
   ShopOutlined,
@@ -240,7 +240,12 @@ export default function SiteGroupPage() {
       form.resetFields();
       loadHierarchy();
     } catch (error: any) {
-      message.error('그룹 생성 실패: ' + error.message);
+      // 중복 이름 에러 처리
+      if (error.message?.includes('Unique constraint failed') || error.message?.includes('division') && error.message?.includes('name')) {
+        message.error(`같은 부문에 "${values.name}" 이름의 그룹이 이미 존재합니다. 다른 이름을 사용해주세요.`);
+      } else {
+        message.error('그룹 생성 실패: ' + error.message);
+      }
     }
   };
 
@@ -328,7 +333,7 @@ export default function SiteGroupPage() {
           </Form.Item>
 
           <Form.Item name="sortOrder" label="정렬 순서" initialValue={0}>
-            <Input type="number" min={0} />
+            <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
         </Form>
       </Modal>
