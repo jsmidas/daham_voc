@@ -37,7 +37,6 @@ import {
 } from '@/api/weekly-menu-template.api';
 import { getMenuTypes, type MenuType } from '@/api/menu-type.api';
 import type { ColumnsType } from 'antd/es/table';
-import type { UploadFile } from 'antd/es/upload/interface';
 
 const { TextArea } = Input;
 

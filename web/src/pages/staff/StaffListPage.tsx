@@ -26,7 +26,7 @@ export default function StaffListPage() {
   const [searchInput, setSearchInput] = useState('');
 
   // 담당자 목록 조회
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['staff', { page, limit, division, role, search }],
     queryFn: () => getStaffList({ page, limit, division, role, search }),
   });

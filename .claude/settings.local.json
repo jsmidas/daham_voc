@@ -94,7 +94,9 @@
       "Bash(echo:*)",
       "Bash(nslookup:*)",
       "Bash(ssh:*)",
-      "Bash(start http://localhost:5175)"
+      "Bash(start http://localhost:5175)",
+      "Bash(./gradlew assembleRelease:*)",
+      "Bash(pm2 list:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,7 +9,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createStaff, updateStaff, getStaffById, assignStaffToSites } from '@/api/staff.api';
 import { getSites } from '@/api/site.api';
 import { useEffect, useState } from 'react';
-import type { TransferDirection } from 'antd/es/transfer';
 
 export default function StaffFormPage() {
   const navigate = useNavigate();
@@ -105,17 +104,17 @@ export default function StaffFormPage() {
   };
 
   // Transfer onChange
-  const handleTransferChange = (newTargetKeys: string[], direction: TransferDirection, moveKeys: string[]) => {
-    setTargetKeys(newTargetKeys);
+  const handleTransferChange = (newTargetKeys: React.Key[]) => {
+    setTargetKeys(newTargetKeys as string[]);
   };
 
   // Transfer onSelectChange
-  const handleSelectChange = (sourceSelectedKeys: string[], targetSelectedKeys: string[]) => {
-    setSelectedKeys([...sourceSelectedKeys, ...targetSelectedKeys]);
+  const handleSelectChange = (sourceSelectedKeys: React.Key[], targetSelectedKeys: React.Key[]) => {
+    setSelectedKeys([...sourceSelectedKeys, ...targetSelectedKeys] as string[]);
   };
 
   // Transfer data source
-  const transferDataSource = sitesData?.sites?.map((site: any) => ({
+  const transferDataSource = sitesData?.data?.sites?.map((site: any) => ({
     key: site.id,
     title: `${site.name} (${site.type})`,
     description: site.address,
@@ -276,14 +275,14 @@ export default function StaffFormPage() {
               selectedKeys={selectedKeys}
               onChange={handleTransferChange}
               onSelectChange={handleSelectChange}
-              render={(item) => item.title}
+              render={(item) => item.title || ''}
               listStyle={{
                 width: '100%',
                 height: 400,
               }}
               showSearch
               filterOption={(inputValue, item) =>
-                item.title.toLowerCase().includes(inputValue.toLowerCase())
+                (item.title || '').toLowerCase().includes(inputValue.toLowerCase())
               }
             />
           </Form.Item>

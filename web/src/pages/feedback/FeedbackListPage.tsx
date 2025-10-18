@@ -259,7 +259,7 @@ export default function FeedbackListPage() {
               showSearch
               optionFilterProp="children"
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               options={sites?.data?.sites?.map((site: any) => ({
                 value: site.id,

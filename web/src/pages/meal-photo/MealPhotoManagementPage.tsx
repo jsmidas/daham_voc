@@ -14,8 +14,6 @@ import {
   deleteMealPhoto,
   bulkDeleteMealPhotos,
   bulkCheckMealPhotos,
-  toggleCheckStatus,
-  getMealPhotos
 } from '@/api/meal-photo.api';
 import dayjs, { Dayjs } from 'dayjs';
 import type { UploadFile } from 'antd';
@@ -29,24 +27,17 @@ interface PhotoState {
   LEFTOVER: UploadFile[];
 }
 
-const { RangePicker } = DatePicker;
-
 export default function MealPhotoManagementPage() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MealType>('BREAKFAST');
-  const [previewImage, setPreviewImage] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
 
   // 필터 상태
   const [mealTypeFilter, setMealTypeFilter] = useState<MealType | 'ALL'>('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'COMPLETE' | 'PARTIAL' | 'PENDING'>('ALL');
   const [checkedFilter, setCheckedFilter] = useState<'ALL' | 'CHECKED' | 'UNCHECKED'>('ALL');
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
-    dayjs().subtract(7, 'days'),
-    dayjs(),
-  ]);
 
   // 일괄 선택 상태
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
@@ -781,7 +772,7 @@ export default function MealPhotoManagementPage() {
               showSearch
               optionFilterProp="children"
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               options={filteredSites.map((site: any) => ({
                 value: site.id,
@@ -936,14 +927,16 @@ export default function MealPhotoManagementPage() {
       )}
 
       {/* 이미지 미리보기 모달 */}
-      <Modal
-        open={previewOpen}
-        title="사진 미리보기"
-        footer={null}
-        onCancel={() => setPreviewOpen(false)}
-      >
-        <img alt="preview" style={{ width: '100%' }} src={previewImage} />
-      </Modal>
+      {previewOpen && (
+        <Modal
+          open={previewOpen}
+          title="사진 미리보기"
+          footer={null}
+          onCancel={() => setPreviewOpen(false)}
+        >
+          <div>미리보기</div>
+        </Modal>
+      )}
     </div>
   );
 }

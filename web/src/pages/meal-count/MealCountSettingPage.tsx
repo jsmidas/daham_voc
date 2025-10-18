@@ -3,7 +3,7 @@
  * @description 사업장별 식수 입력 마감시간 설정 페이지
  */
 
-import { Table, Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input, Collapse, Row, Col } from 'antd';
+import { Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input, Collapse, Row, Col } from 'antd';
 import { SettingOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
@@ -228,7 +228,7 @@ export default function MealCountSettingPage() {
               value={selectedSiteId}
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               options={sites?.data?.sites?.map((site: any) => ({
                 label: `${site.name} (${site.division})`,

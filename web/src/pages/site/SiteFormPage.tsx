@@ -358,7 +358,7 @@ export default function SiteFormPage() {
                   min={0}
                   placeholder="예: 7000"
                   formatter={value => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  parser={value => value!.replace(/₩\s?|(,*)/g, '')}
+                  parser={value => (value!.replace(/₩\s?|(,*)/g, '') ? parseFloat(value!.replace(/₩\s?|(,*)/g, '')) : 0) as 0}
                 />
               </Form.Item>
             </Col>

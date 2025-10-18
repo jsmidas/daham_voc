@@ -4,13 +4,13 @@
  */
 
 import { useState } from 'react';
-import { Card, Select, DatePicker, Table, Button, Space, Modal, Form, InputNumber, Input, message, Tag } from 'antd';
+import { Card, Select, DatePicker, Table, Button, Space, Modal, Form, InputNumber, Input, message } from 'antd';
 
 const { RangePicker } = DatePicker;
 import { EditOutlined, DeleteOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
-import { getMealCountsByDate, getMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
+import { getMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
 import * as XLSX from 'xlsx';
@@ -430,7 +430,7 @@ export default function MealCountListPage() {
               value={selectedSiteId}
               showSearch
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
               options={sites?.data?.sites?.map((site: any) => ({
                 label: `${site.name} (${site.division})`,

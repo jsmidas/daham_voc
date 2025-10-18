@@ -8,7 +8,6 @@ import {
   ShopOutlined,
   MessageOutlined,
   ClockCircleOutlined,
-  TeamOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import {

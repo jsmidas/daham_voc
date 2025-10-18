@@ -125,7 +125,7 @@ export default function SiteMapPage() {
 
         // 현재 열려있는 InfoWindow와 타이머를 추적
         let currentInfoWindow: any = null;
-        let closeTimer: NodeJS.Timeout | null = null;
+        let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
         // 모든 사업장에 마커 표시
         sites.data.sites.forEach((site: any) => {
