@@ -261,7 +261,7 @@ export class SiteGroupService {
   }
 
   /**
-   * Delete site group (soft delete)
+   * Delete site group (hard delete)
    */
   async deleteGroup(id: string, userId: string) {
     await this.checkPermission(id, userId);
@@ -280,12 +280,9 @@ export class SiteGroupService {
       throw new Error('사업장이 있는 그룹은 삭제할 수 없습니다');
     }
 
-    await prisma.siteGroup.update({
+    // Hard delete - 완전히 삭제하여 같은 이름으로 다시 생성 가능
+    await prisma.siteGroup.delete({
       where: { id },
-      data: {
-        isActive: false,
-        deletedAt: new Date(),
-      },
     });
 
     await this.invalidateCache();
