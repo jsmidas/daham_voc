@@ -12,6 +12,7 @@ import {
   Input,
   InputNumber,
   Select,
+  ColorPicker,
   message,
   Space,
   Tag,
@@ -19,6 +20,7 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
+  EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
   ShopOutlined,
@@ -29,9 +31,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   getSiteHierarchy,
   createSiteGroup,
+  updateSiteGroup,
   deleteSiteGroup,
   type SiteHierarchy,
   type MarkerShape,
+  type GroupInHierarchy,
 } from '@/api/site-group.api';
 import { getMarkerShapeLabel } from '@/utils/markerShapes';
 
@@ -55,6 +59,7 @@ export default function SiteGroupPage() {
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedDivision, setSelectedDivision] = useState<'HQ' | 'YEONGNAM'>('HQ');
+  const [editingGroup, setEditingGroup] = useState<GroupInHierarchy | null>(null);
   const [form] = Form.useForm();
 
   // 데이터 로드
@@ -173,6 +178,14 @@ export default function SiteGroupPage() {
                   <Button
                     type="link"
                     size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEditGroup(group, division.code as 'HQ' | 'YEONGNAM')}
+                  >
+                    수정
+                  </Button>
+                  <Button
+                    type="link"
+                    size="small"
                     icon={<DeleteOutlined />}
                     danger
                     onClick={() => handleDeleteGroup(group.id, group.name)}
@@ -204,8 +217,23 @@ export default function SiteGroupPage() {
   // 그룹 추가
   const handleAddGroup = (division: 'HQ' | 'YEONGNAM') => {
     setSelectedDivision(division);
+    setEditingGroup(null);
     setModalVisible(true);
     form.resetFields();
+  };
+
+  // 그룹 수정
+  const handleEditGroup = (group: GroupInHierarchy, division: 'HQ' | 'YEONGNAM') => {
+    setSelectedDivision(division);
+    setEditingGroup(group);
+    setModalVisible(true);
+    form.setFieldsValue({
+      name: group.name,
+      description: group.description,
+      markerShape: group.markerShape,
+      markerColor: group.markerColor,
+      sortOrder: group.sortOrder,
+    });
   };
 
   // 그룹 삭제
@@ -228,15 +256,23 @@ export default function SiteGroupPage() {
     });
   };
 
-  // 그룹 생성
-  const handleCreateGroup = async (values: any) => {
+  // 그룹 생성/수정
+  const handleSubmitGroup = async (values: any) => {
     try {
-      await createSiteGroup({
-        ...values,
-        division: selectedDivision,
-      });
-      message.success('그룹이 생성되었습니다');
+      if (editingGroup) {
+        // 수정 모드
+        await updateSiteGroup(editingGroup.id, values);
+        message.success('그룹이 수정되었습니다');
+      } else {
+        // 생성 모드
+        await createSiteGroup({
+          ...values,
+          division: selectedDivision,
+        });
+        message.success('그룹이 생성되었습니다');
+      }
       setModalVisible(false);
+      setEditingGroup(null);
       form.resetFields();
       loadHierarchy();
     } catch (error: any) {
@@ -244,7 +280,8 @@ export default function SiteGroupPage() {
       if (error.message?.includes('Unique constraint failed') || error.message?.includes('division') && error.message?.includes('name')) {
         message.error(`같은 부문에 "${values.name}" 이름의 그룹이 이미 존재합니다. 다른 이름을 사용해주세요.`);
       } else {
-        message.error('그룹 생성 실패: ' + error.message);
+        const action = editingGroup ? '수정' : '생성';
+        message.error(`그룹 ${action} 실패: ` + error.message);
       }
     }
   };
@@ -286,16 +323,20 @@ export default function SiteGroupPage() {
         )}
       </Card>
 
-      {/* 그룹 추가 Modal */}
+      {/* 그룹 추가/수정 Modal */}
       <Modal
-        title={`${selectedDivision === 'HQ' ? '본사' : '영남지사'} 그룹 추가`}
+        title={editingGroup ? `그룹 수정: ${editingGroup.name}` : `${selectedDivision === 'HQ' ? '본사' : '영남지사'} 그룹 추가`}
         open={modalVisible}
-        onCancel={() => setModalVisible(false)}
+        onCancel={() => {
+          setModalVisible(false);
+          setEditingGroup(null);
+          form.resetFields();
+        }}
         onOk={() => form.submit()}
-        okText="생성"
+        okText={editingGroup ? '수정' : '생성'}
         cancelText="취소"
       >
-        <Form form={form} layout="vertical" onFinish={handleCreateGroup}>
+        <Form form={form} layout="vertical" onFinish={handleSubmitGroup}>
           <Form.Item
             name="name"
             label="그룹 이름"
@@ -325,11 +366,33 @@ export default function SiteGroupPage() {
 
           <Form.Item
             name="markerColor"
-            label="마커 색상"
+            label="마커 배경 색상"
             initialValue="#1890ff"
-            rules={[{ required: true, message: '마커 색상을 입력해주세요' }]}
+            rules={[{ required: true, message: '마커 색상을 선택해주세요' }]}
+            getValueFromEvent={(color) => {
+              return typeof color === 'string' ? color : color?.toHexString();
+            }}
           >
-            <Input type="color" />
+            <ColorPicker
+              showText
+              presets={[
+                {
+                  label: '추천 색상',
+                  colors: [
+                    '#1890ff', // 파랑
+                    '#52c41a', // 초록
+                    '#faad14', // 노랑
+                    '#f5222d', // 빨강
+                    '#722ed1', // 보라
+                    '#fa8c16', // 주황
+                    '#13c2c2', // 청록
+                    '#eb2f96', // 분홍
+                    '#2f54eb', // 남색
+                    '#a0d911', // 연두
+                  ],
+                },
+              ]}
+            />
           </Form.Item>
 
           <Form.Item name="sortOrder" label="정렬 순서" initialValue={0}>

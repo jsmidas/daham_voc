@@ -60,6 +60,28 @@ export const createSiteSchema = Joi.object({
     'array.base': '담당자 ID는 배열 형식이어야 합니다',
     'string.uuid': '유효한 담당자 ID를 입력해주세요',
   }),
+  mealTypes: Joi.array()
+    .items(Joi.string().valid('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'))
+    .optional()
+    .messages({
+      'array.base': '식단유형은 배열 형식이어야 합니다',
+      'any.only': '유효한 식단유형을 선택해주세요',
+    }),
+  pricePerMeal: Joi.number().min(0).optional().messages({
+    'number.min': '단가는 0 이상이어야 합니다',
+  }),
+  deliveryRoute: Joi.string().max(100).optional().messages({
+    'string.max': '배송코스는 최대 100자까지 입력 가능합니다',
+  }),
+  contractStartDate: Joi.date().iso().optional().messages({
+    'date.format': '올바른 날짜 형식이 아닙니다',
+  }),
+  contractEndDate: Joi.date().iso().optional().messages({
+    'date.format': '올바른 날짜 형식이 아닙니다',
+  }),
+  sortOrder: Joi.number().min(0).optional().messages({
+    'number.min': '정렬 순서는 0 이상이어야 합니다',
+  }),
 });
 
 /**
@@ -84,6 +106,14 @@ export const updateSiteSchema = Joi.object({
     .allow(null, '')
     .optional(),
   staffIds: Joi.array().items(Joi.string().uuid()).optional(),
+  mealTypes: Joi.array()
+    .items(Joi.string().valid('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'))
+    .optional(),
+  pricePerMeal: Joi.number().min(0).allow(null).optional(),
+  deliveryRoute: Joi.string().max(100).allow(null, '').optional(),
+  contractStartDate: Joi.date().iso().allow(null).optional(),
+  contractEndDate: Joi.date().iso().allow(null).optional(),
+  sortOrder: Joi.number().min(0).optional(),
 });
 
 /**

@@ -200,12 +200,12 @@ export default function SiteFormPage() {
                       form.setFieldsValue({ address: fullAddress });
                       message.info('주소가 입력되었습니다. 좌표 변환 중...');
 
-                      // 좌표 변환
-                      const apiKey = import.meta.env.VITE_KAKAO_MAP_APP_KEY;
-                      console.log('API 키:', apiKey);
+                      // 좌표 변환 (REST API 키 사용)
+                      const apiKey = import.meta.env.VITE_KAKAO_REST_API_KEY;
+                      console.log('REST API 키:', apiKey);
 
                       if (!apiKey || apiKey === 'your_kakao_map_key_here') {
-                        message.warning('좌표는 수동으로 입력해주세요 (API 키 미설정)');
+                        message.warning('좌표는 수동으로 입력해주세요 (REST API 키 미설정)');
                         return;
                       }
 
