@@ -9,6 +9,8 @@ import dayjs from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { createSite, updateSite, getSiteById } from '@/api/site.api';
+import { getMenuTypes } from '@/api/menu-type.api';
+import { getSiteGroups } from '@/api/site-group.api';
 import { useEffect } from 'react';
 
 export default function SiteFormPage() {
@@ -31,6 +33,18 @@ export default function SiteFormPage() {
     retry: false,
   });
 
+  // 식단유형 목록 조회
+  const { data: menuTypesData, isLoading: isLoadingMenuTypes } = useQuery({
+    queryKey: ['menu-types'],
+    queryFn: getMenuTypes,
+  });
+
+  // 사업장 그룹 목록 조회
+  const { data: siteGroupsData, isLoading: isLoadingGroups } = useQuery({
+    queryKey: ['site-groups'],
+    queryFn: () => getSiteGroups(),
+  });
+
   // 폼에 기존 데이터 설정 (수정 모드) 또는 초기값 설정 (생성 모드)
   useEffect(() => {
     if (isEditMode && siteData?.data) {
@@ -39,6 +53,8 @@ export default function SiteFormPage() {
         ...siteData.data,
         contractStartDate: siteData.data.contractStartDate ? dayjs(siteData.data.contractStartDate) : undefined,
         contractEndDate: siteData.data.contractEndDate ? dayjs(siteData.data.contractEndDate) : undefined,
+        // siteMenuTypes를 menuTypeIds 배열로 변환
+        menuTypeIds: siteData.data.siteMenuTypes?.map((smt: any) => smt.menuTypeId) || [],
       };
       form.setFieldsValue(formData);
     } else if (!isEditMode && stateData) {
@@ -71,6 +87,7 @@ export default function SiteFormPage() {
       message.success('사업장이 수정되었습니다');
       queryClient.invalidateQueries({ queryKey: ['sites'] });
       queryClient.invalidateQueries({ queryKey: ['site', id] });
+      queryClient.invalidateQueries({ queryKey: ['site-groups'] });
       navigate('/sites');
     },
     onError: (error: any) => {
@@ -142,9 +159,24 @@ export default function SiteFormPage() {
           autoComplete="off"
           initialValues={{}}
         >
-          {/* Hidden field for groupId */}
-          <Form.Item name="groupId" hidden>
-            <Input />
+          {/* 사업장 그룹 */}
+          <Form.Item
+            label="사업장 그룹"
+            name="groupId"
+            tooltip="사업장이 속한 그룹을 선택하세요 (선택사항)"
+          >
+            <Select
+              placeholder="그룹 선택 (미지정)"
+              allowClear
+              loading={isLoadingGroups}
+              options={[
+                { label: '(미지정)', value: null },
+                ...(siteGroupsData?.groups?.map((group: any) => ({
+                  label: `${group.name} (${group.division === 'HQ' ? '본사' : '영남지사'})`,
+                  value: group.id,
+                })) || [])
+              ]}
+            />
           </Form.Item>
 
           {/* 사업장명 */}
@@ -354,18 +386,17 @@ export default function SiteFormPage() {
           {/* 식단유형 */}
           <Form.Item
             label="식단유형"
-            name="mealTypes"
-            tooltip="제공하는 식사 유형을 선택하세요"
+            name="menuTypeIds"
+            tooltip="제공하는 식단 유형을 선택하세요 (예: 5찬 저가, 4찬 고가 등)"
           >
             <Select
               mode="multiple"
               placeholder="식단유형 선택"
-              options={[
-                { label: '조식', value: 'BREAKFAST' },
-                { label: '중식', value: 'LUNCH' },
-                { label: '석식', value: 'DINNER' },
-                { label: '간식', value: 'SNACK' },
-              ]}
+              loading={isLoadingMenuTypes}
+              options={menuTypesData?.menuTypes?.map((menuType) => ({
+                label: menuType.name,
+                value: menuType.id,
+              })) || []}
             />
           </Form.Item>
 

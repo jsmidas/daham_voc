@@ -8,6 +8,8 @@ import { PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, UploadOut
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { getSites, deleteSite, downloadExcelTemplate, uploadExcelFile } from '@/api/site.api';
+import { getSiteGroups } from '@/api/site-group.api';
+import { SiteTypeLabels, DivisionLabels } from '@/types/index';
 import { useState } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
@@ -19,14 +21,21 @@ export default function SiteListPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string | undefined>();
   const [divisionFilter, setDivisionFilter] = useState<string | undefined>();
+  const [groupFilter, setGroupFilter] = useState<string | undefined>();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const { data: sites, isLoading } = useQuery({
-    queryKey: ['sites', { search, type: typeFilter, division: divisionFilter }],
-    queryFn: () => getSites({ search, type: typeFilter, division: divisionFilter }),
+    queryKey: ['sites', { search, type: typeFilter, division: divisionFilter, groupId: groupFilter }],
+    queryFn: () => getSites({ search, type: typeFilter, division: divisionFilter, groupId: groupFilter }),
     retry: false,
+  });
+
+  // 사업장 그룹 목록 조회 (필터용)
+  const { data: siteGroupsData } = useQuery({
+    queryKey: ['site-groups'],
+    queryFn: () => getSiteGroups(),
   });
 
   const deleteMutation = useMutation({
@@ -112,11 +121,19 @@ export default function SiteListPage() {
       title: '유형',
       dataIndex: 'type',
       key: 'type',
+      render: (type: any) => SiteTypeLabels[type as keyof typeof SiteTypeLabels] || type,
     },
     {
       title: '부문',
       dataIndex: 'division',
       key: 'division',
+      render: (division: any) => DivisionLabels[division as keyof typeof DivisionLabels] || division,
+    },
+    {
+      title: '그룹',
+      dataIndex: 'group',
+      key: 'group',
+      render: (group: any) => group?.name || '(미지정)',
     },
     {
       title: '주소',
@@ -202,6 +219,20 @@ export default function SiteListPage() {
         >
           <Select.Option value="HQ">본사</Select.Option>
           <Select.Option value="YEONGNAM">영남지사</Select.Option>
+        </Select>
+        <Select
+          placeholder="그룹 선택"
+          style={{ width: 180 }}
+          allowClear
+          onChange={setGroupFilter}
+          value={groupFilter}
+        >
+          <Select.Option value="UNASSIGNED">(미지정)</Select.Option>
+          {siteGroupsData?.groups?.map((group: any) => (
+            <Select.Option key={group.id} value={group.id}>
+              {group.name}
+            </Select.Option>
+          ))}
         </Select>
         <Select
           placeholder="유형 선택"

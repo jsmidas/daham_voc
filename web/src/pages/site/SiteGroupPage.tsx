@@ -37,6 +37,7 @@ import {
   type MarkerShape,
   type GroupInHierarchy,
 } from '@/api/site-group.api';
+import { updateSite } from '@/api/site.api';
 import { getMarkerShapeLabel } from '@/utils/markerShapes';
 
 const { Option } = Select;
@@ -189,7 +190,9 @@ export default function SiteGroupPage() {
                     icon={<DeleteOutlined />}
                     danger
                     onClick={() => handleDeleteGroup(group.id, group.name)}
-                  />
+                  >
+                    삭제
+                  </Button>
                 </Space>
               ),
               key: `group-${group.id}`,
@@ -315,9 +318,41 @@ export default function SiteGroupPage() {
             draggable
             treeData={convertToTreeData()}
             style={{ fontSize: '14px' }}
-            onDrop={(info) => {
-              console.log('Dropped:', info);
-              message.info('드래그 앤 드롭 기능은 곧 지원됩니다');
+            onDrop={async (info) => {
+              const dragKey = info.dragNode.key as string;
+              const dropKey = info.node.key as string;
+
+              // 사업장(site)을 드래그한 경우만 처리
+              if (!dragKey.startsWith('site-')) {
+                message.warning('사업장만 다른 그룹으로 이동할 수 있습니다');
+                return;
+              }
+
+              // 그룹(group)에 드롭한 경우만 처리
+              if (!dropKey.startsWith('group-')) {
+                message.warning('그룹으로만 이동할 수 있습니다');
+                return;
+              }
+
+              const siteId = dragKey.replace('site-', '');
+              const newGroupId = dropKey.replace('group-', '');
+
+              // 사업장의 그룹 업데이트
+              Modal.confirm({
+                title: '사업장 이동',
+                content: '선택한 사업장을 이 그룹으로 이동하시겠습니까?',
+                okText: '이동',
+                cancelText: '취소',
+                onOk: async () => {
+                  try {
+                    await updateSite(siteId, { groupId: newGroupId });
+                    message.success('사업장이 이동되었습니다');
+                    loadHierarchy();
+                  } catch (error: any) {
+                    message.error('사업장 이동 실패: ' + error.message);
+                  }
+                },
+              });
             }}
           />
         )}

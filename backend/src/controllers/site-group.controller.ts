@@ -31,7 +31,7 @@ export class SiteGroupController {
       const division = req.query.division as any;
       const groups = await this.siteGroupService.getGroups(division);
 
-      res.json(successResponse(groups));
+      res.json(successResponse({ groups }));
     } catch (error: any) {
       res.status(500).json(errorResponse(error.message, 'GET_GROUPS_ERROR'));
     }

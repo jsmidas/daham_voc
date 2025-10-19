@@ -94,47 +94,54 @@ export async function getSiteHierarchy() {
  */
 export async function getSiteGroups(division?: 'HQ' | 'YEONGNAM') {
   const params = division ? { division } : {};
-  return apiClient.get<{ groups: SiteGroup[] }>('/site-groups', { params });
+  const response = await apiClient.get<{ success: boolean; data: { groups: SiteGroup[] } }>('/site-groups', { params });
+  return response.data.data;
 }
 
 /**
  * Get site group by ID
  */
 export async function getSiteGroupById(id: string) {
-  return apiClient.get<{ group: SiteGroup }>(`/site-groups/${id}`);
+  const response = await apiClient.get<{ group: SiteGroup }>(`/site-groups/${id}`);
+  return response.data;
 }
 
 /**
  * Create site group
  */
 export async function createSiteGroup(data: CreateSiteGroupDto) {
-  return apiClient.post<{ group: SiteGroup }>('/site-groups', data);
+  const response = await apiClient.post<{ group: SiteGroup }>('/site-groups', data);
+  return response.data;
 }
 
 /**
  * Update site group
  */
 export async function updateSiteGroup(id: string, data: UpdateSiteGroupDto) {
-  return apiClient.put<{ group: SiteGroup }>(`/site-groups/${id}`, data);
+  const response = await apiClient.put<{ group: SiteGroup }>(`/site-groups/${id}`, data);
+  return response.data;
 }
 
 /**
  * Delete site group
  */
 export async function deleteSiteGroup(id: string) {
-  return apiClient.delete(`/site-groups/${id}`);
+  const response = await apiClient.delete(`/site-groups/${id}`);
+  return response.data;
 }
 
 /**
  * Add sites to group
  */
 export async function addSitesToGroup(groupId: string, siteIds: string[]) {
-  return apiClient.post(`/site-groups/${groupId}/sites`, { siteIds });
+  const response = await apiClient.post(`/site-groups/${groupId}/sites`, { siteIds });
+  return response.data;
 }
 
 /**
  * Remove sites from group
  */
 export async function removeSitesFromGroup(groupId: string, siteIds: string[]) {
-  return apiClient.delete(`/site-groups/${groupId}/sites`, { data: { siteIds } });
+  const response = await apiClient.delete(`/site-groups/${groupId}/sites`, { data: { siteIds } });
+  return response.data;
 }

@@ -192,6 +192,11 @@ export class SiteService {
             },
           },
         },
+        siteMenuTypes: {
+          include: {
+            menuType: true,
+          },
+        },
         menus: {
           take: 10,
           orderBy: { startDate: 'desc' },
