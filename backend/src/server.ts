@@ -21,12 +21,13 @@ async function startServer() {
 
     // Start server
     const PORT = env.PORT;
+    const HOST = '0.0.0.0'; // 모든 네트워크 인터페이스에서 접근 가능하도록 변경
 
-    app.listen(PORT, () => {
+    app.listen(PORT, HOST, () => {
       console.log('=================================');
       console.log(`🚀 Daham VOC Backend Server`);
       console.log(`📍 Environment: ${env.NODE_ENV}`);
-      console.log(`🌐 Server running on port ${PORT}`);
+      console.log(`🌐 Server running on ${HOST}:${PORT}`);
       console.log(`🔗 API: http://localhost:${PORT}/api/v1`);
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log('=================================');

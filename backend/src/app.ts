@@ -17,9 +17,11 @@ app.use(
 // CORS middleware
 app.use(cors({
   origin: env.NODE_ENV === 'development'
-    ? true  // 개발 환경에서는 모든 origin 허용
-    : env.CORS_ORIGIN.split(',').map(origin => origin.trim()),
+    ? true  // 개발 환경에서는 모든 origin 허용 (localhost:8081, 모바일 앱 등)
+    : (env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map(origin => origin.trim()) : true),
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 // Body parser middleware
