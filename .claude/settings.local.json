@@ -96,7 +96,8 @@
       "Bash(ssh:*)",
       "Bash(start http://localhost:5175)",
       "Bash(./gradlew assembleRelease:*)",
-      "Bash(pm2 list:*)"
+      "Bash(pm2 list:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YThhNTI2NC1kZWZhLTQyOWMtYWI3ZC1jODM1YjNjYzZiMzkiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjA5Nzk2MTksImV4cCI6MTc2MTU4NDQxOX0.25vtfvnBMuJtIzL0jCu3IHBQjoo-EfyJdQL1Xpia41M\")"
     ],
     "deny": [],
     "ask": []

@@ -48,6 +48,7 @@ export const updateSiteGroupSchema = Joi.object({
     .pattern(/^#[0-9A-Fa-f]{6}$/)
     .optional(),
   sortOrder: Joi.number().integer().min(0).optional(),
+  isActive: Joi.boolean().optional(),
 });
 
 /**

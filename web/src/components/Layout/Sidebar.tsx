@@ -16,6 +16,7 @@ import {
   EnvironmentOutlined,
   AppstoreOutlined,
   UserOutlined,
+  CarOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -46,6 +47,11 @@ export default function Sidebar() {
       key: '/map',
       icon: <EnvironmentOutlined />,
       label: <span>사업장 지도</span>,
+    },
+    {
+      key: '/delivery-routes',
+      icon: <CarOutlined />,
+      label: <span>배송 코스 관리</span>,
     },
     {
       key: '/menu-types',
@@ -103,6 +109,7 @@ export default function Sidebar() {
     const path = location.pathname;
     // /sites/new, /sites/:id/edit 등도 /sites로 선택되도록
     if (path.startsWith('/sites')) return '/sites';
+    if (path.startsWith('/delivery-routes')) return '/delivery-routes';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
     if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';

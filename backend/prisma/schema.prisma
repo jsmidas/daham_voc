@@ -8,23 +8,25 @@ datasource db {
 }
 
 model User {
-  id          String             @id @default(uuid())
-  email       String?
-  password    String
-  name        String
-  phone       String             @unique
-  role        Role               @default(SITE_STAFF)
-  division    Division?
-  isActive    Boolean            @default(true)
-  lastLoginAt DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  deletedAt   DateTime?
-  attendances Attendance[]
-  feedbacks   CustomerFeedback[]
-  mealCounts  MealCount[]
-  mealPhotos  MealPhoto[]
-  staff       Staff?
+  id                  String               @id @default(uuid())
+  email               String?
+  password            String
+  name                String
+  phone               String               @unique
+  role                Role                 @default(SITE_STAFF)
+  division            Division?
+  isActive            Boolean              @default(true)
+  lastLoginAt         DateTime?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  deletedAt           DateTime?
+  attendances         Attendance[]
+  feedbacks           CustomerFeedback[]
+  mealCounts          MealCount[]
+  mealPhotos          MealPhoto[]
+  staff               Staff?
+  deliveryAssignments DeliveryAssignment[]
+  deliveryLogs        DeliveryLog[]
 
   @@index([phone])
   @@index([email])
@@ -133,6 +135,8 @@ model Site {
   group              SiteGroup?          @relation(fields: [groupId], references: [id])
   siteMenuTypes      SiteMenuType[]
   staffSites         StaffSite[]
+  routeStops         DeliveryRouteStop[]
+  deliveryLogs       DeliveryLog[]
 
   @@index([type])
   @@index([division])
@@ -425,4 +429,113 @@ enum AttendanceStatus {
   LATE
   EARLY_LEAVE
   OUTSIDE_RANGE
+}
+
+// ==================== 배송 코스 관리 ====================
+
+// 배송 코스 (A코스, B코스 등)
+model DeliveryRoute {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  code        String    @unique
+  division    Division
+  description String?
+  color       String    @default("#1890ff")
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  routeStops   DeliveryRouteStop[]
+  assignments  DeliveryAssignment[]
+  deliveryLogs DeliveryLog[]
+
+  @@index([division])
+  @@index([isActive])
+  @@map("delivery_routes")
+}
+
+// 코스 내 사업장 순서
+model DeliveryRouteStop {
+  id                String   @id @default(uuid())
+  routeId           String
+  siteId            String
+  stopNumber        Int
+  estimatedArrival  String?
+  estimatedDuration Int?
+  notes             String?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  route DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  site  Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, siteId])
+  @@unique([routeId, stopNumber])
+  @@index([routeId, stopNumber])
+  @@index([siteId])
+  @@map("delivery_route_stops")
+}
+
+// 기사-코스 배정
+model DeliveryAssignment {
+  id         String    @id @default(uuid())
+  routeId    String
+  driverId   String
+  assignedAt DateTime  @default(now())
+  removedAt  DateTime?
+  isActive   Boolean   @default(true)
+
+  route  DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  driver User          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, driverId])
+  @@index([driverId])
+  @@index([routeId])
+  @@map("delivery_assignments")
+}
+
+// 배송 기록
+model DeliveryLog {
+  id             String         @id @default(uuid())
+  routeId        String
+  siteId         String
+  driverId       String
+  deliveryDate   DateTime       @db.Date
+  stopNumber     Int
+  arrivedAt      DateTime?
+  departedAt     DateTime?
+  arrivalLat     Float?
+  arrivalLng     Float?
+  departureLat   Float?
+  departureLng   Float?
+  status         DeliveryStatus @default(PENDING)
+  actualDuration Int?
+  distanceKm     Float?
+  note           String?
+  issueReported  Boolean        @default(false)
+  issueDetail    String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  route  DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  site   Site          @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  driver User          @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, siteId, deliveryDate])
+  @@index([deliveryDate])
+  @@index([driverId, deliveryDate])
+  @@index([routeId, deliveryDate])
+  @@index([status])
+  @@map("delivery_logs")
+}
+
+enum DeliveryStatus {
+  PENDING
+  IN_TRANSIT
+  ARRIVED
+  COMPLETED
+  DELAYED
+  ISSUE
 }

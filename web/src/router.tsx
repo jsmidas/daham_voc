@@ -28,6 +28,8 @@ import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
 import StatsPage from '@/pages/stats/StatsPage';
 import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
 import MealCountListPage from '@/pages/meal-count/MealCountListPage';
+import DeliveryRouteListPage from '@/pages/delivery-route/DeliveryRouteListPage';
+import DeliveryRouteDetailPage from '@/pages/delivery-route/DeliveryRouteDetailPage';
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -129,6 +131,13 @@ export const router = createBrowserRouter([
       {
         path: 'meal-counts',
         element: <MealCountListPage />,
+      },
+      {
+        path: 'delivery-routes',
+        children: [
+          { index: true, element: <DeliveryRouteListPage /> },
+          { path: ':id', element: <DeliveryRouteDetailPage /> },
+        ],
       },
     ],
   },
