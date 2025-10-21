@@ -36,6 +36,6 @@ export function parsePaginationParams(
 
   return {
     page: parsedPage && parsedPage > 0 ? parsedPage : 1,
-    limit: parsedLimit && parsedLimit > 0 && parsedLimit <= 100 ? parsedLimit : 20,
+    limit: parsedLimit && parsedLimit > 0 && parsedLimit <= 1000 ? parsedLimit : 20,
   };
 }

@@ -30,59 +30,36 @@ export default function SiteMapPage() {
     return typeLabels[type] || type;
   };
 
-  // 사업장 목록 조회
+  // 사업장 목록 조회 (limit을 1000으로 설정하여 모든 사업장 표시)
   const { data: sites, isLoading, error } = useQuery({
     queryKey: ['sites', { division, type }],
-    queryFn: () => getSites({ division, type }),
+    queryFn: () => getSites({ division, type, limit: 1000 }),
     retry: false,
   });
 
-  // 디버깅을 위한 로그
-  useEffect(() => {
-    console.log('=== SiteMapPage Debug ===');
-    console.log('isLoading:', isLoading);
-    console.log('error:', error);
-    console.log('sites:', sites);
-    console.log('sites?.data?.sites:', sites?.data?.sites);
-  }, [isLoading, error, sites]);
 
   // 카카오맵 초기화 및 마커 표시
   useEffect(() => {
-    console.log('=== Kakao Map Init Start ===');
-    console.log('sites?.data?.sites:', sites?.data?.sites);
-
     if (!sites?.data?.sites || sites.data.sites.length === 0) {
-      console.log('No sites data, skipping map init');
       return;
     }
-
-    console.log('Sites count:', sites.data.sites.length);
 
     // 이미 스크립트가 로드되어 있는지 확인
     const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
 
     if (existingScript && window.kakao?.maps) {
-      console.log('Kakao script already loaded, initializing map directly');
       initializeMap();
       return;
     }
 
-    console.log('Loading Kakao script...');
-    console.log('Kakao API Key:', import.meta.env.VITE_KAKAO_MAP_APP_KEY);
-
     const script = document.createElement('script');
-    const scriptUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
       import.meta.env.VITE_KAKAO_MAP_APP_KEY
     }&autoload=false`;
-
-    console.log('Script URL:', scriptUrl);
-    script.src = scriptUrl;
     script.async = true;
 
     script.onload = () => {
-      console.log('Kakao script loaded successfully');
       window.kakao.maps.load(() => {
-        console.log('Kakao maps API loaded, initializing map');
         initializeMap();
       });
     };
@@ -102,26 +79,21 @@ export default function SiteMapPage() {
     if (!sites?.data?.sites || sites.data.sites.length === 0) return;
 
     try {
-      console.log('initializeMap called');
       const container = document.getElementById('map');
-      console.log('Map container:', container);
 
       if (!container) {
         console.error('Map container not found!');
         return;
       }
 
-      // 첫 번째 사업장 좌표를 중심으로 설정
-      const firstSite = sites.data.sites[0];
-      console.log('First site:', firstSite);
-
+      // 대구 중심 좌표 (35.8714, 128.6014)
+      // level 8 = 2km 척도
       const options = {
-        center: new window.kakao.maps.LatLng(firstSite.latitude, firstSite.longitude),
-        level: 8, // 확대 레벨 (높을수록 넓은 지역)
+        center: new window.kakao.maps.LatLng(35.8714, 128.6014),
+        level: 8, // 확대 레벨 (8 = 2km 척도)
       };
 
       const map = new window.kakao.maps.Map(container, options);
-      console.log('Map created:', map);
 
         // 현재 열려있는 InfoWindow와 타이머를 추적
         let currentInfoWindow: any = null;
@@ -129,6 +101,7 @@ export default function SiteMapPage() {
 
         // 모든 사업장에 마커 표시
         sites.data.sites.forEach((site: any) => {
+
           const markerPosition = new window.kakao.maps.LatLng(
             site.latitude,
             site.longitude
@@ -225,20 +198,9 @@ export default function SiteMapPage() {
           });
         });
 
-        // 모든 마커가 보이도록 지도 범위 조정
-        const bounds = new window.kakao.maps.LatLngBounds();
-        sites.data.sites.forEach((site: any) => {
-          bounds.extend(
-            new window.kakao.maps.LatLng(site.latitude, site.longitude)
-          );
-        });
-        map.setBounds(bounds);
-
       // 지도 확대/축소 제한 설정
       map.setMaxLevel(10);
       map.setMinLevel(1);
-
-      console.log('Map initialization complete!');
     } catch (error) {
       console.error('Error initializing map:', error);
     }

@@ -3,7 +3,7 @@
  * @description 사업장 등록/수정 페이지
  */
 
-import { Form, Input, Button, Card, message, Select, Alert, Space, DatePicker, InputNumber, Row, Col } from 'antd';
+import { Form, Input, Button, Card, message, Select, Alert, Space, DatePicker, InputNumber, Row, Col, Switch } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -170,7 +170,7 @@ export default function SiteFormPage() {
               allowClear
               loading={isLoadingGroups}
               options={[
-                { label: '(미지정)', value: null },
+                
                 ...(siteGroupsData?.groups?.map((group: any) => ({
                   label: `${group.name} (${group.division === 'HQ' ? '본사' : '영남지사'})`,
                   value: group.id,
@@ -188,9 +188,9 @@ export default function SiteFormPage() {
             <Input placeholder="예: 삼성전자 본사" />
           </Form.Item>
 
-          {/* 유형, 부문 */}
+          {/* 유형, 부문, 거래상태 */}
           <Row gutter={16}>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 label="유형"
                 name="type"
@@ -204,7 +204,7 @@ export default function SiteFormPage() {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={12}>
+            <Col xs={24} sm={8}>
               <Form.Item
                 label="부문"
                 name="division"
@@ -214,6 +214,21 @@ export default function SiteFormPage() {
                   <Select.Option value="HQ">본사</Select.Option>
                   <Select.Option value="YEONGNAM">영남지사</Select.Option>
                 </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="거래 상태"
+                name="isActive"
+                valuePropName="checked"
+                tooltip="OFF로 설정하면 지도, 식수요청, 앱 등 모든 서비스에서 제외됩니다"
+                initialValue={true}
+              >
+                <Switch
+                  checkedChildren="거래중"
+                  unCheckedChildren="거래중단"
+                  style={{ marginTop: 4 }}
+                />
               </Form.Item>
             </Col>
           </Row>
