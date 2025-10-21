@@ -15,3 +15,4 @@ sample/*.jpg
 sample/*.png
 sample/*.JPG
 sample/*.PNG
+.credentials/

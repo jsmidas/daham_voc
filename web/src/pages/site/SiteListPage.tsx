@@ -24,11 +24,27 @@ export default function SiteListPage() {
   const [groupFilter, setGroupFilter] = useState<string | undefined>();
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
+  // Reset to first page when filters change
+  const handleSearchChange = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleFilterChange = (filterType: 'type' | 'division' | 'group', value: any) => {
+    if (filterType === 'type') setTypeFilter(value);
+    else if (filterType === 'division') setDivisionFilter(value);
+    else if (filterType === 'group') setGroupFilter(value);
+    setPage(1);
+  };
 
   const { data: sites, isLoading } = useQuery({
-    queryKey: ['sites', { search, type: typeFilter, division: divisionFilter, groupId: groupFilter }],
-    queryFn: () => getSites({ search, type: typeFilter, division: divisionFilter, groupId: groupFilter }),
+    queryKey: ['sites', { search, type: typeFilter, division: divisionFilter, groupId: groupFilter, page, limit: pageSize }],
+    queryFn: () => getSites({ search, type: typeFilter, division: divisionFilter, groupId: groupFilter, page, limit: pageSize }),
     retry: false,
   });
 
@@ -77,6 +93,7 @@ export default function SiteListPage() {
       }
 
       setUploadModalVisible(false);
+      setSelectedFile(null);
       setFileList([]);
       queryClient.invalidateQueries({ queryKey: ['sites'] });
     },
@@ -97,15 +114,14 @@ export default function SiteListPage() {
 
   // Handle Excel upload
   const handleUpload = async () => {
-    if (fileList.length === 0) {
+    if (!selectedFile) {
       message.error('엑셀 파일을 선택해주세요');
       return;
     }
 
     setUploading(true);
     try {
-      const file = fileList[0].originFileObj as File;
-      await uploadMutation.mutateAsync(file);
+      await uploadMutation.mutateAsync(selectedFile);
     } finally {
       setUploading(false);
     }
@@ -206,7 +222,7 @@ export default function SiteListPage() {
       <Space style={{ marginBottom: 16 }} size="middle" wrap>
         <Search
           placeholder="사업장명 검색"
-          onSearch={setSearch}
+          onSearch={handleSearchChange}
           style={{ width: 300 }}
           allowClear
         />
@@ -214,7 +230,7 @@ export default function SiteListPage() {
           placeholder="부문 선택"
           style={{ width: 150 }}
           allowClear
-          onChange={setDivisionFilter}
+          onChange={(value) => handleFilterChange('division', value)}
           value={divisionFilter}
         >
           <Select.Option value="HQ">본사</Select.Option>
@@ -224,7 +240,7 @@ export default function SiteListPage() {
           placeholder="그룹 선택"
           style={{ width: 180 }}
           allowClear
-          onChange={setGroupFilter}
+          onChange={(value) => handleFilterChange('group', value)}
           value={groupFilter}
         >
           <Select.Option value="UNASSIGNED">(미지정)</Select.Option>
@@ -238,7 +254,7 @@ export default function SiteListPage() {
           placeholder="유형 선택"
           style={{ width: 150 }}
           allowClear
-          onChange={setTypeFilter}
+          onChange={(value) => handleFilterChange('type', value)}
           value={typeFilter}
         >
           <Select.Option value="위탁">위탁</Select.Option>
@@ -253,7 +269,21 @@ export default function SiteListPage() {
         dataSource={sites?.data?.sites || []}
         loading={isLoading}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{
+          current: page,
+          pageSize: pageSize,
+          total: sites?.meta?.total || 0,
+          showSizeChanger: true,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          showTotal: (total) => `총 ${total}개 사업장`,
+          onChange: (newPage, newPageSize) => {
+            setPage(newPage);
+            if (newPageSize !== pageSize) {
+              setPageSize(newPageSize);
+              setPage(1); // 페이지 크기 변경 시 첫 페이지로
+            }
+          },
+        }}
       />
 
       {/* Excel Upload Modal */}
@@ -263,6 +293,7 @@ export default function SiteListPage() {
         onOk={handleUpload}
         onCancel={() => {
           setUploadModalVisible(false);
+          setSelectedFile(null);
           setFileList([]);
         }}
         confirmLoading={uploading}
@@ -289,10 +320,12 @@ export default function SiteListPage() {
               return false;
             }
 
-            setFileList([file]);
+            setSelectedFile(file);
+            setFileList([file as any]);
             return false;
           }}
           onRemove={() => {
+            setSelectedFile(null);
             setFileList([]);
           }}
           maxCount={1}

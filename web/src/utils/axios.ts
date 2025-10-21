@@ -8,7 +8,7 @@ import axios from 'axios';
 // Axios 인스턴스 생성
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
-  timeout: 10000,
+  timeout: 300000, // 5분 (엑셀 대량 업로드를 위해)
   headers: {
     'Content-Type': 'application/json',
   },

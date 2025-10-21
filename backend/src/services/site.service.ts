@@ -548,9 +548,9 @@ export class SiteService {
     // Add instructions sheet
     const instructions = [
       { 항목: '사업장명', 설명: '사업장 이름 (필수)', 예시: '서울초등학교' },
-      { 항목: '유형', 설명: 'SCHOOL, COMPANY, HOSPITAL, WELFARE 중 선택 (필수)', 예시: 'SCHOOL' },
-      { 항목: '부문', 설명: 'HQ, YEONGNAM 중 선택 (필수)', 예시: 'HQ' },
-      { 항목: '그룹ID', 설명: '그룹 UUID (선택)', 예시: '' },
+      { 항목: '유형', 설명: '위탁, 운반급식, 도시락, 행사 중 선택 (필수)', 예시: '위탁' },
+      { 항목: '부문', 설명: '본사, 영남지사 중 선택 (필수)', 예시: '본사' },
+      { 항목: '그룹ID', 설명: '그룹 이름 또는 UUID (선택) - 예: "본사", "영남지사A코스" 등', 예시: '본사' },
       { 항목: '주소', 설명: '사업장 주소 (필수) - 위도/경도는 자동 변환됩니다', 예시: '서울시 강남구 테헤란로 14길 6' },
       { 항목: '담당자1', 설명: '주 담당자 이름 (선택)', 예시: '홍길동' },
       { 항목: '연락처1', 설명: '주 담당자 연락처 (선택)', 예시: '010-1234-5678' },
@@ -621,23 +621,45 @@ export class SiteService {
           throw new Error('주소는 필수입니다');
         }
 
-        // Validate enum values
-        const validTypes = ['SCHOOL', 'COMPANY', 'HOSPITAL', 'WELFARE'];
-        if (!validTypes.includes(row['유형'])) {
-          throw new Error(`유형은 ${validTypes.join(', ')} 중 하나여야 합니다`);
+        // Map Korean labels to enum values
+        const typeMapping: Record<string, string> = {
+          '위탁': 'CONSIGNMENT',
+          '운반': 'DELIVERY',
+          '운반급식': 'DELIVERY',
+          '도시락': 'LUNCHBOX',
+          '행사': 'EVENT',
+          // Also support English values directly
+          'CONSIGNMENT': 'CONSIGNMENT',
+          'DELIVERY': 'DELIVERY',
+          'LUNCHBOX': 'LUNCHBOX',
+          'EVENT': 'EVENT',
+        };
+
+        const mappedType = typeMapping[row['유형']];
+        if (!mappedType) {
+          throw new Error(`유형은 위탁, 운반급식, 도시락, 행사 중 하나여야 합니다 (입력값: ${row['유형']})`);
         }
 
-        const validDivisions = ['HQ', 'YEONGNAM'];
-        if (!validDivisions.includes(row['부문'])) {
-          throw new Error(`부문은 ${validDivisions.join(', ')} 중 하나여야 합니다`);
+        // Map Korean division labels to enum values
+        const divisionMapping: Record<string, string> = {
+          '본사': 'HQ',
+          'HQ': 'HQ',
+          '영남': 'YEONGNAM',
+          '영남지사': 'YEONGNAM',
+          'YEONGNAM': 'YEONGNAM',
+        };
+
+        const mappedDivision = divisionMapping[row['부문']];
+        if (!mappedDivision) {
+          throw new Error(`부문은 본사, 영남지사 중 하나여야 합니다 (입력값: ${row['부문']})`);
         }
 
         // Check permission
-        if (user.role === 'HQ_ADMIN' && row['부문'] !== 'HQ') {
+        if (user.role === 'HQ_ADMIN' && mappedDivision !== 'HQ') {
           throw new Error('본사 관리자는 본사 사업장만 생성할 수 있습니다');
         }
 
-        if (user.role === 'YEONGNAM_ADMIN' && row['부문'] !== 'YEONGNAM') {
+        if (user.role === 'YEONGNAM_ADMIN' && mappedDivision !== 'YEONGNAM') {
           throw new Error('영남지사 관리자는 영남지사 사업장만 생성할 수 있습니다');
         }
 
@@ -660,31 +682,91 @@ export class SiteService {
         }
 
         // Convert address to coordinates using Kakao API
-        const { latitude, longitude } = await this.geocodeAddress(row['주소']);
+        let latitude = 0;
+        let longitude = 0;
+
+        try {
+          const coords = await this.geocodeAddress(row['주소']);
+          latitude = coords.latitude;
+          longitude = coords.longitude;
+        } catch (geocodeError: any) {
+          // Log geocoding error but continue with default coordinates
+          console.warn(`Geocoding failed for row ${rowNumber}: ${geocodeError.message}`);
+          // Use default coordinates (0, 0) if geocoding fails
+        }
 
         // Add delay to respect API rate limits (100ms between requests)
         await new Promise(resolve => setTimeout(resolve, 100));
 
-        // Create site
-        await prisma.site.create({
-          data: {
+        // Validate groupId if provided (supports both UUID and group name)
+        let validatedGroupId: string | undefined = undefined;
+        if (row['그룹ID'] && row['그룹ID'].trim() !== '') {
+          const groupInput = row['그룹ID'].trim();
+
+          // Try to find by ID first (UUID format)
+          let group = await prisma.siteGroup.findUnique({
+            where: { id: groupInput },
+          });
+
+          // If not found, try to find by name (한글 이름으로 검색)
+          if (!group) {
+            group = await prisma.siteGroup.findFirst({
+              where: {
+                name: groupInput,
+                isActive: true,
+              },
+            });
+          }
+
+          if (group) {
+            validatedGroupId = group.id;
+          } else {
+            console.warn(`Group not found for row ${rowNumber}: ${groupInput} (tried both ID and name)`);
+            // Continue without groupId instead of failing
+          }
+        }
+
+        // Check if site with same name already exists
+        const existingSite = await prisma.site.findFirst({
+          where: {
             name: row['사업장명'],
-            type: row['유형'] as SiteType,
-            division: row['부문'] as Division,
-            groupId: row['그룹ID'] || undefined,
-            address: row['주소'],
-            latitude,
-            longitude,
-            contactPerson1: row['담당자1'] || undefined,
-            contactPhone1: row['연락처1'] || undefined,
-            contactPerson2: row['담당자2'] || undefined,
-            contactPhone2: row['연락처2'] || undefined,
-            pricePerMeal: row['단가'] ? parseFloat(row['단가']) : undefined,
-            deliveryRoute: row['배송코스'] || undefined,
-            contractStartDate,
-            contractEndDate,
+            isActive: true,
+            deletedAt: null,
           },
         });
+
+        const siteData = {
+          name: row['사업장명'],
+          type: mappedType as SiteType,
+          division: mappedDivision as Division,
+          groupId: validatedGroupId,
+          address: row['주소'],
+          latitude,
+          longitude,
+          contactPerson1: row['담당자1'] || undefined,
+          contactPhone1: row['연락처1'] || undefined,
+          contactPerson2: row['담당자2'] || undefined,
+          contactPhone2: row['연락처2'] || undefined,
+          pricePerMeal: row['단가'] ? parseFloat(row['단가']) : undefined,
+          deliveryRoute: row['배송코스'] || undefined,
+          contractStartDate,
+          contractEndDate,
+        };
+
+        if (existingSite) {
+          // Update existing site
+          await prisma.site.update({
+            where: { id: existingSite.id },
+            data: siteData,
+          });
+          console.log(`✏️  Updated existing site: ${row['사업장명']} (row ${rowNumber})`);
+        } else {
+          // Create new site
+          await prisma.site.create({
+            data: siteData,
+          });
+          console.log(`✨ Created new site: ${row['사업장명']} (row ${rowNumber})`);
+        }
 
         results.success++;
       } catch (error: any) {
