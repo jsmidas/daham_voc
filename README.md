@@ -6,14 +6,28 @@
 
 ## ⚠️ 중요: 개발 환경 설정 (CLAUDE 필독)
 
+### 🚨 데이터베이스 중요 규칙
+
+**이 프로젝트는 로컬 PostgreSQL을 절대 사용하지 않습니다!**
+
+- ✅ **항상 Supabase만 사용**
+- ❌ **로컬 PostgreSQL (`localhost:5432`) 사용 금지**
+- ❌ **로컬 DB 데이터를 Supabase로 마이그레이션 금지**
+
+자세한 내용은 **[DATABASE.md](DATABASE.md)** 파일을 반드시 읽어주세요.
+
 ### 데이터베이스 환경 구분
 
 이 프로젝트는 **개발용 DB**와 **배포용 DB**를 분리하여 사용합니다.
 
 #### 🔵 개발 환경 (Development)
-- **Supabase 클라우드 PostgreSQL 사용**
+- **Supabase 클라우드 PostgreSQL만 사용**
 - 집/사무실 모든 환경에서 동일한 데이터로 작업
 - `.env` 파일에서 `DATABASE_URL`을 Supabase 연결 문자열로 설정
+- **프로젝트 정보**:
+  - Supabase 프로젝트: `daham-voc-dev` (프로젝트 ID: iyussgoqhgzogjvpuxnb)
+  - 계정: sos1253@gmail.com
+  - 리전: Northeast Asia (Seoul)
 - **설정 방법**: `docs/개발환경_설정가이드.md` 참고
 
 #### 🟢 배포 환경 (Production)
@@ -95,6 +109,7 @@ daham_voc/
 
 ## 문서
 
+- **[DATABASE.md](DATABASE.md)** ⭐ **데이터베이스 사용 규칙 (필독!)**
 - [개발 환경 설정 가이드](docs/개발환경_설정가이드.md) ⭐ **필수**
 - [배송 코스 시스템 검토서](배송코스_시스템_검토서.md)
 - [배송 코스 관리 구현 가이드](구현_가이드_배송코스관리.md)
