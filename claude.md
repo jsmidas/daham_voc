@@ -27,17 +27,23 @@
 - ❌ 로컬 DB에서 Supabase로 덮어쓰지 말 것
 - ❌ `--clean`, `--force`, `--reset` 옵션 사용 금지
 
-### 3. 데이터베이스 연결
+### 3. 데이터베이스 연결 ⭐ 확정 설정
 
-**반드시 확인할 것**:
+**반드시 이 설정을 사용할 것** (2025-10-22 확정):
 ```bash
 # backend/.env 파일
-DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres
+DIRECT_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres
 ```
+
+**포트 설명**:
+- **6543**: Transaction mode - 일반 연결용 (메인 사용)
+- **5432**: Session mode - Prisma 마이그레이션 전용
 
 **절대 사용하면 안 되는 것**:
 ```bash
 ❌ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/daham_voc
+❌ 포트 6543을 다른 것으로 변경
 ```
 
 ### 4. 데이터 조회만 가능
@@ -56,7 +62,7 @@ DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-a
 ### 5. 사용자가 "데이터를 불러와야 함"이라고 말할 때
 
 **올바른 이해**:
-1. .env 파일이 Supabase URL인지 확인
+1. .env 파일이 Supabase URL(포트 6543)인지 확인
 2. Supabase에 연결되어 있는지 확인
 3. 애플리케이션에서 데이터 조회 테스트
 
@@ -69,8 +75,8 @@ DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-a
 
 데이터베이스 관련 작업 시 반드시:
 
-1. [ ] README.md의 "CLAUDE 필독" 섹션 읽기
-2. [ ] .env 파일의 DATABASE_URL 확인
+1. [ ] DATABASE_CONFIRMED.md 확인 (확정된 설정)
+2. [ ] .env 파일의 DATABASE_URL 확인 (포트 6543)
 3. [ ] Supabase 연결인지 확인
 4. [ ] 작업 내용을 사용자에게 설명하고 확인 받기
 5. [ ] 데이터 손실 가능성이 있으면 명확히 경고
@@ -79,8 +85,9 @@ DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-a
 
 ### 데이터 수가 다를 때:
 ```
-로컬: 90개 vs 백업: 195개
-→ 즉시 중단
+기대값: Site 90개, MenuType 28개, User 7개
+실제값: [확인 필요]
+→ 다르면 즉시 중단
 → 사용자에게 확인 요청
 ```
 
@@ -94,10 +101,16 @@ DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-a
 
 ## 📌 요약
 
-1. **Supabase만 사용** - 로컬 DB 금지
+1. **Supabase 포트 6543만 사용** - 로컬 DB 금지
 2. **삭제/복원 금지** - 사용자 확인 없이 절대 불가
 3. **읽기만 허용** - 쓰기는 신중히
 4. **의심되면 물어보기** - 확실하지 않으면 사용자 확인
+
+## 📦 백업 정보
+
+- **최신 백업**: `backup/daham_voc_backup_20251022_205721.dump`
+- **백업 일시**: 2025-10-22 20:57:21
+- **데이터 현황**: Site 90개, MenuType 28개, User 7개, SiteGroup 7개
 
 ---
 
@@ -107,3 +120,6 @@ DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-a
 다른 문서와 충돌하면 **이 파일이 우선**입니다.
 
 **데이터 손실 사고를 절대 방지하기 위한 필수 규칙입니다.**
+
+**마지막 업데이트**: 2025-10-22 20:57  
+**확정 설정**: DATABASE_CONFIRMED.md 참조

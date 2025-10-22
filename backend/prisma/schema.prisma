@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -58,7 +59,7 @@ model Staff {
 model MenuType {
   id                  String               @id @default(uuid())
   name                String               @unique
-  division            Division             @default(HQ)
+  division            Division?            @default(HQ)
   description         String?
   price               Decimal?             @db.Decimal(10, 2)
   sortOrder           Int                  @default(0)

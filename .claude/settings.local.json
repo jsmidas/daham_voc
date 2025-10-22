@@ -103,7 +103,11 @@
       "Bash(PGPASSWORD='cc956697%^12' psql:*)",
       "Read(//c/Program Files/PostgreSQL/17/data/pg_wal//**)",
       "Bash(bash:*)",
-      "Read(//c/Users/**)"
+      "Read(//c/Users/**)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres\" npx prisma db push:*)",
+      "Bash(sed:*)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@db.iyussgoqhgzogjvpuxnb.supabase.co:5432/postgres\" npx prisma db push:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []
