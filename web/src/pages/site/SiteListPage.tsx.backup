@@ -3,7 +3,7 @@
  * @description 사업장 목록 페이지
  */
 
-import { Table, Button, Space, Input, Select, message, Popconfirm, Modal, Upload, Tag } from 'antd';
+import { Table, Button, Space, Input, Select, message, Popconfirm, Modal, Upload } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
@@ -150,17 +150,6 @@ export default function SiteListPage() {
       dataIndex: 'group',
       key: 'group',
       render: (group: any) => group?.name || '(미지정)',
-    },
-    {
-      title: '거래상태',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 100,
-      render: (isActive: boolean) => (
-        <Tag color={isActive ? 'green' : 'red'}>
-          {isActive ? '거래중' : '거래중단'}
-        </Tag>
-      ),
     },
     {
       title: '주소',

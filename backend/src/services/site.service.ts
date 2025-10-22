@@ -436,10 +436,12 @@ export class SiteService {
     });
 
     if (!user) {
-      throw new Error('사용자를 찾을 수 없습니다');
+      throw new Error('인증 정보가 만료되었습니다. 다시 로그인해주세요.');
     }
 
-    if (user.role === 'SUPER_ADMIN') return;
+    if (user.role === 'SUPER_ADMIN') {
+      return;
+    }
 
     if (user.role === 'HQ_ADMIN' && site.division !== 'HQ') {
       throw new Error('권한이 없습니다');

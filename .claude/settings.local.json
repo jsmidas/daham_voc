@@ -102,7 +102,8 @@
       "Bash(pg_restore:*)",
       "Bash(PGPASSWORD='cc956697%^12' psql:*)",
       "Read(//c/Program Files/PostgreSQL/17/data/pg_wal//**)",
-      "Bash(bash:*)"
+      "Bash(bash:*)",
+      "Read(//c/Users/**)"
     ],
     "deny": [],
     "ask": []

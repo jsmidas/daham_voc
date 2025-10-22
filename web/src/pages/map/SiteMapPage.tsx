@@ -48,52 +48,29 @@ export default function SiteMapPage() {
     retry: false,
   });
 
-  // 디버깅을 위한 로그
-  useEffect(() => {
-    console.log('=== SiteMapPage Debug ===');
-    console.log('isLoading:', isLoading);
-    console.log('error:', error);
-    console.log('sites:', sites);
-    console.log('sites?.data?.sites:', sites?.data?.sites);
-  }, [isLoading, error, sites]);
 
   // 카카오맵 초기화 및 마커 표시
   useEffect(() => {
-    console.log('=== Kakao Map Init Start ===');
-    console.log('sites?.data?.sites:', sites?.data?.sites);
-
     if (!sites?.data?.sites || sites.data.sites.length === 0) {
-      console.log('No sites data, skipping map init');
       return;
     }
-
-    console.log('Sites count:', sites.data.sites.length);
 
     // 이미 스크립트가 로드되어 있는지 확인
     const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
 
     if (existingScript && window.kakao?.maps) {
-      console.log('Kakao script already loaded, initializing map directly');
       initializeMap();
       return;
     }
 
-    console.log('Loading Kakao script...');
-    console.log('Kakao API Key:', import.meta.env.VITE_KAKAO_MAP_APP_KEY);
-
     const script = document.createElement('script');
-    const scriptUrl = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
       import.meta.env.VITE_KAKAO_MAP_APP_KEY
     }&autoload=false`;
-
-    console.log('Script URL:', scriptUrl);
-    script.src = scriptUrl;
     script.async = true;
 
     script.onload = () => {
-      console.log('Kakao script loaded successfully');
       window.kakao.maps.load(() => {
-        console.log('Kakao maps API loaded, initializing map');
         initializeMap();
       });
     };
@@ -113,9 +90,7 @@ export default function SiteMapPage() {
     if (!sites?.data?.sites || sites.data.sites.length === 0) return;
 
     try {
-      console.log('initializeMap called');
       const container = document.getElementById('map');
-      console.log('Map container:', container);
 
       if (!container) {
         console.error('Map container not found!');
@@ -131,7 +106,6 @@ export default function SiteMapPage() {
       };
 
       const map = new window.kakao.maps.Map(container, options);
-      console.log('Map created:', map);
 
         // 현재 열려있는 InfoWindow와 타이머를 추적
         let currentInfoWindow: any = null;
@@ -280,8 +254,6 @@ export default function SiteMapPage() {
       // 지도 확대/축소 제한 설정
       map.setMaxLevel(10);
       map.setMinLevel(1);
-
-      console.log('Map initialization complete!');
     } catch (error) {
       console.error('Error initializing map:', error);
     }
