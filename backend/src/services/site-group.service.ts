@@ -28,10 +28,15 @@ export class SiteGroupService {
   async getHierarchy() {
     const cacheKey = 'site-groups:hierarchy';
 
-    // Check cache
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    // Check cache (with error handling)
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      console.error('Cache get error:', error);
+      // Continue to fetch from DB
     }
 
     // Get all groups with sites
@@ -117,8 +122,13 @@ export class SiteGroupService {
       ],
     };
 
-    // Cache for 10 minutes
-    await cache.set(cacheKey, JSON.stringify(hierarchy), 600);
+    // Cache for 10 minutes (with error handling)
+    try {
+      await cache.set(cacheKey, JSON.stringify(hierarchy), 600);
+    } catch (error) {
+      console.error('Cache set error:', error);
+      // Continue to return data even if cache fails
+    }
 
     return hierarchy;
   }
@@ -129,10 +139,15 @@ export class SiteGroupService {
   async getGroups(division?: Division) {
     const cacheKey = `site-groups:${division || 'all'}`;
 
-    // Check cache
-    const cached = await cache.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
+    // Check cache (with error handling)
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (error) {
+      console.error('Cache get error:', error);
+      // Continue to fetch from DB
     }
 
     const where: any = { isActive: true };
@@ -157,8 +172,13 @@ export class SiteGroupService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    // Cache for 10 minutes
-    await cache.set(cacheKey, JSON.stringify(groups), 600);
+    // Cache for 10 minutes (with error handling)
+    try {
+      await cache.set(cacheKey, JSON.stringify(groups), 600);
+    } catch (error) {
+      console.error('Cache set error:', error);
+      // Continue to return data even if cache fails
+    }
 
     return groups;
   }
@@ -365,14 +385,19 @@ export class SiteGroupService {
    * Invalidate cache
    */
   private async invalidateCache() {
-    const keys = await cache.keys('site-groups:*');
-    if (keys.length > 0) {
-      await cache.del(...keys);
-    }
-    // Also invalidate sites cache
-    const siteKeys = await cache.keys('sites:*');
-    if (siteKeys.length > 0) {
-      await cache.del(...siteKeys);
+    try {
+      const keys = await cache.keys('site-groups:*');
+      if (keys.length > 0) {
+        await cache.del(...keys);
+      }
+      // Also invalidate sites cache
+      const siteKeys = await cache.keys('sites:*');
+      if (siteKeys.length > 0) {
+        await cache.del(...siteKeys);
+      }
+    } catch (error) {
+      console.error('Cache invalidation error:', error);
+      // Continue even if cache invalidation fails
     }
   }
 }
