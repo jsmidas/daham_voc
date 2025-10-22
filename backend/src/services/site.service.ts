@@ -146,6 +146,25 @@ export class SiteService {
               },
             },
           },
+          routeStops: {
+            where: {
+              isActive: true,
+            },
+            include: {
+              route: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  color: true,
+                  division: true,
+                },
+              },
+            },
+            orderBy: {
+              stopNumber: 'asc',
+            },
+          },
           _count: {
             select: {
               menus: true,
@@ -601,6 +620,24 @@ export class SiteService {
       failed: [],
     };
 
+    // 배송코스 자동 생성을 위한 캐시 (중복 생성 방지)
+    const deliveryRouteCache = new Map<string, string>(); // key: route name, value: route id
+
+    // 배송코스 색상 팔레트
+    const routeColors = [
+      '#1890ff', // 파랑
+      '#52c41a', // 초록
+      '#faad14', // 노랑
+      '#f5222d', // 빨강
+      '#722ed1', // 보라
+      '#fa8c16', // 주황
+      '#13c2c2', // 청록
+      '#eb2f96', // 분홍
+      '#2f54eb', // 남색
+      '#a0d911', // 연두
+    ];
+    let colorIndex = 0;
+
     // Process each row
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i];
@@ -753,19 +790,106 @@ export class SiteService {
           contractEndDate,
         };
 
+        let createdOrUpdatedSite;
         if (existingSite) {
           // Update existing site
-          await prisma.site.update({
+          createdOrUpdatedSite = await prisma.site.update({
             where: { id: existingSite.id },
             data: siteData,
           });
           console.log(`✏️  Updated existing site: ${row['사업장명']} (row ${rowNumber})`);
         } else {
           // Create new site
-          await prisma.site.create({
+          createdOrUpdatedSite = await prisma.site.create({
             data: siteData,
           });
           console.log(`✨ Created new site: ${row['사업장명']} (row ${rowNumber})`);
+        }
+
+        // 배송코스 처리 (배송코스가 입력된 경우)
+        if (row['배송코스'] && row['배송코스'].trim() !== '') {
+          const routeName = row['배송코스'].trim();
+
+          // 배송코스 ID 가져오기 또는 생성
+          let deliveryRouteId = deliveryRouteCache.get(routeName);
+
+          if (!deliveryRouteId) {
+            // 기존 배송코스 찾기 (여러 형태로 검색)
+            // 예: "C코스" → "본사중식 C", "본사중식C", "C" 등으로 찾기
+            let deliveryRoute = await prisma.deliveryRoute.findFirst({
+              where: {
+                OR: [
+                  { name: routeName }, // 정확히 일치
+                  { name: { contains: routeName.replace('코스', '').trim() } }, // "C코스" → "C" 포함
+                  { code: routeName.replace('코스', '').trim() }, // "C코스" → code가 "C"
+                ],
+                division: mappedDivision as Division,
+                deletedAt: null,
+              },
+            });
+
+            if (!deliveryRoute) {
+              // 새 배송코스 생성
+              const routeCode = routeName
+                .replace(/[^a-zA-Z0-9가-힣]/g, '')
+                .substring(0, 10)
+                .toUpperCase() || `ROUTE_${Date.now()}`;
+
+              deliveryRoute = await prisma.deliveryRoute.create({
+                data: {
+                  name: routeName,
+                  code: routeCode,
+                  division: mappedDivision as Division,
+                  description: `엑셀 업로드를 통해 자동 생성된 배송코스`,
+                  color: routeColors[colorIndex % routeColors.length],
+                  isActive: true,
+                },
+              });
+
+              colorIndex++;
+              console.log(`📦 Created new delivery route: ${routeName} (${routeCode})`);
+            }
+
+            deliveryRouteId = deliveryRoute.id;
+            deliveryRouteCache.set(routeName, deliveryRouteId);
+          }
+
+          // 이미 코스에 등록된 사업장인지 확인
+          const existingStop = await prisma.deliveryRouteStop.findUnique({
+            where: {
+              routeId_siteId: {
+                routeId: deliveryRouteId,
+                siteId: createdOrUpdatedSite.id,
+              },
+            },
+          });
+
+          if (!existingStop) {
+            // 현재 코스의 마지막 순서 번호 가져오기
+            const lastStop = await prisma.deliveryRouteStop.findFirst({
+              where: {
+                routeId: deliveryRouteId,
+                isActive: true,
+              },
+              orderBy: {
+                stopNumber: 'desc',
+              },
+            });
+
+            const nextStopNumber = lastStop ? lastStop.stopNumber + 1 : 1;
+
+            // 배송코스에 사업장 추가
+            await prisma.deliveryRouteStop.create({
+              data: {
+                routeId: deliveryRouteId,
+                siteId: createdOrUpdatedSite.id,
+                stopNumber: nextStopNumber,
+                isActive: true,
+              },
+            });
+
+            console.log(`🚚 Added site to delivery route: ${routeName} (stop #${nextStopNumber})`);
+          }
         }
 
         results.success++;

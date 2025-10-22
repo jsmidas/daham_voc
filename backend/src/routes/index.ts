@@ -12,6 +12,7 @@ import attendanceRoutes from './attendance.routes';
 import dashboardRoutes from './dashboard.routes';
 import mealCountRoutes from './meal-count.routes';
 import deliveryRouteRoutes from './delivery-route.routes';
+import deliveryLogRoutes from './delivery-log.routes';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.get('/', (_req, res) => {
       attendances: '/attendances',
       mealCounts: '/meal-counts',
       deliveryRoutes: '/delivery-routes',
+      deliveryLogs: '/delivery-logs',
     },
   });
 });
@@ -53,6 +55,7 @@ router.use('/staff', staffRoutes);
 router.use('/attendances', attendanceRoutes);
 router.use('/meal-counts', mealCountRoutes);
 router.use('/delivery-routes', deliveryRouteRoutes);
+router.use('/delivery-logs', deliveryLogRoutes);
 
 // Future routes will be added here:
 // router.use('/stats', statsRoutes);

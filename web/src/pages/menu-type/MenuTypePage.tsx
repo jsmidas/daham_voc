@@ -14,6 +14,8 @@ import {
   Space,
   Popconfirm,
   InputNumber,
+  Select,
+  Tag,
 } from 'antd';
 import {
   PlusOutlined,
@@ -28,6 +30,7 @@ import {
   updateMenuType,
   deleteMenuType,
   type MenuType,
+  type Division,
 } from '@/api/menu-type.api';
 import type { ColumnsType } from 'antd/es/table';
 
@@ -96,6 +99,7 @@ export default function MenuTypePage() {
     setEditingMenuType(menuType);
     setModalVisible(true);
     form.setFieldsValue({
+      division: menuType.division,
       name: menuType.name,
       description: menuType.description,
       price: menuType.price,
@@ -119,6 +123,22 @@ export default function MenuTypePage() {
 
   // Table columns
   const columns: ColumnsType<MenuType> = [
+    {
+      title: '부문',
+      dataIndex: 'division',
+      key: 'division',
+      width: 100,
+      render: (division: Division) => (
+        <Tag color={division === 'HQ' ? 'blue' : 'green'}>
+          {division === 'HQ' ? '본사' : '영남지사'}
+        </Tag>
+      ),
+      filters: [
+        { text: '본사', value: 'HQ' },
+        { text: '영남지사', value: 'YEONGNAM' },
+      ],
+      onFilter: (value, record) => record.division === value,
+    },
     {
       title: '순서',
       dataIndex: 'sortOrder',
@@ -236,6 +256,18 @@ export default function MenuTypePage() {
         cancelText="취소"
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          <Form.Item
+            name="division"
+            label="부문"
+            rules={[{ required: true, message: '부문을 선택하세요' }]}
+            initialValue="HQ"
+          >
+            <Select placeholder="부문을 선택하세요">
+              <Select.Option value="HQ">본사</Select.Option>
+              <Select.Option value="YEONGNAM">영남지사</Select.Option>
+            </Select>
+          </Form.Item>
+
           <Form.Item
             name="name"
             label="유형명"

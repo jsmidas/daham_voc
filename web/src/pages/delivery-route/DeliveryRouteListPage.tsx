@@ -37,10 +37,12 @@ export default function DeliveryRouteListPage() {
   const [selectedRoute, setSelectedRoute] = useState<DeliveryRoute | null>(null);
 
   // 배송 코스 목록 조회
-  const { data: routes, isLoading, refetch } = useQuery({
+  const { data: routesData, isLoading, refetch } = useQuery({
     queryKey: ['delivery-routes', { division, isActive, search }],
     queryFn: () => getDeliveryRoutes({ division, isActive, search }),
   });
+
+  const routes = routesData?.data;
 
   // 삭제 핸들러
   const handleDelete = (route: DeliveryRoute) => {

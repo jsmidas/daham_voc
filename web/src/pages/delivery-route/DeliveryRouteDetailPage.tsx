@@ -129,11 +129,13 @@ export default function DeliveryRouteDetailPage() {
   const [stops, setStops] = useState<DeliveryRouteStop[]>([]);
 
   // 배송 코스 상세 조회
-  const { data: route, isLoading } = useQuery({
+  const { data: routeData, isLoading } = useQuery({
     queryKey: ['delivery-route', id],
     queryFn: () => getDeliveryRouteById(id!),
     enabled: !!id,
   });
+
+  const route = routeData?.data;
 
   // route 데이터가 변경되면 stops 업데이트
   useEffect(() => {
@@ -143,11 +145,13 @@ export default function DeliveryRouteDetailPage() {
   }, [route]);
 
   // 전체 사업장 목록 조회 (같은 division)
-  const { data: allSites } = useQuery({
+  const { data: allSitesData } = useQuery({
     queryKey: ['sites', route?.division],
     queryFn: () => getSites({ division: route?.division }),
     enabled: !!route?.division,
   });
+
+  const allSites = allSitesData?.data?.sites;
 
   // 사업장 추가 mutation
   const addSiteMutation = useMutation({
@@ -178,7 +182,7 @@ export default function DeliveryRouteDetailPage() {
 
   // 순서 업데이트 mutation
   const updateStopsMutation = useMutation({
-    mutationFn: (updates: Array<{ siteId: string; stopNumber: number }>) =>
+    mutationFn: (updates: Array<{ id: string; stopNumber: number }>) =>
       updateRouteStops(id!, { stops: updates }),
     onSuccess: () => {
       message.success('순서가 변경되었습니다');
@@ -203,7 +207,7 @@ export default function DeliveryRouteDetailPage() {
   // 순서 변경 저장
   const saveStopsOrder = () => {
     const updates = stops.map((stop, index) => ({
-      siteId: stop.site.id,
+      id: stop.id,
       stopNumber: index + 1,
     }));
     updateStopsMutation.mutate(updates);

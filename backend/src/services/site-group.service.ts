@@ -266,17 +266,15 @@ export class SiteGroupService {
   async deleteGroup(id: string, userId: string) {
     await this.checkPermission(id, userId);
 
-    // Check if group has sites
-    const group = await prisma.siteGroup.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { sites: true },
-        },
+    // Check if group has active sites (excluding soft-deleted ones)
+    const activeSitesCount = await prisma.site.count({
+      where: {
+        groupId: id,
+        deletedAt: null,
       },
     });
 
-    if (group && group._count.sites > 0) {
+    if (activeSitesCount > 0) {
       throw new Error('사업장이 있는 그룹은 삭제할 수 없습니다');
     }
 

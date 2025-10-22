@@ -30,6 +30,7 @@ import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
 import MealCountListPage from '@/pages/meal-count/MealCountListPage';
 import DeliveryRouteListPage from '@/pages/delivery-route/DeliveryRouteListPage';
 import DeliveryRouteDetailPage from '@/pages/delivery-route/DeliveryRouteDetailPage';
+import DeliveryLogPage from '@/pages/delivery-log/DeliveryLogPage';
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -138,6 +139,10 @@ export const router = createBrowserRouter([
           { index: true, element: <DeliveryRouteListPage /> },
           { path: ':id', element: <DeliveryRouteDetailPage /> },
         ],
+      },
+      {
+        path: 'delivery-logs',
+        element: <DeliveryLogPage />,
       },
     ],
   },

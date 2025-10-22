@@ -14,17 +14,15 @@ export async function getDeliveryRoutes(params?: {
   division?: string;
   isActive?: boolean;
   search?: string;
-}): Promise<DeliveryRoute[]> {
-  const response: any = await apiClient.get('/delivery-routes', { params });
-  return response.data;
+}) {
+  return apiClient.get('/delivery-routes', { params });
 }
 
 /**
  * 배송 코스 상세 조회
  */
-export async function getDeliveryRouteById(id: string): Promise<DeliveryRouteDetail> {
-  const response: any = await apiClient.get(`/delivery-routes/${id}`);
-  return response.data;
+export async function getDeliveryRouteById(id: string) {
+  return apiClient.get(`/delivery-routes/${id}`);
 }
 
 /**
@@ -72,9 +70,9 @@ export async function removeSiteFromRoute(routeId: string, siteId: string): Prom
  */
 export async function updateRouteStops(
   routeId: string,
-  stops: Array<{ id: string; stopNumber: number }>
+  data: { stops: Array<{ id: string; stopNumber: number }> }
 ): Promise<void> {
-  await apiClient.put(`/delivery-routes/${routeId}/stops/reorder`, { stops });
+  await apiClient.put(`/delivery-routes/${routeId}/stops/reorder`, data);
 }
 
 /**

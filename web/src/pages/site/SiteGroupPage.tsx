@@ -262,16 +262,24 @@ export default function SiteGroupPage() {
   // 그룹 생성/수정
   const handleSubmitGroup = async (values: any) => {
     try {
+      console.log('=== 그룹 생성/수정 시작 ===');
+      console.log('Form values:', values);
+      console.log('Selected division:', selectedDivision);
+
+      const payload = editingGroup ? values : {
+        ...values,
+        division: selectedDivision,
+      };
+
+      console.log('Sending payload:', payload);
+
       if (editingGroup) {
         // 수정 모드
-        await updateSiteGroup(editingGroup.id, values);
+        await updateSiteGroup(editingGroup.id, payload);
         message.success('그룹이 수정되었습니다');
       } else {
         // 생성 모드
-        await createSiteGroup({
-          ...values,
-          division: selectedDivision,
-        });
+        await createSiteGroup(payload);
         message.success('그룹이 생성되었습니다');
       }
       setModalVisible(false);
@@ -279,6 +287,11 @@ export default function SiteGroupPage() {
       form.resetFields();
       loadHierarchy();
     } catch (error: any) {
+      console.error('=== 그룹 생성/수정 에러 ===');
+      console.error('Error:', error);
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+
       // 중복 이름 에러 처리
       if (error.message?.includes('Unique constraint failed') || error.message?.includes('division') && error.message?.includes('name')) {
         message.error(`같은 부문에 "${values.name}" 이름의 그룹이 이미 존재합니다. 다른 이름을 사용해주세요.`);
@@ -404,12 +417,15 @@ export default function SiteGroupPage() {
             label="마커 배경 색상"
             initialValue="#1890ff"
             rules={[{ required: true, message: '마커 색상을 선택해주세요' }]}
-            getValueFromEvent={(color) => {
-              return typeof color === 'string' ? color : color?.toHexString();
-            }}
           >
             <ColorPicker
               showText
+              format="hex"
+              value={form.getFieldValue('markerColor')}
+              onChange={(color) => {
+                const hexValue = color?.toHexString?.() || '#1890ff';
+                form.setFieldValue('markerColor', hexValue);
+              }}
               presets={[
                 {
                   label: '추천 색상',

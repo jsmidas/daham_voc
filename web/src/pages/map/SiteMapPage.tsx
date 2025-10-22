@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import { Select, Card, Spin, Space, Tag } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
+import { getDeliveryRoutes } from '@/api/delivery-route.api';
 import { createMarkerImage, type MarkerShape } from '@/utils/markerShapes';
 
 declare global {
@@ -18,6 +19,7 @@ declare global {
 export default function SiteMapPage() {
   const [division, setDivision] = useState<string | undefined>();
   const [type, setType] = useState<string | undefined>();
+  const [routeId, setRouteId] = useState<string | undefined>();
 
   // 사업장 유형 한국어 변환
   const getTypeLabel = (type: string) => {
@@ -30,10 +32,19 @@ export default function SiteMapPage() {
     return typeLabels[type] || type;
   };
 
+  // 배송 코스 목록 조회
+  const { data: routesData } = useQuery({
+    queryKey: ['delivery-routes', { division }],
+    queryFn: () => getDeliveryRoutes({ division, isActive: true }),
+    retry: false,
+  });
+
+  const routes = routesData?.data || [];
+
   // 사업장 목록 조회
   const { data: sites, isLoading, error } = useQuery({
     queryKey: ['sites', { division, type }],
-    queryFn: () => getSites({ division, type }),
+    queryFn: () => getSites({ division, type, limit: 1000 }),
     retry: false,
   });
 
@@ -96,7 +107,7 @@ export default function SiteMapPage() {
     };
 
     document.head.appendChild(script);
-  }, [sites]);
+  }, [sites, routeId]);
 
   const initializeMap = () => {
     if (!sites?.data?.sites || sites.data.sites.length === 0) return;
@@ -111,13 +122,12 @@ export default function SiteMapPage() {
         return;
       }
 
-      // 첫 번째 사업장 좌표를 중심으로 설정
-      const firstSite = sites.data.sites[0];
-      console.log('First site:', firstSite);
+      // 대구시청을 중심으로 설정 (위도: 35.8714, 경도: 128.6014)
+      console.log('Setting map center to Daegu City Hall');
 
       const options = {
-        center: new window.kakao.maps.LatLng(firstSite.latitude, firstSite.longitude),
-        level: 8, // 확대 레벨 (높을수록 넓은 지역)
+        center: new window.kakao.maps.LatLng(35.8714, 128.6014),
+        level: 8, // 확대 레벨 (약 2km 척도)
       };
 
       const map = new window.kakao.maps.Map(container, options);
@@ -127,16 +137,37 @@ export default function SiteMapPage() {
         let currentInfoWindow: any = null;
         let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
+        // 필터링된 사업장 목록
+        let filteredSites = sites.data.sites;
+        if (routeId) {
+          filteredSites = sites.data.sites.filter((site: any) =>
+            site.routeStops?.some((stop: any) => stop.route.id === routeId)
+          );
+        }
+
         // 모든 사업장에 마커 표시
-        sites.data.sites.forEach((site: any) => {
+        filteredSites.forEach((site: any) => {
           const markerPosition = new window.kakao.maps.LatLng(
             site.latitude,
             site.longitude
           );
 
-          // 그룹이 있으면 그룹의 마커 모양/색상 사용, 없으면 사업장 유형별 기본값 사용
-          const markerShape: MarkerShape = site.group?.markerShape || 'CIRCLE';
-          const markerColor = site.group?.markerColor || getDefaultColorBySiteType(site.type);
+          // 마커 색상 우선순위: 배송코스 > 그룹 > 사업장 유형
+          let markerColor: string;
+          let markerShape: MarkerShape = 'CIRCLE';
+
+          if (site.routeStops && site.routeStops.length > 0) {
+            // 첫 번째 배송코스의 색상 사용
+            markerColor = site.routeStops[0].route.color || '#1890ff';
+          } else if (site.group) {
+            // 그룹의 마커 색상/모양 사용
+            markerShape = site.group.markerShape || 'CIRCLE';
+            markerColor = site.group.markerColor || '#999999';
+          } else {
+            // 코스에 미등록된 사업장은 회색으로 표시
+            markerColor = '#999999';
+          }
+
           const markerImage = createMarkerImage(markerShape, markerColor, window.kakao.maps);
 
           const marker = new window.kakao.maps.Marker({
@@ -171,6 +202,14 @@ export default function SiteMapPage() {
           labelOverlay.setMap(map);
 
           // 마커 클릭 시 정보 팝업
+          const routeInfo = site.routeStops && site.routeStops.length > 0
+            ? site.routeStops.map((stop: any) => `
+                <span style="display:inline-block;padding:2px 8px;background:${stop.route.color};color:white;border-radius:4px;font-size:12px;margin-right:4px;margin-bottom:4px;">
+                  ${stop.route.code}
+                </span>
+              `).join('')
+            : '<span style="font-size:12px;color:#999;">미등록</span>';
+
           const infowindow = new window.kakao.maps.InfoWindow({
             content: `
               <div style="padding:15px;min-width:250px;font-family:sans-serif;">
@@ -184,6 +223,10 @@ export default function SiteMapPage() {
                   <span style="display:inline-block;padding:2px 8px;background:#52c41a;color:white;border-radius:4px;font-size:12px;">
                     ${site.division === 'HQ' ? '본사' : '영남지사'}
                   </span>
+                </div>
+                <div style="margin-bottom:8px;">
+                  <strong style="font-size:12px;color:#666;">배송코스:</strong><br/>
+                  ${routeInfo}
                 </div>
                 <p style="margin:0;font-size:13px;color:#666;line-height:1.5;">
                   📍 ${site.address}
@@ -225,14 +268,14 @@ export default function SiteMapPage() {
           });
         });
 
-        // 모든 마커가 보이도록 지도 범위 조정
-        const bounds = new window.kakao.maps.LatLngBounds();
-        sites.data.sites.forEach((site: any) => {
-          bounds.extend(
-            new window.kakao.maps.LatLng(site.latitude, site.longitude)
-          );
-        });
-        map.setBounds(bounds);
+        // 모든 마커가 보이도록 지도 범위 조정 (주석 처리 - 대구시청 중심 고정)
+        // const bounds = new window.kakao.maps.LatLngBounds();
+        // sites.data.sites.forEach((site: any) => {
+        //   bounds.extend(
+        //     new window.kakao.maps.LatLng(site.latitude, site.longitude)
+        //   );
+        // });
+        // map.setBounds(bounds);
 
       // 지도 확대/축소 제한 설정
       map.setMaxLevel(10);
@@ -296,14 +339,17 @@ export default function SiteMapPage() {
       {/* 필터 및 통계 */}
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <Space size="large">
+          <Space size="large" wrap>
             <div>
               <label style={{ marginRight: 8, fontWeight: 'bold' }}>부문:</label>
               <Select
                 placeholder="전체"
                 style={{ width: 150 }}
                 allowClear
-                onChange={setDivision}
+                onChange={(value) => {
+                  setDivision(value);
+                  setRouteId(undefined); // 부문 변경 시 코스 필터 초기화
+                }}
                 value={division}
               >
                 <Select.Option value="HQ">본사</Select.Option>
@@ -326,24 +372,50 @@ export default function SiteMapPage() {
                 <Select.Option value="EVENT">행사</Select.Option>
               </Select>
             </div>
+
+            <div>
+              <label style={{ marginRight: 8, fontWeight: 'bold' }}>배송코스:</label>
+              <Select
+                placeholder="전체"
+                style={{ width: 200 }}
+                allowClear
+                onChange={setRouteId}
+                value={routeId}
+              >
+                {routes.map((route: any) => (
+                  <Select.Option key={route.id} value={route.id}>
+                    <Space>
+                      <div style={{ width: 12, height: 12, backgroundColor: route.color, borderRadius: '50%' }} />
+                      {route.code} - {route.name}
+                    </Space>
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
           </Space>
 
           <div>
             <span style={{ fontWeight: 'bold' }}>총 사업장: </span>
             <span style={{ fontSize: '18px', color: '#1890ff', fontWeight: 'bold' }}>
-              {sites?.data?.sites?.length || 0}개
+              {routeId
+                ? sites?.data?.sites?.filter((site: any) =>
+                    site.routeStops?.some((stop: any) => stop.route.id === routeId)
+                  ).length || 0
+                : sites?.data?.sites?.length || 0}개
             </span>
           </div>
         </div>
 
         {/* 범례 */}
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-          <span style={{ marginRight: 16, fontWeight: 'bold' }}>마커 색상:</span>
-          <Space>
-            <Tag color="red">위탁</Tag>
-            <Tag color="blue">운반급식</Tag>
-            <Tag color="green">도시락</Tag>
-            <Tag color="orange">행사</Tag>
+          <span style={{ marginRight: 16, fontWeight: 'bold' }}>배송코스별 마커 색상:</span>
+          <Space wrap>
+            {routes.map((route: any) => (
+              <Tag key={route.id} color={route.color}>
+                {route.code} - {route.name}
+              </Tag>
+            ))}
+            <Tag color="#999999">미등록</Tag>
           </Space>
         </div>
       </Card>
@@ -364,8 +436,9 @@ export default function SiteMapPage() {
       {/* 안내 메시지 */}
       <Card style={{ marginTop: 16, background: '#f6ffed', borderColor: '#b7eb8f' }}>
         <p style={{ margin: 0, color: '#52c41a' }}>
-          💡 <strong>사용 팁:</strong> 마커를 클릭하면 사업장 상세 정보를 확인할 수 있습니다 (2초 후 자동으로 닫힘).
-          지도를 드래그하거나 마우스 휠로 확대/축소할 수 있습니다.
+          💡 <strong>사용 팁:</strong> 마커 색상은 배송코스별로 구분됩니다.
+          특정 코스만 보려면 위의 배송코스 필터를 사용하세요.
+          마커를 클릭하면 사업장 상세 정보를 확인할 수 있습니다 (2초 후 자동으로 닫힘).
         </p>
       </Card>
     </div>

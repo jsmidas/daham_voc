@@ -58,6 +58,7 @@ model Staff {
 model MenuType {
   id                  String               @id @default(uuid())
   name                String               @unique
+  division            Division             @default(HQ)
   description         String?
   price               Decimal?             @db.Decimal(10, 2)
   sortOrder           Int                  @default(0)
@@ -69,6 +70,7 @@ model MenuType {
   weeklyMenuTemplates WeeklyMenuTemplate[]
 
   @@index([sortOrder])
+  @@index([division])
 }
 
 model SiteMenuType {

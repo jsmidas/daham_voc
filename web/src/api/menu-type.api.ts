@@ -1,8 +1,11 @@
 import apiClient from '@/utils/apiClient';
 
+export type Division = 'HQ' | 'YEONGNAM';
+
 export interface MenuType {
   id: string;
   name: string;
+  division: Division;
   description?: string;
   price?: number;
   sortOrder: number;
@@ -16,6 +19,7 @@ export interface MenuType {
 
 export interface CreateMenuTypeDto {
   name: string;
+  division: Division;
   description?: string;
   price?: number;
   sortOrder?: number;
@@ -23,6 +27,7 @@ export interface CreateMenuTypeDto {
 
 export interface UpdateMenuTypeDto {
   name?: string;
+  division?: Division;
   description?: string;
   price?: number;
   sortOrder?: number;

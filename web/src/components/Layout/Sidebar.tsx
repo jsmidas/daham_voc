@@ -54,6 +54,11 @@ export default function Sidebar() {
       label: <span>배송 코스 관리</span>,
     },
     {
+      key: '/delivery-logs',
+      icon: <CarOutlined />,
+      label: <span>배송 이력</span>,
+    },
+    {
       key: '/menu-types',
       icon: <AppstoreOutlined />,
       label: <span>식단유형 관리</span>,
@@ -110,6 +115,7 @@ export default function Sidebar() {
     // /sites/new, /sites/:id/edit 등도 /sites로 선택되도록
     if (path.startsWith('/sites')) return '/sites';
     if (path.startsWith('/delivery-routes')) return '/delivery-routes';
+    if (path.startsWith('/delivery-logs')) return '/delivery-logs';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
     if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';
