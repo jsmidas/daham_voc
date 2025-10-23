@@ -3,8 +3,8 @@
  * @description 사업장별 식수 입력 마감시간 설정 페이지
  */
 
-import { Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input, Collapse, Row, Col } from 'antd';
-import { SettingOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Button, Space, Select, message, Modal, Form, InputNumber, Switch, TimePicker, Card, Descriptions, Tag, Input, Collapse, Row, Col, Checkbox } from 'antd';
+import { SettingOutlined, ClockCircleOutlined, CopyOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getMealCountSetting, upsertMealCountSetting } from '@/api/meal-count.api';
@@ -84,16 +84,18 @@ export default function MealCountSettingPage() {
   const queryClient = useQueryClient();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
   const [modalVisible, setModalVisible] = useState(false);
+  const [bulkModalVisible, setBulkModalVisible] = useState(false);
   const [breakfastMenuCount, setBreakfastMenuCount] = useState(1);
   const [lunchMenuCount, setLunchMenuCount] = useState(1);
   const [dinnerMenuCount, setDinnerMenuCount] = useState(1);
   const [supperMenuCount, setSupperMenuCount] = useState(1);
   const [form] = Form.useForm();
+  const [bulkForm] = Form.useForm();
 
-  // 사업장 목록 조회
+  // 사업장 목록 조회 (전체)
   const { data: sites } = useQuery({
-    queryKey: ['sites'],
-    queryFn: () => getSites({ isActive: true }),
+    queryKey: ['sites', { limit: 1000 }],
+    queryFn: () => getSites({ isActive: true, limit: 1000 }),
   });
 
   // 선택한 사업장의 식수 설정 조회
@@ -115,6 +117,24 @@ export default function MealCountSettingPage() {
     },
     onError: (error: any) => {
       message.error(error.message || '설정 저장에 실패했습니다');
+    },
+  });
+
+  // 일괄 저장 Mutation
+  const bulkSaveMutation = useMutation({
+    mutationFn: async ({ siteIds, data }: { siteIds: string[], data: Partial<MealCountSetting> }) => {
+      const promises = siteIds.map(siteId => upsertMealCountSetting(siteId, data));
+      return Promise.all(promises);
+    },
+    onSuccess: (_, variables) => {
+      message.success(`${variables.siteIds.length}개 사업장의 설정이 저장되었습니다`);
+      setBulkModalVisible(false);
+      bulkForm.resetFields();
+      // 모든 사업장 설정 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['meal-count-setting'] });
+    },
+    onError: (error: any) => {
+      message.error(error.message || '일괄 설정 저장에 실패했습니다');
     },
   });
 
@@ -234,6 +254,71 @@ export default function MealCountSettingPage() {
     }
   };
 
+  const handleOpenBulkModal = () => {
+    if (!selectedSiteId || !currentSetting) {
+      message.warning('먼저 복사할 설정이 있는 사업장을 선택하세요');
+      return;
+    }
+    setBulkModalVisible(true);
+  };
+
+  const handleBulkSave = async () => {
+    try {
+      const values = await bulkForm.validateFields();
+
+      if (!values.targetSiteIds || values.targetSiteIds.length === 0) {
+        message.warning('적용할 사업장을 선택하세요');
+        return;
+      }
+
+      const currentSetting = setting?.data;
+      if (!currentSetting) {
+        message.error('현재 사업장의 설정을 찾을 수 없습니다');
+        return;
+      }
+
+      const data: Partial<MealCountSetting> = {
+        deadlineHoursBefore: currentSetting.deadlineHoursBefore,
+        breakfastStartTime: currentSetting.breakfastStartTime,
+        lunchStartTime: currentSetting.lunchStartTime,
+        dinnerStartTime: currentSetting.dinnerStartTime,
+        breakfastMenuCount: currentSetting.breakfastMenuCount,
+        lunchMenuCount: currentSetting.lunchMenuCount,
+        dinnerMenuCount: currentSetting.dinnerMenuCount,
+        supperMenuCount: currentSetting.supperMenuCount,
+        breakfastMenu1Name: currentSetting.breakfastMenu1Name,
+        breakfastMenu2Name: currentSetting.breakfastMenu2Name,
+        breakfastMenu3Name: currentSetting.breakfastMenu3Name,
+        breakfastMenu4Name: currentSetting.breakfastMenu4Name,
+        breakfastMenu5Name: currentSetting.breakfastMenu5Name,
+        lunchMenu1Name: currentSetting.lunchMenu1Name,
+        lunchMenu2Name: currentSetting.lunchMenu2Name,
+        lunchMenu3Name: currentSetting.lunchMenu3Name,
+        lunchMenu4Name: currentSetting.lunchMenu4Name,
+        lunchMenu5Name: currentSetting.lunchMenu5Name,
+        dinnerMenu1Name: currentSetting.dinnerMenu1Name,
+        dinnerMenu2Name: currentSetting.dinnerMenu2Name,
+        dinnerMenu3Name: currentSetting.dinnerMenu3Name,
+        dinnerMenu4Name: currentSetting.dinnerMenu4Name,
+        dinnerMenu5Name: currentSetting.dinnerMenu5Name,
+        supperMenu1Name: currentSetting.supperMenu1Name,
+        supperMenu2Name: currentSetting.supperMenu2Name,
+        supperMenu3Name: currentSetting.supperMenu3Name,
+        supperMenu4Name: currentSetting.supperMenu4Name,
+        supperMenu5Name: currentSetting.supperMenu5Name,
+        allowLateSubmission: currentSetting.allowLateSubmission,
+        isActive: currentSetting.isActive,
+      };
+
+      bulkSaveMutation.mutate({
+        siteIds: values.targetSiteIds,
+        data
+      });
+    } catch (error) {
+      console.error('Bulk save validation failed:', error);
+    }
+  };
+
   const calculateDeadline = (startTime: string | undefined, hoursBefore: number) => {
     if (!startTime) return '-';
 
@@ -304,14 +389,23 @@ export default function MealCountSettingPage() {
               }))}
             />
           </div>
-          <Button
-            type="primary"
-            icon={<SettingOutlined />}
-            onClick={handleOpenModal}
-            disabled={!selectedSiteId}
-          >
-            설정 관리
-          </Button>
+          <Space>
+            <Button
+              type="primary"
+              icon={<SettingOutlined />}
+              onClick={handleOpenModal}
+              disabled={!selectedSiteId}
+            >
+              설정 관리
+            </Button>
+            <Button
+              icon={<CopyOutlined />}
+              onClick={handleOpenBulkModal}
+              disabled={!selectedSiteId || !currentSetting}
+            >
+              일괄 수정
+            </Button>
+          </Space>
         </Space>
       </Card>
 
@@ -584,6 +678,65 @@ export default function MealCountSettingPage() {
               },
             ]}
           />
+        </Form>
+      </Modal>
+
+      {/* 일괄 수정 모달 */}
+      <Modal
+        title={
+          <Space>
+            <CopyOutlined />
+            <span>설정 일괄 적용</span>
+          </Space>
+        }
+        open={bulkModalVisible}
+        onCancel={() => {
+          setBulkModalVisible(false);
+          bulkForm.resetFields();
+        }}
+        onOk={handleBulkSave}
+        width={700}
+        okText="일괄 적용"
+        cancelText="취소"
+        confirmLoading={bulkSaveMutation.isPending}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ marginBottom: 8, color: '#666' }}>
+            현재 선택한 사업장의 설정을 다른 사업장에 동일하게 적용합니다.
+          </p>
+          {currentSetting && (
+            <Card size="small" style={{ backgroundColor: '#f0f5ff' }}>
+              <strong>복사될 설정:</strong>
+              <div style={{ marginTop: 8, fontSize: 12 }}>
+                • 마감 시간: {currentSetting.deadlineHoursBefore}시간 전<br/>
+                • 조식: {currentSetting.breakfastStartTime || '-'}<br/>
+                • 중식: {currentSetting.lunchStartTime || '-'}<br/>
+                • 석식: {currentSetting.dinnerStartTime || '-'}<br/>
+                • 메뉴 개수: 조식 {currentSetting.breakfastMenuCount}개, 중식 {currentSetting.lunchMenuCount}개, 석식 {currentSetting.dinnerMenuCount}개
+              </div>
+            </Card>
+          )}
+        </div>
+        <Form form={bulkForm} layout="vertical">
+          <Form.Item
+            label="적용할 사업장 선택"
+            name="targetSiteIds"
+            rules={[{ required: true, message: '사업장을 선택하세요' }]}
+          >
+            <Checkbox.Group style={{ width: '100%' }}>
+              <Row gutter={[8, 8]}>
+                {sites?.data?.sites
+                  ?.filter((site: any) => site.id !== selectedSiteId)
+                  ?.map((site: any) => (
+                    <Col span={8} key={site.id}>
+                      <Checkbox value={site.id}>
+                        {site.name}
+                      </Checkbox>
+                    </Col>
+                  ))}
+              </Row>
+            </Checkbox.Group>
+          </Form.Item>
         </Form>
       </Modal>
     </div>

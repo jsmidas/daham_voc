@@ -48,6 +48,7 @@ export default function WeeklyMenuPage() {
   const [previewImage, setPreviewImage] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [fileList, setFileList] = useState<any[]>([]);
 
   // Filter states
   const [selectedMenuType, setSelectedMenuType] = useState<string | undefined>();
@@ -89,7 +90,9 @@ export default function WeeklyMenuPage() {
     onSuccess: () => {
       message.success('주간 식단표가 생성되었습니다');
       queryClient.invalidateQueries({ queryKey: ['weekly-menu-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-types'] });
       setModalVisible(false);
+      setFileList([]);
       form.resetFields();
     },
     onError: (error: any) => {
@@ -103,8 +106,10 @@ export default function WeeklyMenuPage() {
     onSuccess: () => {
       message.success('주간 식단표가 수정되었습니다');
       queryClient.invalidateQueries({ queryKey: ['weekly-menu-templates'] });
+      queryClient.invalidateQueries({ queryKey: ['menu-types'] });
       setModalVisible(false);
       setEditingTemplate(null);
+      setFileList([]);
       form.resetFields();
     },
     onError: (error: any) => {
@@ -128,6 +133,7 @@ export default function WeeklyMenuPage() {
   const handleCreate = () => {
     setEditingTemplate(null);
     setModalVisible(true);
+    setFileList([]);
     form.resetFields();
     form.setFieldsValue({
       year: currentYear,
@@ -139,6 +145,7 @@ export default function WeeklyMenuPage() {
   const handleEdit = (template: WeeklyMenuTemplate) => {
     setEditingTemplate(template);
     setModalVisible(true);
+    setFileList([]);
     form.setFieldsValue({
       menuTypeId: template.menuTypeId,
       year: template.year,
@@ -189,6 +196,16 @@ export default function WeeklyMenuPage() {
         thumbnailUrl: uploadedData.thumbnailUrl,
       });
 
+      // Add to file list to show preview
+      setFileList([
+        {
+          uid: '-1',
+          name: (file as File).name,
+          status: 'done',
+          url: uploadedData.thumbnailUrl || uploadedData.imageUrl,
+        },
+      ]);
+
       message.success('이미지가 업로드되었습니다');
       onSuccess?.(uploadedData);
     } catch (error: any) {
@@ -197,6 +214,15 @@ export default function WeeklyMenuPage() {
     } finally {
       setUploading(false);
     }
+  };
+
+  // Handle remove upload
+  const handleRemove = () => {
+    form.setFieldsValue({
+      imageUrl: undefined,
+      thumbnailUrl: undefined,
+    });
+    setFileList([]);
   };
 
   // Generate year options (from 2025 to current year + 2)
@@ -373,6 +399,7 @@ export default function WeeklyMenuPage() {
         onCancel={() => {
           setModalVisible(false);
           setEditingTemplate(null);
+          setFileList([]);
           form.resetFields();
         }}
         onOk={() => form.submit()}
@@ -430,19 +457,23 @@ export default function WeeklyMenuPage() {
               name="image"
               listType="picture-card"
               maxCount={1}
+              fileList={fileList}
               customRequest={handleUpload}
+              onRemove={handleRemove}
               accept="image/*"
               showUploadList={{
                 showPreviewIcon: true,
                 showRemoveIcon: true,
               }}
             >
-              <div>
-                <UploadOutlined />
-                <div style={{ marginTop: 8 }}>
-                  {uploading ? '업로드 중...' : '클릭 또는 드래그'}
+              {fileList.length === 0 && (
+                <div>
+                  <UploadOutlined />
+                  <div style={{ marginTop: 8 }}>
+                    {uploading ? '업로드 중...' : '클릭 또는 드래그'}
+                  </div>
                 </div>
-              </div>
+              )}
             </Upload>
           </Form.Item>
 

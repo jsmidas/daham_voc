@@ -22,6 +22,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -167,8 +168,18 @@ export default function MenuTypePage() {
     {
       title: '사용 중인 사업장',
       key: 'siteCount',
-      width: 150,
+      width: 130,
       render: (_, record) => `${record._count?.siteMenuTypes || 0}개`,
+    },
+    {
+      title: '주간 메뉴',
+      key: 'menuCount',
+      width: 100,
+      render: (_, record) => (
+        <Tag color={record._count && record._count.weeklyMenuTemplates > 0 ? 'blue' : 'default'}>
+          {record._count?.weeklyMenuTemplates || 0}개
+        </Tag>
+      ),
     },
     {
       title: '작업',
@@ -237,6 +248,51 @@ export default function MenuTypePage() {
           pagination={{
             pageSize: 10,
             showTotal: (total) => `총 ${total}개`,
+          }}
+          expandable={{
+            expandedRowRender: (record) => {
+              if (!record.weeklyMenuTemplates || record.weeklyMenuTemplates.length === 0) {
+                return (
+                  <div style={{ padding: '16px', color: '#999', textAlign: 'center' }}>
+                    등록된 주간 메뉴가 없습니다
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ padding: '8px' }}>
+                  <h4 style={{ marginBottom: 12 }}>주간 메뉴 목록</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+                    {record.weeklyMenuTemplates.map((menu) => (
+                      <Card
+                        key={menu.id}
+                        size="small"
+                        hoverable
+                        cover={
+                          menu.thumbnailUrl || menu.imageUrl ? (
+                            <img
+                              alt={`${menu.year}년 ${menu.weekNumber}주차`}
+                              src={menu.thumbnailUrl || menu.imageUrl}
+                              style={{ height: 150, objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div style={{ height: 150, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              이미지 없음
+                            </div>
+                          )
+                        }
+                      >
+                        <Card.Meta
+                          title={`${menu.year}년 ${menu.weekNumber}주차`}
+                          description={menu.description || '설명 없음'}
+                        />
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              );
+            },
+            rowExpandable: (record) => (record.weeklyMenuTemplates && record.weeklyMenuTemplates.length > 0),
           }}
         />
       </Card>
