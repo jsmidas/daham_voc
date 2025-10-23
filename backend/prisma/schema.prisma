@@ -438,15 +438,16 @@ enum AttendanceStatus {
 
 // 배송 코스 (A코스, B코스 등)
 model DeliveryRoute {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  code        String    @unique
+  id          String      @id @default(uuid())
+  name        String      @unique
+  code        String      @unique
   division    Division
   description String?
-  color       String    @default("#1890ff")
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  color       String      @default("#1890ff")
+  markerShape MarkerShape @default(CIRCLE)
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   deletedAt   DateTime?
 
   routeStops   DeliveryRouteStop[]

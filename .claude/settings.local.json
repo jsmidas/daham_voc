@@ -107,7 +107,9 @@
       "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres\" npx prisma db push:*)",
       "Bash(sed:*)",
       "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@db.iyussgoqhgzogjvpuxnb.supabase.co:5432/postgres\" npx prisma db push:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres\" npx prisma db push:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YThhNTI2NC1kZWZhLTQyOWMtYWI3ZC1jODM1YjNjYzZiMzkiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjEyNDAyNzcsImV4cCI6MTc2MTg0NTA3N30.SWrmGWYZuR6x2sQAQFZzcfR9lk7wL3_PZRceW9vtBO0\")"
     ],
     "deny": [],
     "ask": []

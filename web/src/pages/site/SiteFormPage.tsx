@@ -77,7 +77,23 @@ export default function SiteFormPage() {
       navigate(stateData ? '/site-groups' : '/sites');
     },
     onError: (error: any) => {
-      message.error(error.message || '등록 실패');
+      console.error('=== Create Error ===');
+      console.error('Error object:', error);
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+      console.error('Error message:', error.message);
+
+      // 서버에서 반환한 자세한 에러 메시지 표시
+      const errorMessage = error.response?.data?.message || error.message || '등록 실패';
+      const errorDetails = error.response?.data?.details;
+
+      if (errorDetails && Array.isArray(errorDetails)) {
+        // Validation 에러인 경우 자세한 메시지 표시
+        const detailMessages = errorDetails.map((d: any) => `${d.field}: ${d.message}`).join('\n');
+        message.error(`${errorMessage}\n${detailMessages}`, 10);
+      } else {
+        message.error(errorMessage);
+      }
     },
   });
 

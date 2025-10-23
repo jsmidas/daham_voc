@@ -417,15 +417,11 @@ export default function SiteGroupPage() {
             label="마커 배경 색상"
             initialValue="#1890ff"
             rules={[{ required: true, message: '마커 색상을 선택해주세요' }]}
+            getValueFromEvent={(color) => color?.toHexString?.() || '#1890ff'}
           >
             <ColorPicker
               showText
               format="hex"
-              value={form.getFieldValue('markerColor')}
-              onChange={(color) => {
-                const hexValue = color?.toHexString?.() || '#1890ff';
-                form.setFieldValue('markerColor', hexValue);
-              }}
               presets={[
                 {
                   label: '추천 색상',

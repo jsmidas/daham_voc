@@ -38,20 +38,22 @@ export const createSiteSchema = Joi.object({
     'number.max': '경도는 -180에서 180 사이여야 합니다',
     'any.required': '경도는 필수 항목입니다',
   }),
-  contactPerson1: Joi.string().max(50).optional().messages({
+  contactPerson1: Joi.string().max(50).allow(null, '').optional().messages({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone1: Joi.string()
-    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
+    .allow(null, '')
     .optional()
     .messages({
       'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 02-123-4567, 051-123-4567)',
     }),
-  contactPerson2: Joi.string().max(50).optional().messages({
+  contactPerson2: Joi.string().max(50).allow(null, '').optional().messages({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone2: Joi.string()
-    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
+    .allow(null, '')
     .optional()
     .messages({
       'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 02-123-4567, 051-123-4567)',
@@ -67,10 +69,18 @@ export const createSiteSchema = Joi.object({
       'array.base': '식단유형은 배열 형식이어야 합니다',
       'any.only': '유효한 식단유형을 선택해주세요',
     }),
-  pricePerMeal: Joi.number().min(0).optional().messages({
-    'number.min': '단가는 0 이상이어야 합니다',
-  }),
-  deliveryRoute: Joi.string().max(100).optional().messages({
+  pricePerMeal: Joi.alternatives()
+    .try(
+      Joi.number().min(0),
+      Joi.string().pattern(/^\d+(\.\d+)?$/).custom((value) => parseFloat(value))
+    )
+    .allow(null)
+    .optional()
+    .messages({
+      'number.min': '단가는 0 이상이어야 합니다',
+      'string.pattern.base': '단가는 숫자 형식이어야 합니다',
+    }),
+  deliveryRoute: Joi.string().max(100).allow(null, '').optional().messages({
     'string.max': '배송코스는 최대 100자까지 입력 가능합니다',
   }),
   contractStartDate: Joi.date().iso().optional().messages({
