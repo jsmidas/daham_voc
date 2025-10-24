@@ -107,7 +107,10 @@
       "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres\" npx prisma db push:*)",
       "Bash(sed:*)",
       "Bash(DIRECT_URL=\"postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@db.iyussgoqhgzogjvpuxnb.supabase.co:5432/postgres\" npx prisma db push:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(start http://localhost:5174/meal-count-settings)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YThhNTI2NC1kZWZhLTQyOWMtYWI3ZC1jODM1YjNjYzZiMzkiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjEyOTUzOTksImV4cCI6MTc2MTkwMDE5OX0.9KPbQL5oW81q6w03eWJJu-DoYwZF-fUwri6Mmei5NOc\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI0YThhNTI2NC1kZWZhLTQyOWMtYWI3ZC1jODM1YjNjYzZiMzkiLCJlbWFpbCI6ImFkbWluQGRhaGFtLmNvbSIsInJvbGUiOiJTVVBFUl9BRE1JTiIsImRpdmlzaW9uIjoiSFEiLCJpYXQiOjE3NjEzMDE0NDMsImV4cCI6MTc2MTkwNjI0M30.uVNOyOjYJYMl9rJT4TtXMztaAgKMjI-nko7lNMNV-0w\")"
     ],
     "deny": [],
     "ask": []

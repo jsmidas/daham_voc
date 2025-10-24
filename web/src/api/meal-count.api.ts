@@ -12,10 +12,17 @@ export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
 export interface MealCountSetting {
   id: string;
   siteId: string;
-  deadlineHoursBefore: number;
+  // 새로운 방식: 각 끼니별 직접 마감 시간 설정
+  breakfastDeadline?: string;  // 전날 마감 시간 (예: "20:00")
+  lunchDeadline?: string;       // 당일 마감 시간 (예: "10:00")
+  dinnerDeadline?: string;      // 당일 마감 시간 (예: "15:00")
+  supperDeadline?: string;      // 당일 마감 시간 (예: "18:00")
+  // 기존 방식 (하위 호환성 유지)
+  deadlineHoursBefore?: number;
   breakfastStartTime?: string;
   lunchStartTime?: string;
   dinnerStartTime?: string;
+  // 메뉴 설정
   breakfastMenuCount: number;
   lunchMenuCount: number;
   dinnerMenuCount: number;

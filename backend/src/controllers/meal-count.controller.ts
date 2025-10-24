@@ -190,15 +190,17 @@ export async function getMealCountsByRange(req: Request, res: Response) {
 export async function getMealCountSetting(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
+    console.log('🔍 [MealCountSetting] GET 요청 - siteId:', siteId);
 
     const setting = await mealCountService.getMealCountSetting(siteId);
+    console.log('📦 [MealCountSetting] 조회 결과:', setting);
 
     return res.json({
       success: true,
       data: setting,
     });
   } catch (error: any) {
-    console.error('식수 설정 조회 실패:', error);
+    console.error('❌ [MealCountSetting] 식수 설정 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 설정 조회에 실패했습니다',
@@ -215,14 +217,21 @@ export async function upsertMealCountSetting(req: Request, res: Response) {
     const { siteId } = req.params;
     const data = req.body;
 
+    console.log('💾 [MealCountSetting] POST 요청 받음!');
+    console.log('  - siteId:', siteId);
+    console.log('  - 요청 데이터:', JSON.stringify(data, null, 2));
+
     const setting = await mealCountService.upsertMealCountSetting(siteId, data);
+
+    console.log('✅ [MealCountSetting] 저장 성공!');
+    console.log('  - 결과:', JSON.stringify(setting, null, 2));
 
     return res.json({
       success: true,
       data: setting,
     });
   } catch (error: any) {
-    console.error('식수 설정 저장 실패:', error);
+    console.error('❌ [MealCountSetting] 식수 설정 저장 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 설정 저장에 실패했습니다',

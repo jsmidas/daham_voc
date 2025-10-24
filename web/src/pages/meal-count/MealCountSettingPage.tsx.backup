@@ -52,8 +52,6 @@ export default function MealCountSettingPage() {
       return settingsMap;
     },
     enabled: !!sites?.data?.sites,
-    staleTime: 0, // 항상 최신 데이터 가져오기
-    gcTime: 0, // 캐시 즉시 만료
   });
 
   // 전체 사업장 리스트 (설정 유무와 관계없이)
@@ -71,16 +69,9 @@ export default function MealCountSettingPage() {
   const saveMutation = useMutation({
     mutationFn: async (data: { siteId: string; setting: Partial<MealCountSetting> }) =>
       upsertMealCountSetting(data.siteId, data.setting),
-    onSuccess: async () => {
+    onSuccess: () => {
       message.success('설정이 저장되었습니다');
-
-      // 캐시 무효화 및 리프레시
-      await queryClient.invalidateQueries({ queryKey: ['meal-count-settings-all'] });
-      await refetchSettings();
-
-      // 모달 닫기
-      setModalVisible(false);
-      form.resetFields();
+      refetchSettings();
     },
     onError: (error: any) => {
       message.error(error.message || '설정 저장에 실패했습니다');
@@ -95,17 +86,12 @@ export default function MealCountSettingPage() {
       );
       await Promise.all(promises);
     },
-    onSuccess: async (_, variables) => {
+    onSuccess: (_, variables) => {
       message.success(`${variables.siteIds.length}개 사업장에 설정이 적용되었습니다`);
-
-      // 캐시 무효화 및 리프레시
-      await queryClient.invalidateQueries({ queryKey: ['meal-count-settings-all'] });
-      await refetchSettings();
-
-      // 모달 닫기
       setModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
+      refetchSettings();
     },
     onError: (error: any) => {
       message.error(error.message || '설정 복제에 실패했습니다');
@@ -128,10 +114,10 @@ export default function MealCountSettingPage() {
             breakfastDeadline: setting.breakfastDeadline ? dayjs(setting.breakfastDeadline, 'HH:mm') : undefined,
             lunchDeadline: setting.lunchDeadline ? dayjs(setting.lunchDeadline, 'HH:mm') : undefined,
             dinnerDeadline: setting.dinnerDeadline ? dayjs(setting.dinnerDeadline, 'HH:mm') : undefined,
-            breakfastMenuCount: setting.breakfastMenuCount ?? 1,
-            lunchMenuCount: setting.lunchMenuCount ?? 1,
-            dinnerMenuCount: setting.dinnerMenuCount ?? 1,
-            supperMenuCount: setting.supperMenuCount ?? 1,
+            breakfastMenuCount: setting.breakfastMenuCount || 1,
+            lunchMenuCount: setting.lunchMenuCount || 1,
+            dinnerMenuCount: setting.dinnerMenuCount || 1,
+            supperMenuCount: setting.supperMenuCount || 1,
             allowLateSubmission: setting.allowLateSubmission ?? false,
             isActive: setting.isActive ?? true,
           });
@@ -168,10 +154,10 @@ export default function MealCountSettingPage() {
         breakfastDeadline: values.breakfastDeadline ? values.breakfastDeadline.format('HH:mm') : undefined,
         lunchDeadline: values.lunchDeadline ? values.lunchDeadline.format('HH:mm') : undefined,
         dinnerDeadline: values.dinnerDeadline ? values.dinnerDeadline.format('HH:mm') : undefined,
-        breakfastMenuCount: parseInt(values.breakfastMenuCount) ?? 1,
-        lunchMenuCount: parseInt(values.lunchMenuCount) ?? 1,
-        dinnerMenuCount: parseInt(values.dinnerMenuCount) ?? 1,
-        supperMenuCount: parseInt(values.supperMenuCount) ?? 1,
+        breakfastMenuCount: parseInt(values.breakfastMenuCount) || 1,
+        lunchMenuCount: parseInt(values.lunchMenuCount) || 1,
+        dinnerMenuCount: parseInt(values.dinnerMenuCount) || 1,
+        supperMenuCount: parseInt(values.supperMenuCount) || 1,
         allowLateSubmission: values.allowLateSubmission,
         isActive: values.isActive,
       };
@@ -191,10 +177,11 @@ export default function MealCountSettingPage() {
       } else if (currentSiteId) {
         // 개별 수정
         await saveMutation.mutateAsync({ siteId: currentSiteId, setting: settingData });
+        setModalVisible(false);
+        form.resetFields();
       }
     } catch (error) {
       console.error('Validation failed:', error);
-      message.error('입력값을 확인해주세요');
     }
   };
 
@@ -463,22 +450,22 @@ export default function MealCountSettingPage() {
             <Row gutter={16}>
               <Col span={6}>
                 <Form.Item label="조식" name="breakfastMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+                  <Input type="number" min={1} max={5} suffix="개" />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="중식" name="lunchMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+                  <Input type="number" min={1} max={5} suffix="개" />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="석식" name="dinnerMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+                  <Input type="number" min={1} max={5} suffix="개" />
                 </Form.Item>
               </Col>
               <Col span={6}>
                 <Form.Item label="야식" name="supperMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+                  <Input type="number" min={1} max={5} suffix="개" />
                 </Form.Item>
               </Col>
             </Row>

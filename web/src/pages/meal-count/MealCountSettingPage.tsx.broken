@@ -3,30 +3,53 @@
  * @description 사업장별 식수 입력 마감시간 설정 페이지 (재설계 v2)
  */
 
-import { Button, Space, message, Modal, Form, Switch, TimePicker, Card, Tag, Input, Row, Col, Table, Alert } from 'antd';
-import { ClockCircleOutlined, CopyOutlined, EditOutlined } from '@ant-design/icons';
+import { Button, Space, message, Modal, Form, Switch, TimePicker, Card, Tag, Input, Row, Col, Table, Alert, Divider } from 'antd';
+import { CopyOutlined, EditOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getMealCountSetting, upsertMealCountSetting } from '@/api/meal-count.api';
 import type { MealCountSetting } from '@/api/meal-count.api';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import dayjs from 'dayjs';
 import type { TableRowSelection } from 'antd/es/table/interface';
 
 interface SiteWithSetting {
   siteId: string;
   siteName: string;
+  siteType: string;
   division: string;
   setting?: MealCountSetting;
 }
 
+const SITE_TYPE_LABELS: Record<string, string> = {
+  LUNCHBOX: '도시락',
+  DELIVERY: '운반',
+  CONSIGNMENT: '위탁',
+  EVENT: '이벤트',
+};
+
+const SITE_TYPE_COLORS: Record<string, string> = {
+  LUNCHBOX: 'blue',
+  DELIVERY: 'green',
+  CONSIGNMENT: 'orange',
+  EVENT: 'purple',
+};
+
 export default function MealCountSettingPage() {
+  console.log('🚀🚀🚀 MealCountSettingPage 컴포넌트 로드됨! (최신 버전 v2.0) 🚀🚀🚀');
+
   const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [currentSiteId, setCurrentSiteId] = useState<string | undefined>();
   const [copyMode, setCopyMode] = useState(false);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [form] = Form.useForm();
+
+  // 메뉴 개수 상태 관리
+  const [breakfastCount, setBreakfastCount] = useState(1);
+  const [lunchCount, setLunchCount] = useState(1);
+  const [dinnerCount, setDinnerCount] = useState(1);
+  const [supperCount, setSupperCount] = useState(1);
 
   // 사업장 목록 조회
   const { data: sites, isLoading: sitesLoading } = useQuery({
@@ -38,30 +61,42 @@ export default function MealCountSettingPage() {
   const { data: allSettings, isLoading: settingsLoading, refetch: refetchSettings } = useQuery({
     queryKey: ['meal-count-settings-all'],
     queryFn: async () => {
+      console.log('[MealCountSetting] Fetching all settings...');
       if (!sites?.data?.sites) return {};
       const promises = sites.data.sites.map((site: any) =>
         getMealCountSetting(site.id)
-          .then(res => ({ siteId: site.id, setting: res.data }))
-          .catch(() => ({ siteId: site.id, setting: null }))
+          .then(res => {
+            console.log(`[MealCountSetting] Fetched setting for ${site.name}:`, res.data);
+            return { siteId: site.id, setting: res.data };
+          })
+          .catch(() => {
+            console.log(`[MealCountSetting] No setting found for ${site.name}`);
+            return { siteId: site.id, setting: null };
+          })
       );
       const results = await Promise.all(promises);
       const settingsMap: Record<string, MealCountSetting | null> = {};
       results.forEach(r => {
         settingsMap[r.siteId] = r.setting;
       });
+      console.log('[MealCountSetting] All settings loaded:', settingsMap);
       return settingsMap;
     },
     enabled: !!sites?.data?.sites,
     staleTime: 0, // 항상 최신 데이터 가져오기
-    gcTime: 0, // 캐시 즉시 만료
+    gcTime: 0, // 캐시 즉시 만료 (React Query v5)
+    refetchOnMount: 'always', // 마운트 시 항상 리프레시
+    refetchOnWindowFocus: true, // 윈도우 포커스 시 리프레시
   });
 
   // 전체 사업장 리스트 (설정 유무와 관계없이)
   const allSitesList = useMemo<SiteWithSetting[]>(() => {
     if (!sites?.data?.sites) return [];
+    console.log('[MealCountSetting] Building sites list. allSettings:', allSettings);
     return sites.data.sites.map((site: any) => ({
       siteId: site.id,
       siteName: site.name,
+      siteType: site.type,
       division: site.division,
       setting: allSettings?.[site.id] || undefined,
     }));
@@ -71,18 +106,33 @@ export default function MealCountSettingPage() {
   const saveMutation = useMutation({
     mutationFn: async (data: { siteId: string; setting: Partial<MealCountSetting> }) =>
       upsertMealCountSetting(data.siteId, data.setting),
-    onSuccess: async () => {
+    onSuccess: async (response, variables) => {
+      console.log('🎉 [MealCountSetting] Save successful!');
+      console.log('📦 [MealCountSetting] Server response:', response);
       message.success('설정이 저장되었습니다');
 
-      // 캐시 무효화 및 리프레시
-      await queryClient.invalidateQueries({ queryKey: ['meal-count-settings-all'] });
-      await refetchSettings();
+      // 1. 모든 관련 쿼리 무효화
+      console.log('🗑️ [MealCountSetting] Invalidating queries...');
+      await queryClient.invalidateQueries({
+        queryKey: ['meal-count-settings-all'],
+        refetchType: 'all'
+      });
 
-      // 모달 닫기
+      // 2. 작은 지연 후 강제 리프레시
+      console.log('⏳ [MealCountSetting] Waiting for server sync...');
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 3. 다시 한번 refetch 호출
+      console.log('🔄 [MealCountSetting] Refetching data...');
+      await refetchSettings();
+      console.log('✅ [MealCountSetting] Refetch completed!');
+
+      // 4. 모달 닫기
       setModalVisible(false);
       form.resetFields();
     },
     onError: (error: any) => {
+      console.error('❌ [MealCountSetting] Save failed:', error);
       message.error(error.message || '설정 저장에 실패했습니다');
     },
   });
@@ -96,18 +146,32 @@ export default function MealCountSettingPage() {
       await Promise.all(promises);
     },
     onSuccess: async (_, variables) => {
+      console.log('🎉 [MealCountSetting] Batch save successful!');
       message.success(`${variables.siteIds.length}개 사업장에 설정이 적용되었습니다`);
 
-      // 캐시 무효화 및 리프레시
-      await queryClient.invalidateQueries({ queryKey: ['meal-count-settings-all'] });
-      await refetchSettings();
+      // 1. 모든 관련 쿼리 무효화
+      console.log('🗑️ [MealCountSetting] Invalidating queries...');
+      await queryClient.invalidateQueries({
+        queryKey: ['meal-count-settings-all'],
+        refetchType: 'all'
+      });
 
-      // 모달 닫기
+      // 2. 작은 지연 후 강제 리프레시
+      console.log('⏳ [MealCountSetting] Waiting for server sync...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // 3. 다시 한번 refetch 호출
+      console.log('🔄 [MealCountSetting] Refetching data...');
+      await refetchSettings();
+      console.log('✅ [MealCountSetting] Refetch completed!');
+
+      // 4. 모달 닫기
       setModalVisible(false);
       form.resetFields();
       setSelectedRowKeys([]);
     },
     onError: (error: any) => {
+      console.error('❌ [MealCountSetting] Batch save failed:', error);
       message.error(error.message || '설정 복제에 실패했습니다');
     },
   });
@@ -123,22 +187,47 @@ export default function MealCountSettingPage() {
       const setting = siteData?.setting;
 
       if (setting) {
+        setBreakfastCount(setting.breakfastMenuCount || 1);
+        setLunchCount(setting.lunchMenuCount || 1);
+        setDinnerCount(setting.dinnerMenuCount || 1);
+        setSupperCount(setting.supperMenuCount || 1);
+
         setTimeout(() => {
-          form.setFieldsValue({
+          const formValues: any = {
             breakfastDeadline: setting.breakfastDeadline ? dayjs(setting.breakfastDeadline, 'HH:mm') : undefined,
             lunchDeadline: setting.lunchDeadline ? dayjs(setting.lunchDeadline, 'HH:mm') : undefined,
             dinnerDeadline: setting.dinnerDeadline ? dayjs(setting.dinnerDeadline, 'HH:mm') : undefined,
-            breakfastMenuCount: setting.breakfastMenuCount ?? 1,
-            lunchMenuCount: setting.lunchMenuCount ?? 1,
-            dinnerMenuCount: setting.dinnerMenuCount ?? 1,
-            supperMenuCount: setting.supperMenuCount ?? 1,
+            supperDeadline: setting.supperDeadline ? dayjs(setting.supperDeadline, 'HH:mm') : undefined,
+            breakfastMenuCount: setting.breakfastMenuCount || 1,
+            lunchMenuCount: setting.lunchMenuCount || 1,
+            dinnerMenuCount: setting.dinnerMenuCount || 1,
+            supperMenuCount: setting.supperMenuCount || 1,
             allowLateSubmission: setting.allowLateSubmission ?? false,
             isActive: setting.isActive ?? true,
-          });
+          };
+
+          // 메뉴명 필드 설정
+          for (let i = 1; i <= 5; i++) {
+            formValues[`breakfastMenu${i}Name`] = (setting as any)[`breakfastMenu${i}Name`] || '';
+            formValues[`lunchMenu${i}Name`] = (setting as any)[`lunchMenu${i}Name`] || '';
+            formValues[`dinnerMenu${i}Name`] = (setting as any)[`dinnerMenu${i}Name`] || '';
+            formValues[`supperMenu${i}Name`] = (setting as any)[`supperMenu${i}Name`] || '';
+          }
+
+          form.setFieldsValue(formValues);
         }, 0);
+      } else {
+        setBreakfastCount(1);
+        setLunchCount(1);
+        setDinnerCount(1);
+        setSupperCount(1);
       }
     } else {
       // 신규 또는 복제 모드
+      setBreakfastCount(1);
+      setLunchCount(1);
+      setDinnerCount(1);
+      setSupperCount(1);
       setTimeout(() => {
         form.setFieldsValue({
           breakfastMenuCount: 1,
@@ -155,46 +244,71 @@ export default function MealCountSettingPage() {
   };
 
   const handleSave = async () => {
-    try {
-      const values = await form.validateFields();
+    console.log('=== handleSave 호출됨 ===');
+    console.log('copyMode:', copyMode);
+    console.log('currentSiteId:', currentSiteId);
 
-      // 디버깅: Form 값 확인
+    try {
+      console.log('🔍 Form 유효성 검사 시작...');
+      const values = await form.validateFields();
+      console.log('✅ Form validation 성공');
       console.log('Form values:', values);
-      console.log('breakfastDeadline:', values.breakfastDeadline);
-      console.log('lunchDeadline:', values.lunchDeadline);
-      console.log('dinnerDeadline:', values.dinnerDeadline);
 
       const settingData: Partial<MealCountSetting> = {
         breakfastDeadline: values.breakfastDeadline ? values.breakfastDeadline.format('HH:mm') : undefined,
         lunchDeadline: values.lunchDeadline ? values.lunchDeadline.format('HH:mm') : undefined,
         dinnerDeadline: values.dinnerDeadline ? values.dinnerDeadline.format('HH:mm') : undefined,
-        breakfastMenuCount: parseInt(values.breakfastMenuCount) ?? 1,
-        lunchMenuCount: parseInt(values.lunchMenuCount) ?? 1,
-        dinnerMenuCount: parseInt(values.dinnerMenuCount) ?? 1,
-        supperMenuCount: parseInt(values.supperMenuCount) ?? 1,
+        supperDeadline: values.supperDeadline ? values.supperDeadline.format('HH:mm') : undefined,
+        breakfastMenuCount: parseInt(values.breakfastMenuCount) ?? 0,
+        lunchMenuCount: parseInt(values.lunchMenuCount) ?? 0,
+        dinnerMenuCount: parseInt(values.dinnerMenuCount) ?? 0,
+        supperMenuCount: parseInt(values.supperMenuCount) ?? 0,
         allowLateSubmission: values.allowLateSubmission,
         isActive: values.isActive,
       };
 
-      console.log('Setting data to save:', settingData);
+      // 메뉴명 필드 추가
+      for (let i = 1; i <= 5; i++) {
+        (settingData as any)[`breakfastMenu${i}Name`] = values[`breakfastMenu${i}Name`] || undefined;
+        (settingData as any)[`lunchMenu${i}Name`] = values[`lunchMenu${i}Name`] || undefined;
+        (settingData as any)[`dinnerMenu${i}Name`] = values[`dinnerMenu${i}Name`] || undefined;
+        (settingData as any)[`supperMenu${i}Name`] = values[`supperMenu${i}Name`] || undefined;
+      }
+
+      console.log('📦 저장할 데이터:', JSON.stringify(settingData, null, 2));
 
       if (copyMode) {
-        // 선택한 사업장에 복제
+        console.log('🔄 복제 모드 실행');
         if (selectedRowKeys.length === 0) {
           message.warning('사업장을 선택해주세요');
           return;
         }
+        console.log('🚀 batchSaveMutation.mutateAsync 호출 시작...');
         await batchSaveMutation.mutateAsync({
           siteIds: selectedRowKeys as string[],
           setting: settingData,
         });
+        console.log('✅ batchSaveMutation.mutateAsync 완료');
       } else if (currentSiteId) {
-        // 개별 수정
-        await saveMutation.mutateAsync({ siteId: currentSiteId, setting: settingData });
+        console.log('💾 개별 저장 모드 실행 - siteId:', currentSiteId);
+        console.log('🚀 saveMutation.mutateAsync 호출 시작...');
+
+        try {
+          const result = await saveMutation.mutateAsync({ siteId: currentSiteId, setting: settingData });
+          console.log('✅ saveMutation.mutateAsync 완료 - 결과:', result);
+        } catch (mutationError) {
+          console.error('❌ saveMutation.mutateAsync 에러:', mutationError);
+          throw mutationError;
+        }
+      } else {
+        console.warn('⚠️ currentSiteId가 없습니다!');
       }
     } catch (error) {
-      console.error('Validation failed:', error);
-      message.error('입력값을 확인해주세요');
+      console.error('❌ Validation 또는 저장 실패:', error);
+      if (error instanceof Error) {
+        console.error('  에러 메시지:', error.message);
+        console.error('  스택:', error.stack);
+      }
     }
   };
 
@@ -219,6 +333,16 @@ export default function MealCountSettingPage() {
           <span style={{ fontWeight: 500 }}>{record.siteName}</span>
           <span style={{ fontSize: 12, color: '#999' }}>{record.division}</span>
         </Space>
+      ),
+    },
+    {
+      title: '타입',
+      key: 'type',
+      width: 100,
+      render: (_: any, record: SiteWithSetting) => (
+        <Tag color={SITE_TYPE_COLORS[record.siteType]}>
+          {SITE_TYPE_LABELS[record.siteType] || record.siteType}
+        </Tag>
       ),
     },
     {
@@ -258,6 +382,18 @@ export default function MealCountSettingPage() {
       ),
     },
     {
+      title: '야식 마감',
+      key: 'supper',
+      width: 150,
+      render: (_: any, record: SiteWithSetting) => (
+        record.setting?.supperDeadline ? (
+          <Tag color="purple">당일 {record.setting.supperDeadline}</Tag>
+        ) : (
+          <span style={{ color: '#999' }}>미설정</span>
+        )
+      ),
+    },
+    {
       title: '메뉴 개수',
       key: 'menuCount',
       width: 200,
@@ -265,10 +401,10 @@ export default function MealCountSettingPage() {
         if (!record.setting) return <span style={{ color: '#999' }}>미설정</span>;
         return (
           <Space size={4}>
-            <Tag>조 {record.setting.breakfastMenuCount}개</Tag>
-            <Tag>중 {record.setting.lunchMenuCount}개</Tag>
-            <Tag>석 {record.setting.dinnerMenuCount}개</Tag>
-            <Tag>야 {record.setting.supperMenuCount}개</Tag>
+            <Tag color={record.setting.breakfastMenuCount === 0 ? 'default' : undefined}>조 {record.setting.breakfastMenuCount}개</Tag>
+            <Tag color={record.setting.lunchMenuCount === 0 ? 'default' : undefined}>중 {record.setting.lunchMenuCount}개</Tag>
+            <Tag color={record.setting.dinnerMenuCount === 0 ? 'default' : undefined}>석 {record.setting.dinnerMenuCount}개</Tag>
+            <Tag color={record.setting.supperMenuCount === 0 ? 'default' : undefined}>야 {record.setting.supperMenuCount}개</Tag>
           </Space>
         );
       },
@@ -307,6 +443,24 @@ export default function MealCountSettingPage() {
 
   const settingsCount = allSitesList.filter(s => s.setting).length;
 
+  // 메뉴명 입력 필드 렌더링
+  const renderMenuNameFields = (mealType: 'breakfast' | 'lunch' | 'dinner' | 'supper', count: number) => {
+    const fields = [];
+    for (let i = 1; i <= count; i++) {
+      fields.push(
+        <Col span={12} key={i}>
+          <Form.Item
+            label={`메뉴 ${i}`}
+            name={`${mealType}Menu${i}Name`}
+          >
+            <Input placeholder={`메뉴 ${i} 이름 (예: 백반, 돈까스 등)`} />
+          </Form.Item>
+        </Col>
+      );
+    }
+    return fields;
+  };
+
   return (
     <div>
       {/* 헤더 */}
@@ -321,6 +475,7 @@ export default function MealCountSettingPage() {
           <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
             <li><strong>조식:</strong> 전날 저녁에 마감 (예: 전날 20:00)</li>
             <li><strong>중식/석식:</strong> 당일 마감 (예: 당일 10:00, 15:00)</li>
+            <li><strong>메뉴명:</strong> 메뉴 개수를 설정하면 각 메뉴의 이름을 입력할 수 있습니다</li>
             <li><strong>일괄 적용:</strong> 사업장을 선택하고 "선택한 사업장에 설정 복제" 버튼을 클릭하세요</li>
           </ul>
         }
@@ -367,7 +522,7 @@ export default function MealCountSettingPage() {
             showSizeChanger: true,
             showTotal: (total) => `총 ${total}개`,
           }}
-          scroll={{ x: 1000 }}
+          scroll={{ x: 1400 }}
         />
       </Card>
 
@@ -387,7 +542,7 @@ export default function MealCountSettingPage() {
         confirmLoading={saveMutation.isPending || batchSaveMutation.isPending}
         okText={copyMode ? `${selectedRowKeys.length}개 사업장에 적용` : '저장'}
         cancelText="취소"
-        width={800}
+        width={900}
       >
         {copyMode && (
           <Alert
@@ -455,32 +610,92 @@ export default function MealCountSettingPage() {
                   <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} placeholder="예: 15:00" />
                 </Form.Item>
               </Col>
+              <Col span={8}>
+                <Form.Item
+                  label={
+                    <Space>
+                      <span>야식 마감</span>
+                      <Tag color="purple" style={{ fontSize: 11 }}>당일</Tag>
+                    </Space>
+                  }
+                  name="supperDeadline"
+                  tooltip="야식은 당일 저녁에 마감됩니다"
+                >
+                  <TimePicker style={{ width: '100%' }} format="HH:mm" minuteStep={10} placeholder="예: 18:00" />
+                </Form.Item>
+              </Col>
             </Row>
           </Card>
 
-          {/* 메뉴 개수 설정 */}
-          <Card title="메뉴 개수" size="small" style={{ marginBottom: 16 }}>
+          {/* 조식 메뉴 설정 */}
+          <Card title="조식 메뉴 설정" size="small" style={{ marginBottom: 16 }}>
             <Row gutter={16}>
-              <Col span={6}>
-                <Form.Item label="조식" name="breakfastMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+              <Col span={24}>
+                <Form.Item label="메뉴 개수" name="breakfastMenuCount" rules={[{ required: true }]}>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    suffix="개"
+                    onChange={(e) => setBreakfastCount(Math.min(5, Math.max(0, parseInt(e.target.value) || 0)))}
+                  />
                 </Form.Item>
               </Col>
-              <Col span={6}>
-                <Form.Item label="중식" name="lunchMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+              {breakfastCount > 0 && renderMenuNameFields('breakfast', breakfastCount)}
+            </Row>
+          </Card>
+
+          {/* 중식 메뉴 설정 */}
+          <Card title="중식 메뉴 설정" size="small" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item label="메뉴 개수" name="lunchMenuCount" rules={[{ required: true }]}>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    suffix="개"
+                    onChange={(e) => setLunchCount(Math.min(5, Math.max(0, parseInt(e.target.value) || 0)))}
+                  />
                 </Form.Item>
               </Col>
-              <Col span={6}>
-                <Form.Item label="석식" name="dinnerMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+              {lunchCount > 0 && renderMenuNameFields('lunch', lunchCount)}
+            </Row>
+          </Card>
+
+          {/* 석식 메뉴 설정 */}
+          <Card title="석식 메뉴 설정" size="small" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item label="메뉴 개수" name="dinnerMenuCount" rules={[{ required: true }]}>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    suffix="개"
+                    onChange={(e) => setDinnerCount(Math.min(5, Math.max(0, parseInt(e.target.value) || 0)))}
+                  />
                 </Form.Item>
               </Col>
-              <Col span={6}>
-                <Form.Item label="야식" name="supperMenuCount" rules={[{ required: true }]}>
-                  <Input type="number" min={0} max={5} suffix="개" />
+              {dinnerCount > 0 && renderMenuNameFields('dinner', dinnerCount)}
+            </Row>
+          </Card>
+
+          {/* 야식 메뉴 설정 */}
+          <Card title="야식 메뉴 설정" size="small" style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item label="메뉴 개수" name="supperMenuCount" rules={[{ required: true }]}>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5}
+                    suffix="개"
+                    onChange={(e) => setSupperCount(Math.min(5, Math.max(0, parseInt(e.target.value) || 0)))}
+                  />
                 </Form.Item>
               </Col>
+              {supperCount > 0 && renderMenuNameFields('supper', supperCount)}
             </Row>
           </Card>
 

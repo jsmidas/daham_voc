@@ -46,7 +46,7 @@ export async function createMealCount(data: CreateMealCountDTO) {
       const [hours, minutes] = startTime.split(':').map(Number);
       const deadline = new Date(targetDate);
       deadline.setHours(hours, minutes, 0, 0);
-      deadline.setHours(deadline.getHours() - setting.deadlineHoursBefore);
+      deadline.setHours(deadline.getHours() - (setting.deadlineHoursBefore ?? 0));
 
       if (now > deadline) {
         isLate = true;
