@@ -191,6 +191,7 @@ export async function getSiteComparison(
     return JSON.parse(cached);
   }
 
+  // 모든 사업장과 관련 데이터를 한 번에 조회 (최적화됨)
   const sites = await prisma.site.findMany({
     where: {
       deletedAt: null,
@@ -199,15 +200,8 @@ export async function getSiteComparison(
     select: {
       id: true,
       name: true,
-    },
-  });
-
-  const result = await Promise.all(
-    sites.map(async (site) => {
-      // VOC 통계
-      const feedbacks = await prisma.customerFeedback.findMany({
+      feedbacks: {
         where: {
-          siteId: site.id,
           deletedAt: null,
           createdAt: {
             gte: dateFrom,
@@ -217,39 +211,42 @@ export async function getSiteComparison(
         select: {
           rating: true,
         },
-      });
-
-      const feedbackCount = feedbacks.length;
-      const avgRating =
-        feedbackCount > 0
-          ? Math.round(
-              (feedbacks.reduce((sum, f) => sum + (f.rating || 0), 0) /
-                feedbackCount) *
-                10
-            ) / 10
-          : 0;
-
-      // 출퇴근 통계
-      const attendanceCount = await prisma.attendance.count({
+      },
+      attendances: {
         where: {
-          siteId: site.id,
           deletedAt: null,
           checkInTime: {
             gte: dateFrom,
             lte: dateTo,
           },
         },
-      });
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
 
-      return {
-        siteId: site.id,
-        siteName: site.name,
-        feedbackCount,
-        avgRating,
-        attendanceCount,
-      };
-    })
-  );
+  // 데이터 집계
+  const result = sites.map((site) => {
+    const feedbackCount = site.feedbacks.length;
+    const avgRating =
+      feedbackCount > 0
+        ? Math.round(
+            (site.feedbacks.reduce((sum, f) => sum + (f.rating || 0), 0) /
+              feedbackCount) *
+              10
+          ) / 10
+        : 0;
+
+    return {
+      siteId: site.id,
+      siteName: site.name,
+      feedbackCount,
+      avgRating,
+      attendanceCount: site.attendances.length,
+    };
+  });
 
   await cache.set(cacheKey, JSON.stringify(result), 600);
 

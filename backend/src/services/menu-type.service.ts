@@ -32,8 +32,18 @@ export class MenuTypeService {
       where: { isActive: true },
       orderBy: { sortOrder: 'asc' },
       include: {
+        weeklyMenuTemplates: {
+          where: { deletedAt: null },
+          orderBy: [
+            { year: 'desc' },
+            { weekNumber: 'desc' },
+          ],
+        },
         _count: {
-          select: { siteMenuTypes: true },
+          select: {
+            siteMenuTypes: true,
+            weeklyMenuTemplates: true,
+          },
         },
       },
     });

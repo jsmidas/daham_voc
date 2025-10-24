@@ -65,6 +65,10 @@ export class SiteService {
     const KAKAO_API_KEY = process.env.KAKAO_API_KEY || '2ec48bfd86a549a69da630e18d685008';
 
     try {
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+
       const response = await axios.get('https://dapi.kakao.com/v2/local/search/address.json', {
         headers: {
           Authorization: `KakaoAK ${KAKAO_API_KEY}`,
@@ -72,7 +76,10 @@ export class SiteService {
         params: {
           query: address,
         },
+        signal: controller.signal as any,
       });
+
+      clearTimeout(timeout);
 
       if (response.data.documents && response.data.documents.length > 0) {
         const { x, y } = response.data.documents[0].address || response.data.documents[0].road_address;
@@ -84,6 +91,9 @@ export class SiteService {
 
       throw new Error(`주소를 찾을 수 없습니다: ${address}`);
     } catch (error: any) {
+      if (error.name === 'AbortError' || error.code === 'ECONNABORTED') {
+        throw new Error(`주소 변환 타임아웃 (${address}): 5초 초과`);
+      }
       if (error.response) {
         throw new Error(`주소 변환 실패 (${address}): ${error.response.data.message || error.message}`);
       }
@@ -640,10 +650,20 @@ export class SiteService {
     ];
     let colorIndex = 0;
 
-    // Process each row
+    // Process each row with batch processing (5 rows at a time)
+    const BATCH_SIZE = 5;
+    const totalRows = data.length;
+
+    console.log(`📊 Starting bulk creation: ${totalRows} rows total`);
+
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i];
       const rowNumber = i + 2; // Excel row number (1-indexed + header)
+
+      // Log progress every BATCH_SIZE rows
+      if (i % BATCH_SIZE === 0) {
+        console.log(`📍 Processing batch: ${i + 1}-${Math.min(i + BATCH_SIZE, totalRows)} of ${totalRows}`);
+      }
 
       try {
         // Validate required fields
@@ -720,7 +740,7 @@ export class SiteService {
           }
         }
 
-        // Convert address to coordinates using Kakao API
+        // Convert address to coordinates using Kakao API with timeout
         let latitude = 0;
         let longitude = 0;
 
@@ -730,12 +750,12 @@ export class SiteService {
           longitude = coords.longitude;
         } catch (geocodeError: any) {
           // Log geocoding error but continue with default coordinates
-          console.warn(`Geocoding failed for row ${rowNumber}: ${geocodeError.message}`);
+          console.warn(`⚠️  Geocoding failed for row ${rowNumber} (${row['사업장명']}): ${geocodeError.message}`);
           // Use default coordinates (0, 0) if geocoding fails
         }
 
-        // Add delay to respect API rate limits (100ms between requests)
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Add delay to respect API rate limits (200ms between requests for stability)
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // Validate groupId if provided (supports both UUID and group name)
         let validatedGroupId: string | undefined = undefined;
@@ -752,6 +772,7 @@ export class SiteService {
             group = await prisma.siteGroup.findFirst({
               where: {
                 name: groupInput,
+                division: mappedDivision as Division,
                 isActive: true,
               },
             });
@@ -896,6 +917,7 @@ export class SiteService {
 
         results.success++;
       } catch (error: any) {
+        console.error(`❌ Failed to process row ${rowNumber}: ${error.message}`);
         results.failed.push({
           row: rowNumber,
           error: error.message,
@@ -906,6 +928,16 @@ export class SiteService {
 
     // Invalidate cache
     await this.invalidateCache();
+
+    // Log final summary
+    console.log('='.repeat(50));
+    console.log(`✅ Bulk creation completed`);
+    console.log(`   Success: ${results.success}/${totalRows}`);
+    console.log(`   Failed: ${results.failed.length}/${totalRows}`);
+    if (results.failed.length > 0) {
+      console.log(`   Failed rows: ${results.failed.map(f => f.row).join(', ')}`);
+    }
+    console.log('='.repeat(50));
 
     return results;
   }

@@ -3,8 +3,9 @@
  * @description 사업장 지도 페이지 (카카오맵)
  */
 
-import { useState, useEffect } from 'react';
-import { Select, Card, Spin, Space, Tag } from 'antd';
+import { useState, useEffect, useRef } from 'react';
+import { Select, Card, Spin, Space, Tag, Input, Button, message } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getDeliveryRoutes } from '@/api/delivery-route.api';
@@ -20,6 +21,15 @@ export default function SiteMapPage() {
   const [division, setDivision] = useState<string | undefined>();
   const [type, setType] = useState<string | undefined>();
   const [routeId, setRouteId] = useState<string | undefined>();
+  const [searchAddress, setSearchAddress] = useState<string>('');
+  const [isSearching, setIsSearching] = useState(false);
+  const mapRef = useRef<any>(null);
+  const searchMarkerRef = useRef<any>(null);
+  const searchOverlayRef = useRef<any>(null);
+  const nearestSitesOverlaysRef = useRef<any[]>([]);
+  const markersRef = useRef<any[]>([]);
+  const overlaysRef = useRef<any[]>([]);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 사업장 유형 한국어 변환
   const getTypeLabel = (type: string) => {
@@ -43,36 +53,269 @@ export default function SiteMapPage() {
 
   // 사업장 목록 조회
   const { data: sites, isLoading, error } = useQuery({
-    queryKey: ['sites', { division, type }],
+    queryKey: ['sites', { division, type, limit: 1000 }],
     queryFn: () => getSites({ division, type, limit: 1000 }),
     retry: false,
   });
 
-
-  // 카카오맵 초기화 및 마커 표시
+  // 디버깅: 사업장 데이터 확인
   useEffect(() => {
-    if (!sites?.data?.sites || sites.data.sites.length === 0) {
+    if (sites?.data?.sites) {
+      console.log('🔍 [SiteMapPage] Sites loaded:', sites.data.sites.length);
+      console.log('🔍 [SiteMapPage] Total from API:', sites.meta?.total);
+      console.log('🔍 [SiteMapPage] First site:', sites.data.sites[0]);
+    }
+  }, [sites]);
+
+  // 두 좌표 사이의 거리 계산 (Haversine 공식)
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371e3; // 지구 반지름 (미터)
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // 미터 단위
+  };
+
+  // 주소 검색 함수
+  const handleAddressSearch = async () => {
+    if (!searchAddress.trim()) {
+      message.warning('검색할 주소를 입력해주세요.');
       return;
     }
 
+    if (!window.kakao?.maps || !mapRef.current) {
+      message.error('지도가 아직 로드되지 않았습니다.');
+      return;
+    }
+
+    if (!sites?.data?.sites || sites.data.sites.length === 0) {
+      message.error('사업장 데이터가 없습니다.');
+      return;
+    }
+
+    setIsSearching(true);
+
+    try {
+      const geocoder = new window.kakao.maps.services.Geocoder();
+
+      geocoder.addressSearch(searchAddress, (result: any, status: any) => {
+        setIsSearching(false);
+
+        if (status === window.kakao.maps.services.Status.OK) {
+          const coords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
+
+          // 기존 검색 마커 및 가까운 사업장 표시 제거
+          if (searchMarkerRef.current) {
+            searchMarkerRef.current.setMap(null);
+          }
+          if (searchOverlayRef.current) {
+            searchOverlayRef.current.setMap(null);
+          }
+          nearestSitesOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+          nearestSitesOverlaysRef.current = [];
+
+          // 모든 사업장과의 거리 계산
+          const sitesWithDistance = sites.data.sites.map((site: any) => {
+            const distance = Math.round(
+              calculateDistance(result[0].y, result[0].x, site.latitude, site.longitude)
+            );
+            return { ...site, distance };
+          });
+
+          // 거리순 정렬 후 가장 가까운 3곳 선택
+          const nearestSites = sitesWithDistance
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, 3);
+
+          // 특별한 별 모양 마커 생성 (애니메이션 포함)
+          const markerContent = `
+            <div style="position: relative;">
+              <div style="
+                font-size: 40px;
+                animation: pulse 1.5s ease-in-out infinite;
+                transform-origin: center;
+                filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+              ">⭐</div>
+              <style>
+                @keyframes pulse {
+                  0%, 100% {
+                    transform: scale(1);
+                    opacity: 1;
+                  }
+                  50% {
+                    transform: scale(1.3);
+                    opacity: 0.8;
+                  }
+                }
+              </style>
+            </div>
+          `;
+
+          const customOverlay = new window.kakao.maps.CustomOverlay({
+            position: coords,
+            content: markerContent,
+            yAnchor: 1,
+            zIndex: 999,
+          });
+
+          customOverlay.setMap(mapRef.current);
+          searchOverlayRef.current = customOverlay;
+
+          // 지도 중심을 검색 위치로 이동
+          mapRef.current.setCenter(coords);
+          mapRef.current.setLevel(5); // 적절한 줌 레벨
+
+          // 가까운 사업장 정보 생성
+          const nearestSitesInfo = nearestSites.map((site: any, index: number) => {
+            const distanceKm = (site.distance / 1000).toFixed(2);
+            const routeInfo = site.routeStops && site.routeStops.length > 0
+              ? site.routeStops.map((stop: any) => stop.route.code).join(', ')
+              : '미등록';
+
+            return `
+              <div style="
+                margin-top: ${index === 0 ? '12px' : '8px'};
+                padding: 8px;
+                background: rgba(255,255,255,0.15);
+                border-radius: 6px;
+                border-left: 3px solid ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'};
+              ">
+                <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                  <span style="font-size: 16px; margin-right: 6px;">
+                    ${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                  </span>
+                  <span style="font-weight: bold; font-size: 13px;">
+                    ${site.name}
+                  </span>
+                </div>
+                <div style="font-size: 11px; opacity: 0.9; line-height: 1.4;">
+                  📏 직선거리: <strong>${distanceKm}km</strong><br/>
+                  🚚 배송코스: ${routeInfo}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          // 정보창 표시
+          const infoContent = `
+            <div style="
+              padding: 15px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              color: white;
+              border-radius: 8px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+              min-width: 280px;
+              max-width: 350px;
+              font-family: sans-serif;
+            ">
+              <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">
+                🔍 검색된 위치
+              </div>
+              <div style="font-size: 12px; line-height: 1.5; margin-bottom: 8px;">
+                ${result[0].address_name || result[0].road_address?.address_name || searchAddress}
+              </div>
+              <div style="
+                border-top: 1px solid rgba(255,255,255,0.3);
+                padding-top: 8px;
+                margin-top: 8px;
+              ">
+                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+                  📍 가까운 사업장 TOP 3
+                </div>
+                ${nearestSitesInfo}
+              </div>
+            </div>
+          `;
+
+          const infoOverlay = new window.kakao.maps.CustomOverlay({
+            position: coords,
+            content: infoContent,
+            yAnchor: 2.3,
+            zIndex: 998,
+          });
+
+          infoOverlay.setMap(mapRef.current);
+          searchMarkerRef.current = infoOverlay;
+
+          // 가까운 사업장에 번호 표시
+          nearestSites.forEach((site: any, index: number) => {
+            const siteCoords = new window.kakao.maps.LatLng(site.latitude, site.longitude);
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+            const color = index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32';
+
+            const nearestMarkerContent = `
+              <div style="
+                position: relative;
+                width: 36px;
+                height: 36px;
+                background: ${color};
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 20px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                border: 3px solid white;
+                animation: bounce 2s ease-in-out infinite;
+              ">
+                ${medal}
+              </div>
+              <style>
+                @keyframes bounce {
+                  0%, 100% { transform: translateY(0); }
+                  50% { transform: translateY(-5px); }
+                }
+              </style>
+            `;
+
+            const nearestOverlay = new window.kakao.maps.CustomOverlay({
+              position: siteCoords,
+              content: nearestMarkerContent,
+              yAnchor: 1.5,
+              zIndex: 997,
+            });
+
+            nearestOverlay.setMap(mapRef.current);
+            nearestSitesOverlaysRef.current.push(nearestOverlay);
+          });
+
+          message.success(`주소를 찾았습니다! 가장 가까운 사업장: ${nearestSites[0].name} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
+        } else {
+          message.error('주소를 찾을 수 없습니다. 다시 시도해주세요.');
+        }
+      });
+    } catch (error) {
+      console.error('Address search error:', error);
+      setIsSearching(false);
+      message.error('주소 검색 중 오류가 발생했습니다.');
+    }
+  };
+
+
+  // 카카오맵 스크립트 로드 (한 번만 실행)
+  useEffect(() => {
     // 이미 스크립트가 로드되어 있는지 확인
     const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
 
-    if (existingScript && window.kakao?.maps) {
-      initializeMap();
+    if (existingScript || window.kakao?.maps) {
       return;
     }
 
     const script = document.createElement('script');
     script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
       import.meta.env.VITE_KAKAO_MAP_APP_KEY
-    }&autoload=false`;
+    }&autoload=false&libraries=services,drawing`;
     script.async = true;
 
     script.onload = () => {
-      window.kakao.maps.load(() => {
-        initializeMap();
-      });
+      console.log('✅ Kakao Maps SDK loaded successfully');
     };
 
     script.onerror = (error) => {
@@ -84,10 +327,81 @@ export default function SiteMapPage() {
     };
 
     document.head.appendChild(script);
+  }, []); // 한 번만 실행
+
+  // 카카오맵 초기화 및 마커 표시 (sites나 routeId가 변경될 때)
+  useEffect(() => {
+    if (!sites?.data?.sites || sites.data.sites.length === 0) {
+      return;
+    }
+
+    if (!window.kakao?.maps) {
+      // 스크립트가 아직 로드되지 않았으면 대기
+      const checkKakao = setInterval(() => {
+        if (window.kakao?.maps) {
+          clearInterval(checkKakao);
+          window.kakao.maps.load(() => {
+            initializeMap();
+          });
+        }
+      }, 100);
+
+      return () => clearInterval(checkKakao);
+    }
+
+    window.kakao.maps.load(() => {
+      initializeMap();
+    });
+
+    // Cleanup: 컴포넌트 언마운트 시 마커/오버레이 제거
+    return () => {
+      // 타이머 정리
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+
+      // 모든 마커 제거
+      markersRef.current.forEach((marker) => {
+        if (marker && marker.setMap) {
+          marker.setMap(null);
+        }
+      });
+      markersRef.current = [];
+
+      // 모든 오버레이 제거
+      overlaysRef.current.forEach((overlay) => {
+        if (overlay && overlay.setMap) {
+          overlay.setMap(null);
+        }
+      });
+      overlaysRef.current = [];
+
+      // 검색 관련 오버레이 제거
+      if (searchMarkerRef.current) {
+        searchMarkerRef.current.setMap(null);
+        searchMarkerRef.current = null;
+      }
+      if (searchOverlayRef.current) {
+        searchOverlayRef.current.setMap(null);
+        searchOverlayRef.current = null;
+      }
+      nearestSitesOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+      nearestSitesOverlaysRef.current = [];
+    };
   }, [sites, routeId]);
 
   const initializeMap = () => {
     if (!sites?.data?.sites || sites.data.sites.length === 0) return;
+
+    console.log('🗺️ Total sites loaded:', sites.data.sites.length);
+    console.log('📊 Sites data:', sites.data);
+
+    // 기존 마커와 오버레이 정리
+    markersRef.current.forEach((marker) => marker?.setMap(null));
+    overlaysRef.current.forEach((overlay) => overlay?.setMap(null));
+    markersRef.current = [];
+    overlaysRef.current = [];
 
     try {
       const container = document.getElementById('map');
@@ -106,10 +420,10 @@ export default function SiteMapPage() {
       };
 
       const map = new window.kakao.maps.Map(container, options);
+      mapRef.current = map;
 
-        // 현재 열려있는 InfoWindow와 타이머를 추적
+        // 현재 열려있는 InfoWindow를 추적
         let currentInfoWindow: any = null;
-        let closeTimer: ReturnType<typeof setTimeout> | null = null;
 
         // 필터링된 사업장 목록
         let filteredSites = sites.data.sites;
@@ -130,12 +444,14 @@ export default function SiteMapPage() {
           let markerColor: string;
           let markerShape: MarkerShape = 'CIRCLE';
 
+          // 부문에 따라 마커 모양 결정 (본사: 원형, 영남지사: 사각형)
+          markerShape = site.division === 'YEONGNAM' ? 'SQUARE' : 'CIRCLE';
+
           if (site.routeStops && site.routeStops.length > 0) {
             // 첫 번째 배송코스의 색상 사용
             markerColor = site.routeStops[0].route.color || '#1890ff';
           } else if (site.group) {
-            // 그룹의 마커 색상/모양 사용
-            markerShape = site.group.markerShape || 'CIRCLE';
+            // 그룹의 마커 색상 사용 (모양은 부문으로 결정되므로 제외)
             markerColor = site.group.markerColor || '#999999';
           } else {
             // 코스에 미등록된 사업장은 회색으로 표시
@@ -151,6 +467,7 @@ export default function SiteMapPage() {
           });
 
           marker.setMap(map);
+          markersRef.current.push(marker); // 마커 ref에 저장
 
           // 사업장 이름 라벨 추가 (CustomOverlay)
           const labelContent = `
@@ -174,6 +491,7 @@ export default function SiteMapPage() {
           });
 
           labelOverlay.setMap(map);
+          overlaysRef.current.push(labelOverlay); // 오버레이 ref에 저장
 
           // 마커 클릭 시 정보 팝업
           const routeInfo = site.routeStops && site.routeStops.length > 0
@@ -212,8 +530,8 @@ export default function SiteMapPage() {
           // 마커 클릭 이벤트
           window.kakao.maps.event.addListener(marker, 'click', () => {
             // 이전 타이머가 있으면 취소
-            if (closeTimer) {
-              clearTimeout(closeTimer);
+            if (closeTimerRef.current) {
+              clearTimeout(closeTimerRef.current);
             }
 
             // 이전에 열린 InfoWindow가 있으면 닫기
@@ -226,9 +544,10 @@ export default function SiteMapPage() {
             currentInfoWindow = infowindow;
 
             // 2초 후 자동으로 닫기
-            closeTimer = setTimeout(() => {
+            closeTimerRef.current = setTimeout(() => {
               infowindow.close();
               currentInfoWindow = null;
+              closeTimerRef.current = null;
             }, 2000);
           });
 
@@ -380,15 +699,51 @@ export default function SiteMapPage() {
 
         {/* 범례 */}
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-          <span style={{ marginRight: 16, fontWeight: 'bold' }}>배송코스별 마커 색상:</span>
-          <Space wrap>
-            {routes.map((route: any) => (
-              <Tag key={route.id} color={route.color}>
-                {route.code} - {route.name}
-              </Tag>
-            ))}
-            <Tag color="#999999">미등록</Tag>
-          </Space>
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ marginRight: 16, fontWeight: 'bold' }}>부문별 마커 모양:</span>
+            <Space wrap>
+              <Tag color="blue">● 본사 (원형)</Tag>
+              <Tag color="green">■ 영남지사 (사각형)</Tag>
+            </Space>
+          </div>
+          <div>
+            <span style={{ marginRight: 16, fontWeight: 'bold' }}>배송코스별 마커 색상:</span>
+            <Space wrap>
+              {routes.map((route: any) => (
+                <Tag key={route.id} color={route.color}>
+                  {route.code} - {route.name}
+                </Tag>
+              ))}
+              <Tag color="#999999">미등록</Tag>
+            </Space>
+          </div>
+        </div>
+
+        {/* 주소 검색 */}
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
+          <Space.Compact style={{ width: '100%', maxWidth: '600px' }}>
+            <Input
+              placeholder="신규 거래처 주소를 검색하세요 (예: 대구 중구 동성로2가 119)"
+              value={searchAddress}
+              onChange={(e) => setSearchAddress(e.target.value)}
+              onPressEnter={handleAddressSearch}
+              prefix={<SearchOutlined />}
+              size="large"
+              style={{ flex: 1 }}
+            />
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleAddressSearch}
+              loading={isSearching}
+              icon={<SearchOutlined />}
+            >
+              검색
+            </Button>
+          </Space.Compact>
+          <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
+            💡 신규 거래처의 주소를 검색하면 지도에 ⭐ 별 모양으로 표시되어 어느 배송코스에 넣을지 판단할 수 있습니다.
+          </div>
         </div>
       </Card>
 

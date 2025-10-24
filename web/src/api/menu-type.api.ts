@@ -2,6 +2,19 @@ import apiClient from '@/utils/apiClient';
 
 export type Division = 'HQ' | 'YEONGNAM';
 
+export interface WeeklyMenuTemplate {
+  id: string;
+  menuTypeId: string;
+  year: number;
+  weekNumber: number;
+  imageUrl: string;
+  thumbnailUrl?: string;
+  description?: string;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MenuType {
   id: string;
   name: string;
@@ -12,8 +25,10 @@ export interface MenuType {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  weeklyMenuTemplates?: WeeklyMenuTemplate[];
   _count?: {
     siteMenuTypes: number;
+    weeklyMenuTemplates: number;
   };
 }
 

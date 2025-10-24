@@ -81,7 +81,7 @@ export async function uploadExcelFile(file: File) {
   // axios가 FormData에 맞는 multipart/form-data를 자동 설정하도록 함
   return apiClient.post('/sites/excel-upload', formData, {
     headers: {
-      'Content-Type': undefined,
+      'Content-Type': 'multipart/form-data',
     },
   });
 }

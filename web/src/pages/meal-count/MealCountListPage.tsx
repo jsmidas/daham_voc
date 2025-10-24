@@ -33,10 +33,10 @@ export default function MealCountListPage() {
   const [editingRecord, setEditingRecord] = useState<MealCount | null>(null);
   const [form] = Form.useForm();
 
-  // 사업장 목록 조회
+  // 사업장 목록 조회 (전체)
   const { data: sites } = useQuery({
-    queryKey: ['sites'],
-    queryFn: () => getSites({ isActive: true }),
+    queryKey: ['sites', { limit: 1000 }],
+    queryFn: () => getSites({ isActive: true, limit: 1000 }),
   });
 
   // 사업장 식수 설정 조회
@@ -133,6 +133,29 @@ export default function MealCountListPage() {
   const handleSave = async () => {
     try {
       const values = await form.validateFields();
+
+      // 전체 취소 방지: count가 0이면 경고
+      if (values.count === 0 || values.count === null || values.count === undefined) {
+        Modal.confirm({
+          title: '전체 취소 확인',
+          content: '식수 인원이 0명입니다. 이 주문을 완전히 삭제하시겠습니까?',
+          okText: '삭제',
+          cancelText: '취소',
+          okType: 'danger',
+          onOk: () => {
+            if (editingRecord) {
+              // 기존 데이터가 있으면 삭제
+              deleteMutation.mutate(editingRecord.id);
+            } else {
+              // 신규 등록인데 0명이면 저장하지 않음
+              setModalVisible(false);
+              form.resetFields();
+              message.info('취소되었습니다');
+            }
+          },
+        });
+        return;
+      }
 
       if (editingRecord) {
         // 수정
