@@ -382,14 +382,10 @@ export async function assignStaffToSites(
     throw new Error('담당자를 찾을 수 없습니다');
   }
 
-  // 기존 배정 제거 (removedAt 설정)
-  await prisma.staffSite.updateMany({
+  // 기존 배정 완전히 삭제 (unique constraint 충돌 방지)
+  await prisma.staffSite.deleteMany({
     where: {
       staffId,
-      removedAt: null,
-    },
-    data: {
-      removedAt: new Date(),
     },
   });
 
