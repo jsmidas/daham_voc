@@ -3,11 +3,12 @@
  * @description 담당자 등록/수정 페이지
  */
 
-import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Transfer } from 'antd';
+import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Transfer, Space } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createStaff, updateStaff, getStaffById, assignStaffToSites } from '@/api/staff.api';
 import { getSites } from '@/api/site.api';
+import { getDeliveryRoutes } from '@/api/delivery-route.api';
 import { useEffect, useState } from 'react';
 
 export default function StaffFormPage() {
@@ -22,6 +23,9 @@ export default function StaffFormPage() {
   const [targetKeys, setTargetKeys] = useState<string[]>([]);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
 
+  // 선택된 역할 (배송기사 여부 확인용)
+  const [selectedRole, setSelectedRole] = useState<string | undefined>();
+
   // 수정 모드일 때 기존 데이터 조회
   const { data: staffData } = useQuery({
     queryKey: ['staff', id],
@@ -34,6 +38,13 @@ export default function StaffFormPage() {
   const { data: sitesData } = useQuery({
     queryKey: ['sites'],
     queryFn: () => getSites(),
+  });
+
+  // 배송 코스 목록 조회 (배송기사인 경우에만)
+  const { data: routesData } = useQuery({
+    queryKey: ['delivery-routes'],
+    queryFn: () => getDeliveryRoutes(),
+    enabled: selectedRole === 'DELIVERY_DRIVER',
   });
 
   // 폼에 기존 데이터 설정
@@ -54,11 +65,48 @@ export default function StaffFormPage() {
         managerId: staffData.managerId,
       });
 
+      // 역할 설정
+      setSelectedRole(staffData.user.role);
+
       // 배정된 사업장 설정
       const assignedSiteIds = staffData.staffSites?.map((ss) => ss.siteId) || [];
       setTargetKeys(assignedSiteIds);
     }
   }, [isEditMode, staffData, form]);
+
+  // 역할 변경 핸들러
+  const handleRoleChange = (role: string) => {
+    setSelectedRole(role);
+    form.setFieldsValue({ role });
+  };
+
+  // 배송 코스 선택 핸들러 (해당 코스의 모든 사업장을 자동으로 추가)
+  const handleRouteSelect = async (routeId: string) => {
+    if (!routeId) return;
+
+    try {
+      // 선택한 코스의 상세 정보를 가져와서 해당 코스의 사업장 ID 목록 추출
+      const route = routesData?.data?.find((r: any) => r.id === routeId);
+      if (route && route.stopsCount > 0) {
+        // 코스의 사업장 정보를 가져오기 위해 API 호출이 필요
+        // 여기서는 sites에서 해당 코스와 같은 division의 사업장을 추가
+        // 실제로는 route의 stops를 가져와야 하지만, 간단하게 구현
+        const { data: routeDetail } = await import('@/api/delivery-route.api').then(m =>
+          m.getDeliveryRouteById(routeId)
+        );
+
+        if (routeDetail?.data?.stops) {
+          const newSiteIds = routeDetail.data.stops.map((stop: any) => stop.siteId);
+          // 기존 선택된 사업장과 중복 제거하고 추가
+          const uniqueSiteIds = Array.from(new Set([...targetKeys, ...newSiteIds]));
+          setTargetKeys(uniqueSiteIds);
+          message.success(`${route.name}의 사업장 ${newSiteIds.length}개가 추가되었습니다`);
+        }
+      }
+    } catch (error) {
+      message.error('코스 사업장 불러오기 실패');
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: createStaff,
@@ -209,7 +257,7 @@ export default function StaffFormPage() {
                 name="role"
                 rules={[{ required: true, message: '권한을 선택하세요' }]}
               >
-                <Select placeholder="권한 선택">
+                <Select placeholder="권한 선택" onChange={handleRoleChange}>
                   <Select.Option value="SUPER_ADMIN">슈퍼 관리자</Select.Option>
                   <Select.Option value="HQ_ADMIN">본사 관리자</Select.Option>
                   <Select.Option value="YEONGNAM_ADMIN">영남 관리자</Select.Option>
@@ -267,6 +315,30 @@ export default function StaffFormPage() {
 
           {/* 사업장 배정 */}
           <h3 style={{ marginTop: 24 }}>사업장 배정</h3>
+
+          {/* 배송기사인 경우 코스 선택 옵션 표시 */}
+          {selectedRole === 'DELIVERY_DRIVER' && (
+            <Form.Item label="배송 코스로 사업장 배정">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ color: '#666', marginBottom: 8 }}>
+                  💡 배송 코스를 선택하면 해당 코스의 모든 사업장이 자동으로 추가됩니다.
+                </div>
+                <Select
+                  placeholder="배송 코스 선택"
+                  style={{ width: '100%' }}
+                  onChange={handleRouteSelect}
+                  allowClear
+                >
+                  {routesData?.data?.map((route: any) => (
+                    <Select.Option key={route.id} value={route.id}>
+                      {route.name} ({route.division}) - {route.stopsCount}개 사업장
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Space>
+            </Form.Item>
+          )}
+
           <Form.Item label="배정할 사업장 선택">
             <Transfer
               dataSource={transferDataSource}

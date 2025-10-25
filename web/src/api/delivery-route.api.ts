@@ -81,3 +81,10 @@ export async function updateRouteStops(
 export async function assignDrivers(routeId: string, driverIds: string[]): Promise<void> {
   await apiClient.post(`/delivery-routes/${routeId}/assign-drivers`, { driverIds });
 }
+
+/**
+ * 기사 배정 해제
+ */
+export async function unassignDriver(routeId: string, driverId: string): Promise<void> {
+  await apiClient.delete(`/delivery-routes/${routeId}/drivers/${driverId}`);
+}
