@@ -26,6 +26,9 @@ export default function StaffFormPage() {
   // 선택된 역할 (배송기사 여부 확인용)
   const [selectedRole, setSelectedRole] = useState<string | undefined>();
 
+  // 선택된 배송 코스
+  const [selectedRouteId, setSelectedRouteId] = useState<string | undefined>();
+
   // 수정 모드일 때 기존 데이터 조회
   const { data: staffData } = useQuery({
     queryKey: ['staff', id],
@@ -74,6 +77,44 @@ export default function StaffFormPage() {
     }
   }, [isEditMode, staffData, form]);
 
+  // 배송기사의 경우 배정된 코스 찾기
+  useEffect(() => {
+    const findAssignedRoute = async () => {
+      if (isEditMode && staffData && selectedRole === 'DELIVERY_DRIVER' && routesData?.data) {
+        const assignedSiteIds = staffData.staffSites?.map((ss) => ss.siteId) || [];
+
+        // 각 코스를 확인하여 사업장이 일치하는 코스 찾기
+        for (const route of routesData.data) {
+          try {
+            const { data: routeDetail } = await import('@/api/delivery-route.api').then(m =>
+              m.getDeliveryRouteById(route.id)
+            );
+
+            // API 응답 구조: routeDetail이 직접 데이터
+            const stops = routeDetail?.data?.stops || routeDetail?.stops;
+
+            if (stops && stops.length > 0) {
+              const routeSiteIds = stops.map((stop: any) => stop.siteId || stop.site?.id);
+
+              // 배정된 사업장이 코스의 모든 사업장과 일치하는지 확인
+              const allSitesMatch = routeSiteIds.every((siteId: string) => assignedSiteIds.includes(siteId));
+              const sameLength = routeSiteIds.length === assignedSiteIds.length;
+
+              if (allSitesMatch && sameLength) {
+                setSelectedRouteId(route.id);
+                break;
+              }
+            }
+          } catch (error) {
+            console.error('코스 상세 정보 조회 실패:', error);
+          }
+        }
+      }
+    };
+
+    findAssignedRoute();
+  }, [isEditMode, staffData, selectedRole, routesData]);
+
   // 역할 변경 핸들러
   const handleRoleChange = (role: string) => {
     setSelectedRole(role);
@@ -82,28 +123,39 @@ export default function StaffFormPage() {
 
   // 배송 코스 선택 핸들러 (해당 코스의 모든 사업장을 자동으로 추가)
   const handleRouteSelect = async (routeId: string) => {
-    if (!routeId) return;
+    if (!routeId) {
+      setSelectedRouteId(undefined);
+      return;
+    }
+
+    setSelectedRouteId(routeId);
 
     try {
       // 선택한 코스의 상세 정보를 가져와서 해당 코스의 사업장 ID 목록 추출
       const route = routesData?.data?.find((r: any) => r.id === routeId);
+
       if (route && route.stopsCount > 0) {
-        // 코스의 사업장 정보를 가져오기 위해 API 호출이 필요
-        // 여기서는 sites에서 해당 코스와 같은 division의 사업장을 추가
-        // 실제로는 route의 stops를 가져와야 하지만, 간단하게 구현
         const { data: routeDetail } = await import('@/api/delivery-route.api').then(m =>
           m.getDeliveryRouteById(routeId)
         );
 
-        if (routeDetail?.data?.stops) {
-          const newSiteIds = routeDetail.data.stops.map((stop: any) => stop.siteId);
+        // API 응답 구조: routeDetail이 직접 데이터
+        const stops = routeDetail?.data?.stops || routeDetail?.stops;
+
+        if (stops && stops.length > 0) {
+          const newSiteIds = stops.map((stop: any) => stop.siteId || stop.site?.id);
+
           // 기존 선택된 사업장과 중복 제거하고 추가
           const uniqueSiteIds = Array.from(new Set([...targetKeys, ...newSiteIds]));
+
           setTargetKeys(uniqueSiteIds);
           message.success(`${route.name}의 사업장 ${newSiteIds.length}개가 추가되었습니다`);
+        } else {
+          message.warning('해당 코스에 배정된 사업장이 없습니다');
         }
       }
     } catch (error) {
+      console.error('코스 사업장 불러오기 실패:', error);
       message.error('코스 사업장 불러오기 실패');
     }
   };
@@ -162,11 +214,15 @@ export default function StaffFormPage() {
   };
 
   // Transfer data source
-  const transferDataSource = sitesData?.data?.sites?.map((site: any) => ({
-    key: site.id,
-    title: `${site.name} (${site.type})`,
-    description: site.address,
-  })) || [];
+  const transferDataSource = sitesData?.data?.sites?.map((site: any) => {
+    const label = `${site.name} (${site.type})`;
+    return {
+      key: site.id,
+      title: label,
+      label: label,
+      description: site.address,
+    };
+  }) || [];
 
   return (
     <div>
@@ -326,14 +382,18 @@ export default function StaffFormPage() {
                 <Select
                   placeholder="배송 코스 선택"
                   style={{ width: '100%' }}
+                  value={selectedRouteId}
                   onChange={handleRouteSelect}
                   allowClear
                 >
-                  {routesData?.data?.map((route: any) => (
-                    <Select.Option key={route.id} value={route.id}>
-                      {route.name} ({route.division}) - {route.stopsCount}개 사업장
-                    </Select.Option>
-                  ))}
+                  {routesData?.data?.map((route: any) => {
+                    const label = `${route.name} (${route.division}) - ${route.stopsCount}개 사업장`;
+                    return (
+                      <Select.Option key={route.id} value={route.id} label={label}>
+                        {label}
+                      </Select.Option>
+                    );
+                  })}
                 </Select>
               </Space>
             </Form.Item>
