@@ -25,6 +25,7 @@ const MEAL_TYPES = [
 export default function MealCountListPage() {
   const queryClient = useQueryClient();
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
+  const [isAllSites, setIsAllSites] = useState(false); // 전체 사업장 조회 여부
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf('month'),
     dayjs().endOf('month'),
@@ -33,11 +34,42 @@ export default function MealCountListPage() {
   const [editingRecord, setEditingRecord] = useState<MealCount | null>(null);
   const [form] = Form.useForm();
 
+  // 필터 상태
+  const [filterDivision, setFilterDivision] = useState<string>('ALL');
+  const [filterType, setFilterType] = useState<string>('ALL');
+  const [filterInputStatus, setFilterInputStatus] = useState<string>('ALL'); // ALL, COMPLETED, PENDING
+
   // 사업장 목록 조회 (전체)
   const { data: sites } = useQuery({
     queryKey: ['sites', { limit: 1000 }],
     queryFn: () => getSites({ isActive: true, limit: 1000 }),
   });
+
+  // 필터링된 사업장 목록
+  const filteredSites = sites?.data?.sites?.filter((site: any) => {
+    // 지사 필터
+    if (filterDivision !== 'ALL' && site.division !== filterDivision) {
+      return false;
+    }
+
+    // 유형 필터
+    if (filterType !== 'ALL' && site.type !== filterType) {
+      return false;
+    }
+
+    // 입력 상태 필터
+    if (filterInputStatus !== 'ALL' && todayAllMealCounts) {
+      const hasInput = todayAllMealCounts[site.id] || false;
+      if (filterInputStatus === 'COMPLETED' && !hasInput) {
+        return false;
+      }
+      if (filterInputStatus === 'PENDING' && hasInput) {
+        return false;
+      }
+    }
+
+    return true;
+  }) || [];
 
   // 사업장 식수 설정 조회
   const { data: settingData } = useQuery({
@@ -46,7 +78,7 @@ export default function MealCountListPage() {
     enabled: !!selectedSiteId,
   });
 
-  // 식수 데이터 조회 (날짜 범위)
+  // 식수 데이터 조회 (단일 사업장)
   const { data: mealCounts, isLoading } = useQuery({
     queryKey: ['meal-counts', selectedSiteId, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
     queryFn: () => getMealCountsByRange(
@@ -54,7 +86,53 @@ export default function MealCountListPage() {
       dateRange[0].format('YYYY-MM-DD'),
       dateRange[1].format('YYYY-MM-DD')
     ),
-    enabled: !!selectedSiteId,
+    enabled: !!selectedSiteId && !isAllSites,
+  });
+
+  // 전체 사업장 식수 데이터 조회
+  const { data: allSitesMealCounts, isLoading: isLoadingAll } = useQuery({
+    queryKey: ['all-sites-meal-counts', filteredSites.map((s: any) => s.id).join(','), dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryFn: async () => {
+      const startDate = dateRange[0].format('YYYY-MM-DD');
+      const endDate = dateRange[1].format('YYYY-MM-DD');
+
+      // 필터링된 사업장들의 데이터를 병렬로 가져옴
+      const promises = filteredSites.map((site: any) =>
+        getMealCountsByRange(site.id, startDate, endDate).catch(() => ({ data: [] }))
+      );
+      const results = await Promise.all(promises);
+
+      // 사업장별로 데이터 매핑
+      const dataMap: { [siteId: string]: MealCount[] } = {};
+      filteredSites.forEach((site: any, index: number) => {
+        dataMap[site.id] = results[index]?.data || [];
+      });
+
+      return dataMap;
+    },
+    enabled: isAllSites && filteredSites.length > 0,
+  });
+
+  // 오늘 날짜의 전체 사업장 식수 입력 데이터 (입력 상태 필터용)
+  const today = dayjs().format('YYYY-MM-DD');
+  const { data: todayAllMealCounts } = useQuery({
+    queryKey: ['today-all-meal-counts', today],
+    queryFn: async () => {
+      // 모든 사업장의 오늘 날짜 데이터를 가져옴
+      const allSites = sites?.data?.sites || [];
+      const promises = allSites.map((site: any) =>
+        getMealCountsByRange(site.id, today, today).catch(() => ({ data: [] }))
+      );
+      const results = await Promise.all(promises);
+
+      // 사업장별로 입력 여부 매핑
+      const inputStatusMap: { [siteId: string]: boolean } = {};
+      allSites.forEach((site: any, index: number) => {
+        inputStatusMap[site.id] = results[index]?.data?.length > 0;
+      });
+      return inputStatusMap;
+    },
+    enabled: !!sites?.data?.sites,
   });
 
   // 등록 Mutation
@@ -284,46 +362,93 @@ export default function MealCountListPage() {
 
   // 엑셀 다운로드
   const handleExcelDownload = () => {
-    if (!mealCounts?.data || mealCounts.data.length === 0) {
-      message.warning('다운로드할 데이터가 없습니다');
-      return;
-    }
-
-    const siteName = sites?.data?.sites?.find((s: any) => s.id === selectedSiteId)?.name || '사업장';
     const dateStr = `${dateRange[0].format('YYYY-MM-DD')}_${dateRange[1].format('YYYY-MM-DD')}`;
 
-    // 엑셀 데이터 생성
-    const excelData = mealCounts.data.map((record: MealCount) => ({
-      '날짜': dayjs(record.date).format('YYYY-MM-DD'),
-      '식사 유형': getMealTypeLabel(record.mealType),
-      '메뉴명': getMenuName(record.mealType, record.menuNumber) || '-',
-      '인원': record.count,
-      '등록자': record.submitter?.name || '-',
-      '등록시간': dayjs(record.submittedAt).format('YYYY-MM-DD HH:mm'),
-      '상태': record.isLate ? '늦은 제출' : '정상',
-      '비고': record.note || '-',
-    }));
+    if (isAllSites) {
+      // 전체 사업장 엑셀 다운로드
+      if (!allSitesMealCounts) {
+        message.warning('다운로드할 데이터가 없습니다');
+        return;
+      }
 
-    // 워크북 생성
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, '식수현황');
+      const excelData = allSitesTableData.map((row: any) => {
+        const rowData: any = {
+          '사업장': row.siteName,
+          '지사': row.division,
+          '유형': row.type,
+        };
 
-    // 열 너비 설정
-    worksheet['!cols'] = [
-      { wch: 12 }, // 날짜
-      { wch: 12 }, // 식사 유형
-      { wch: 15 }, // 메뉴명
-      { wch: 10 }, // 인원
-      { wch: 12 }, // 등록자
-      { wch: 18 }, // 등록시간
-      { wch: 12 }, // 상태
-      { wch: 30 }, // 비고
-    ];
+        // 각 식사 유형별 인원 추가
+        MEAL_TYPES.forEach((mealType) => {
+          const mealData = row.mealData[mealType.value];
+          const total = mealData ? mealData.reduce((sum: number, item: MealCount) => sum + item.count, 0) : 0;
+          rowData[mealType.label] = total || '-';
+        });
 
-    // 파일 다운로드
-    XLSX.writeFile(workbook, `식수현황_${siteName}_${dateStr}.xlsx`);
-    message.success('엑셀 파일이 다운로드되었습니다');
+        // 합계
+        const total = Object.values(row.mealData).reduce((sum: number, mealArray: any) => {
+          return sum + mealArray.reduce((mealSum: number, item: MealCount) => mealSum + item.count, 0);
+        }, 0);
+        rowData['합계'] = total;
+
+        return rowData;
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '전체사업장');
+
+      worksheet['!cols'] = [
+        { wch: 25 }, // 사업장
+        { wch: 10 }, // 지사
+        { wch: 10 }, // 유형
+        { wch: 12 }, // 조식
+        { wch: 12 }, // 중식
+        { wch: 12 }, // 석식
+        { wch: 12 }, // 야식
+        { wch: 12 }, // 합계
+      ];
+
+      XLSX.writeFile(workbook, `전체사업장_식수현황_${dateStr}.xlsx`);
+      message.success('엑셀 파일이 다운로드되었습니다');
+    } else {
+      // 개별 사업장 엑셀 다운로드
+      if (!mealCounts?.data || mealCounts.data.length === 0) {
+        message.warning('다운로드할 데이터가 없습니다');
+        return;
+      }
+
+      const siteName = sites?.data?.sites?.find((s: any) => s.id === selectedSiteId)?.name || '사업장';
+
+      const excelData = mealCounts.data.map((record: MealCount) => ({
+        '날짜': dayjs(record.date).format('YYYY-MM-DD'),
+        '식사 유형': getMealTypeLabel(record.mealType),
+        '메뉴명': getMenuName(record.mealType, record.menuNumber) || '-',
+        '인원': record.count,
+        '등록자': record.submitter?.name || '-',
+        '등록시간': dayjs(record.submittedAt).format('YYYY-MM-DD HH:mm'),
+        '상태': record.isLate ? '늦은 제출' : '정상',
+        '비고': record.note || '-',
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, '식수현황');
+
+      worksheet['!cols'] = [
+        { wch: 12 }, // 날짜
+        { wch: 12 }, // 식사 유형
+        { wch: 15 }, // 메뉴명
+        { wch: 10 }, // 인원
+        { wch: 12 }, // 등록자
+        { wch: 18 }, // 등록시간
+        { wch: 12 }, // 상태
+        { wch: 30 }, // 비고
+      ];
+
+      XLSX.writeFile(workbook, `식수현황_${siteName}_${dateStr}.xlsx`);
+      message.success('엑셀 파일이 다운로드되었습니다');
+    }
   };
 
   // 요일 변환 함수
@@ -431,6 +556,91 @@ export default function MealCountListPage() {
     total: getTotalForDate(date),
   }));
 
+  // 전체 사업장용 테이블 컬럼
+  const allSitesColumns = [
+    {
+      title: '사업장',
+      dataIndex: 'siteName',
+      key: 'siteName',
+      width: 200,
+      fixed: 'left' as const,
+      render: (text: string, record: any) => (
+        <div>
+          <div style={{ fontWeight: 600 }}>{text}</div>
+          <div style={{ fontSize: 11, color: '#999' }}>
+            {record.division} | {record.type}
+          </div>
+        </div>
+      ),
+    },
+    ...MEAL_TYPES.map((mealType) => ({
+      title: mealType.label,
+      key: mealType.value,
+      width: 120,
+      render: (_: any, record: any) => {
+        const mealData = record.mealData[mealType.value];
+        if (!mealData || mealData.length === 0) {
+          return <div style={{ color: '#ccc', textAlign: 'center' }}>-</div>;
+        }
+
+        const total = mealData.reduce((sum: number, item: MealCount) => sum + item.count, 0);
+        return (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontWeight: 600, color: '#1890ff', fontSize: 16 }}>
+              {total}명
+            </div>
+            {mealData.length > 1 && (
+              <div style={{ fontSize: 11, color: '#999' }}>
+                ({mealData.length}개 메뉴)
+              </div>
+            )}
+          </div>
+        );
+      },
+    })),
+    {
+      title: '합계',
+      key: 'total',
+      width: 100,
+      render: (_: any, record: any) => {
+        const total = Object.values(record.mealData).reduce((sum: number, mealArray: any) => {
+          return sum + mealArray.reduce((mealSum: number, item: MealCount) => mealSum + item.count, 0);
+        }, 0);
+        return (
+          <div style={{ fontWeight: 'bold', color: '#52c41a', fontSize: 16, textAlign: 'center' }}>
+            {total}명
+          </div>
+        );
+      },
+    },
+  ];
+
+  // 전체 사업장용 테이블 데이터
+  const allSitesTableData = filteredSites.map((site: any) => {
+    const siteData = allSitesMealCounts?.[site.id] || [];
+
+    // 조회 기간 내 데이터만 필터링
+    const filteredData = siteData.filter((item: MealCount) => {
+      const itemDate = dayjs(item.date);
+      return itemDate.isSameOrAfter(dateRange[0], 'day') && itemDate.isSameOrBefore(dateRange[1], 'day');
+    });
+
+    // 식사 유형별로 그룹화
+    const mealData: { [key: string]: MealCount[] } = {};
+    MEAL_TYPES.forEach((type) => {
+      mealData[type.value] = filteredData.filter((item: MealCount) => item.mealType === type.value);
+    });
+
+    return {
+      key: site.id,
+      siteId: site.id,
+      siteName: site.name,
+      division: site.division,
+      type: site.type === 'CONSIGNMENT' ? '위탁' : site.type === 'DELIVERY' ? '운반' : site.type === 'LUNCHBOX' ? '도시락' : '행사',
+      mealData,
+    };
+  });
+
   // 등록된 식사 유형 필터링
   const registeredTypes = mealCounts?.data?.map((mc: MealCount) => mc.mealType) || [];
   const availableMealTypes = MEAL_TYPES.filter(
@@ -445,48 +655,113 @@ export default function MealCountListPage() {
       <Card style={{ marginBottom: 24 }}>
         <Space size="large" style={{ width: '100%', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>사업장</div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>지사</div>
+            <Select
+              placeholder="전체"
+              style={{ width: 120 }}
+              value={filterDivision}
+              onChange={setFilterDivision}
+              options={[
+                { label: '전체', value: 'ALL' },
+                { label: 'HQ', value: 'HQ' },
+                { label: '영남', value: '영남' },
+              ]}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>유형</div>
+            <Select
+              placeholder="전체"
+              style={{ width: 120 }}
+              value={filterType}
+              onChange={setFilterType}
+              options={[
+                { label: '전체', value: 'ALL' },
+                { label: '위탁', value: 'CONSIGNMENT' },
+                { label: '운반', value: 'DELIVERY' },
+                { label: '도시락', value: 'LUNCHBOX' },
+                { label: '행사', value: 'EVENT' },
+              ]}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>오늘 식수 통보</div>
+            <Select
+              placeholder="전체"
+              style={{ width: 160 }}
+              value={filterInputStatus}
+              onChange={setFilterInputStatus}
+              options={[
+                { label: '전체', value: 'ALL' },
+                { label: '✅ 통보 완료', value: 'COMPLETED' },
+                { label: '⏳ 통보 대기', value: 'PENDING' },
+              ]}
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>사업장 ({filteredSites.length}개)</div>
             <Select
               placeholder="사업장을 선택하세요"
               style={{ width: 250 }}
-              onChange={setSelectedSiteId}
-              value={selectedSiteId}
+              onChange={(value) => {
+                if (value === 'ALL') {
+                  setIsAllSites(true);
+                  setSelectedSiteId(undefined);
+                } else {
+                  setIsAllSites(false);
+                  setSelectedSiteId(value);
+                }
+              }}
+              value={isAllSites ? 'ALL' : selectedSiteId}
               showSearch
               filterOption={(input, option) =>
                 String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
               }
-              options={sites?.data?.sites?.map((site: any) => ({
-                label: `${site.name} (${site.division})`,
-                value: site.id,
-              }))}
+              options={[
+                { label: '📋 전체 사업장', value: 'ALL' },
+                ...filteredSites.map((site: any) => {
+                  const hasInput = todayAllMealCounts?.[site.id] || false;
+                  return {
+                    label: `${hasInput ? '✅' : '⏳'} ${site.name} (${site.division})`,
+                    value: site.id,
+                  };
+                }),
+              ]}
             />
           </div>
           <div>
             <div style={{ marginBottom: 8, fontWeight: 500 }}>조회 기간</div>
-            <RangePicker
-              value={dateRange}
-              onChange={(dates) => {
-                if (dates && dates[0] && dates[1]) {
-                  setDateRange([dates[0], dates[1]]);
-                }
-              }}
-              format="YYYY-MM-DD"
-              style={{ width: 280 }}
-            />
+            <Space.Compact>
+              <RangePicker
+                value={dateRange}
+                onChange={(dates) => {
+                  if (dates && dates[0] && dates[1]) {
+                    setDateRange([dates[0], dates[1]]);
+                  }
+                }}
+                format="YYYY-MM-DD"
+                style={{ width: 280 }}
+              />
+              <Button
+                onClick={() => setDateRange([dayjs(), dayjs()])}
+              >
+                오늘
+              </Button>
+            </Space.Compact>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAdd}
-              disabled={!selectedSiteId}
+              disabled={!selectedSiteId || isAllSites}
             >
               식수 등록
             </Button>
             <Button
               icon={<DownloadOutlined />}
               onClick={handleExcelDownload}
-              disabled={!selectedSiteId || !mealCounts?.data || mealCounts.data.length === 0}
+              disabled={isAllSites ? !allSitesMealCounts : (!selectedSiteId || !mealCounts?.data || mealCounts.data.length === 0)}
             >
               엑셀 다운로드
             </Button>
@@ -496,16 +771,29 @@ export default function MealCountListPage() {
 
       {/* 테이블 */}
       <Card>
-        <Table
-          columns={columns}
-          dataSource={tableData}
-          rowKey="date"
-          loading={isLoading}
-          locale={{ emptyText: '등록된 식수 정보가 없습니다' }}
-          pagination={{ pageSize: 31, showSizeChanger: false }}
-          scroll={{ x: 800 }}
-          size="small"
-        />
+        {isAllSites ? (
+          <Table
+            columns={allSitesColumns}
+            dataSource={allSitesTableData}
+            rowKey="siteId"
+            loading={isLoadingAll}
+            locale={{ emptyText: '등록된 식수 정보가 없습니다' }}
+            pagination={{ pageSize: 50, showSizeChanger: true, showTotal: (total) => `총 ${total}개 사업장` }}
+            scroll={{ x: 800 }}
+            size="small"
+          />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={tableData}
+            rowKey="date"
+            loading={isLoading}
+            locale={{ emptyText: '등록된 식수 정보가 없습니다' }}
+            pagination={{ pageSize: 31, showSizeChanger: false }}
+            scroll={{ x: 800 }}
+            size="small"
+          />
+        )}
       </Card>
 
       {/* 등록/수정 모달 */}

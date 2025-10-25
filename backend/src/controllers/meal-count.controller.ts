@@ -184,6 +184,27 @@ export async function getMealCountsByRange(req: Request, res: Response) {
 }
 
 /**
+ * GET /api/v1/meal-counts/settings/all
+ * 전체 사업장 식수 설정 조회
+ */
+export async function getAllMealCountSettings(_req: Request, res: Response) {
+  try {
+    const settings = await mealCountService.getAllMealCountSettings();
+
+    return res.json({
+      success: true,
+      data: settings,
+    });
+  } catch (error: any) {
+    console.error('전체 식수 설정 조회 실패:', error);
+    return res.status(500).json({
+      success: false,
+      message: '전체 식수 설정 조회에 실패했습니다',
+    });
+  }
+}
+
+/**
  * GET /api/v1/meal-counts/settings/:siteId
  * 사업장 식수 설정 조회
  */

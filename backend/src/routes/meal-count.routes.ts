@@ -23,6 +23,7 @@ router.get('/site/:siteId/date/:date', mealCountController.getMealCountsByDate);
 router.get('/site/:siteId/range', mealCountController.getMealCountsByRange);
 
 // 식수 설정
+router.get('/settings/all', mealCountController.getAllMealCountSettings);
 router.get('/settings/:siteId', mealCountController.getMealCountSetting);
 router.post('/settings/:siteId', mealCountController.upsertMealCountSetting);
 
