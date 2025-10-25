@@ -117,8 +117,8 @@ export default function MealPhotoManagementPage() {
     },
   });
 
-  // 도시락 사업장 제외한 사업장 목록
-  const filteredSites = sites?.data?.sites?.filter((site: any) => site.type !== 'LUNCHBOX') || [];
+  // 전체 사업장 목록
+  const filteredSites = sites?.data?.sites || [];
 
   // 업로드 핸들러
   const handleUploadChange = (
