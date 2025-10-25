@@ -283,7 +283,7 @@ export default function SiteListPage() {
         pagination={{
           current: page,
           pageSize: pageSize,
-          total: sites?.meta?.total || 0,
+          total: (sites as any)?.meta?.total || 0,
           showSizeChanger: true,
           pageSizeOptions: ['10', '20', '50', '100'],
           showTotal: (total) => `총 ${total}개 사업장`,

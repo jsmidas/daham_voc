@@ -33,8 +33,6 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
     if (open && route) {
       form.setFieldsValue({
         name: route.name,
-        code: route.code,
-        division: route.division,
         color: route.color,
         description: route.description,
         isActive: route.isActive,

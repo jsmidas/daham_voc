@@ -13,7 +13,12 @@ import { getSites } from '@/api/site.api';
 import { getMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import * as XLSX from 'xlsx';
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
 
 const MEAL_TYPES = [
   { label: '조식', value: 'BREAKFAST' },

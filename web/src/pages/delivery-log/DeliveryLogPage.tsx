@@ -31,7 +31,6 @@ import { getDeliveryRoutes } from '../../api/delivery-route.api';
 import type { DeliveryLog, DeliveryStatus } from '../../types/delivery-log';
 
 const { Title } = Typography;
-const { RangePicker } = DatePicker;
 
 export default function DeliveryLogPage() {
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
@@ -365,7 +364,7 @@ export default function DeliveryLogPage() {
                 onChange={setRouteId}
                 allowClear
               >
-                {routes.map(route => (
+                {routes.map((route: any) => (
                   <Select.Option key={route.id} value={route.id}>
                     {route.name}
                   </Select.Option>
@@ -382,9 +381,9 @@ export default function DeliveryLogPage() {
                 onChange={setDriverId}
                 allowClear
               >
-                {drivers.map(driver => (
-                  <Select.Option key={driver.id} value={driver.id}>
-                    {driver.name}
+                {drivers.map((driver: any) => (
+                  <Select.Option key={driver?.id} value={driver?.id}>
+                    {driver?.name}
                   </Select.Option>
                 ))}
               </Select>

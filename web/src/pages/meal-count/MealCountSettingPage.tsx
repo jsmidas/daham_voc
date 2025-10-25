@@ -4,7 +4,7 @@
  */
 
 import { Button, Space, message, Modal, Form, Switch, TimePicker, Card, Tag, Input, Row, Col, Table, Alert } from 'antd';
-import { ClockCircleOutlined, CopyOutlined, EditOutlined } from '@ant-design/icons';
+import { CopyOutlined, EditOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getMealCountSetting, upsertMealCountSetting } from '@/api/meal-count.api';

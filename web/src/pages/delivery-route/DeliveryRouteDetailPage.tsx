@@ -32,7 +32,7 @@ import {
   updateRouteStops,
 } from '../../api/delivery-route.api';
 import { apiClient } from '../../utils/axios';
-import type { DeliveryRouteDetail, DeliveryRouteStop } from '../../types/delivery-route';
+import type { DeliveryRouteStop } from '../../types/delivery-route';
 
 const { Title, Text } = Typography;
 
@@ -215,7 +215,7 @@ export default function DeliveryRouteDetailPage() {
 
   // 코스에 포함되지 않은 사업장 필터링
   const availableSites = allSites?.filter(
-    (site: any) => !route?.stops.some((stop) => stop.site.id === site.id)
+    (site: any) => !route?.stops.some((stop: any) => stop.site.id === site.id)
   );
 
   // 사업장 추가 핸들러
@@ -394,7 +394,7 @@ export default function DeliveryRouteDetailPage() {
                   type="primary"
                   onClick={saveStopsOrder}
                   loading={updateStopsMutation.isPending}
-                  disabled={JSON.stringify(stops) === JSON.stringify(route.stops.sort((a, b) => a.stopNumber - b.stopNumber))}
+                  disabled={JSON.stringify(stops) === JSON.stringify(route.stops.sort((a: any, b: any) => a.stopNumber - b.stopNumber))}
                 >
                   순서 저장
                 </Button>
@@ -415,7 +415,7 @@ export default function DeliveryRouteDetailPage() {
             <Text strong>배정된 기사:</Text>
             {route.assignedDrivers.length > 0 ? (
               <Space size={4}>
-                {route.assignedDrivers.map((driver) => (
+                {route.assignedDrivers.map((driver: any) => (
                   <Tag key={driver.id} color="purple">
                     {driver.name}
                   </Tag>
@@ -480,7 +480,7 @@ export default function DeliveryRouteDetailPage() {
               placeholder="사업장 선택"
               showSearch
               filterOption={(input, option) =>
-                (option?.children as string).toLowerCase().includes(input.toLowerCase())
+                ((option?.children as unknown) as string).toLowerCase().includes(input.toLowerCase())
               }
             >
               {availableSites?.map((site: any) => (

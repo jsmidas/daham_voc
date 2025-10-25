@@ -62,7 +62,7 @@ export default function SiteMapPage() {
   useEffect(() => {
     if (sites?.data?.sites) {
       console.log('🔍 [SiteMapPage] Sites loaded:', sites.data.sites.length);
-      console.log('🔍 [SiteMapPage] Total from API:', sites.meta?.total);
+      console.log('🔍 [SiteMapPage] Total from API:', (sites as any).meta?.total);
       console.log('🔍 [SiteMapPage] First site:', sites.data.sites[0]);
     }
   }, [sites]);
@@ -131,7 +131,7 @@ export default function SiteMapPage() {
 
           // 거리순 정렬 후 가장 가까운 3곳 선택
           const nearestSites = sitesWithDistance
-            .sort((a, b) => a.distance - b.distance)
+            .sort((a: any, b: any) => a.distance - b.distance)
             .slice(0, 3);
 
           // 특별한 별 모양 마커 생성 (애니메이션 포함)
@@ -579,15 +579,15 @@ export default function SiteMapPage() {
   };
 
   // 사업장 유형별 기본 색상 (그룹이 없는 경우)
-  const getDefaultColorBySiteType = (type: string) => {
-    const colors: Record<string, string> = {
-      'CONSIGNMENT': '#ff4d4f',
-      'DELIVERY': '#1890ff',
-      'LUNCHBOX': '#52c41a',
-      'EVENT': '#faad14',
-    };
-    return colors[type] || '#1890ff';
-  };
+  // const getDefaultColorBySiteType = (type: string) => {
+  //   const colors: Record<string, string> = {
+  //     'CONSIGNMENT': '#ff4d4f',
+  //     'DELIVERY': '#1890ff',
+  //     'LUNCHBOX': '#52c41a',
+  //     'EVENT': '#faad14',
+  //   };
+  //   return colors[type] || '#1890ff';
+  // };
 
   if (isLoading) {
     return (

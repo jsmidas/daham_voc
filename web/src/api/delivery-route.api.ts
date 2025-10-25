@@ -1,7 +1,6 @@
 import { apiClient } from '../utils/axios';
 import type {
   DeliveryRoute,
-  DeliveryRouteDetail,
   CreateDeliveryRouteDto,
   UpdateDeliveryRouteDto,
   AddSiteToRouteDto,

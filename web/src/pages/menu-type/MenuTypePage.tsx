@@ -22,7 +22,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   ReloadOutlined,
-  DownOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -292,7 +291,7 @@ export default function MenuTypePage() {
                 </div>
               );
             },
-            rowExpandable: (record) => (record.weeklyMenuTemplates && record.weeklyMenuTemplates.length > 0),
+            rowExpandable: (record) => !!(record.weeklyMenuTemplates && record.weeklyMenuTemplates.length > 0),
           }}
         />
       </Card>
