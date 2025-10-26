@@ -73,6 +73,16 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
         form={form}
         layout="vertical"
       >
+        {/* 코스 코드 (읽기 전용) */}
+        <Form.Item label="코스 코드">
+          <Input value={route?.code} disabled />
+        </Form.Item>
+
+        {/* 부문 (읽기 전용) */}
+        <Form.Item label="부문">
+          <Input value={route?.division === 'HQ' ? '본사' : '영남지사'} disabled />
+        </Form.Item>
+
         <Form.Item
           label="코스명"
           name="name"
@@ -82,28 +92,6 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
           ]}
         >
           <Input placeholder="예: A코스, 본사 오전 배송" maxLength={50} />
-        </Form.Item>
-
-        <Form.Item
-          label="코스 코드"
-          name="code"
-          rules={[
-            { required: true, message: '코스 코드를 입력해주세요' },
-            { pattern: /^[A-Z0-9]+$/, message: '영문 대문자와 숫자만 입력 가능합니다' },
-          ]}
-        >
-          <Input placeholder="예: A, B, C" maxLength={10} style={{ textTransform: 'uppercase' }} />
-        </Form.Item>
-
-        <Form.Item
-          label="부문"
-          name="division"
-          rules={[{ required: true, message: '부문을 선택해주세요' }]}
-        >
-          <Select placeholder="부문 선택">
-            <Select.Option value="HQ">본사</Select.Option>
-            <Select.Option value="YEONGNAM">영남지사</Select.Option>
-          </Select>
         </Form.Item>
 
         <Form.Item label="코스 색상" name="color">
