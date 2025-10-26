@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Kakao Map Test</title>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2ec48bfd86a549a69da630e18d685008&libraries=services"></script>
+</head>
+<body>
+    <div id="map" style="width:100%;height:400px;"></div>
+    <script>
+        window.addEventListener('load', function() {
+            console.log('Kakao object:', window.kakao);
+            console.log('Kakao.maps:', window.kakao?.maps);
+
+            if (!window.kakao || !window.kakao.maps) {
+                document.body.innerHTML += '<h1 style="color:red;">Kakao Map API 로드 실패!</h1>';
+                return;
+            }
+
+            const container = document.getElementById('map');
+            const options = {
+                center: new kakao.maps.LatLng(35.8714, 128.6014),
+                level: 8
+            };
+
+            try {
+                const map = new kakao.maps.Map(container, options);
+                document.body.innerHTML += '<h1 style="color:green;">✅ Kakao Map 정상 작동!</h1>';
+            } catch (error) {
+                document.body.innerHTML += '<h1 style="color:red;">❌ 에러: ' + error.message + '</h1>';
+            }
+        });
+    </script>
+</body>
+</html>

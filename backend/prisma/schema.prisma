@@ -17,6 +17,7 @@ model User {
   role                Role                 @default(SITE_STAFF)
   division            Division?
   isActive            Boolean              @default(true)
+  canUseAttendance    Boolean              @default(false)
   lastLoginAt         DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

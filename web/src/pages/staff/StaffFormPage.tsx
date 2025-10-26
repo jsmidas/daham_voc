@@ -61,6 +61,7 @@ export default function StaffFormPage() {
         role: staffData.user.role,
         division: staffData.user.division,
         isActive: staffData.user.isActive,
+        canUseAttendance: staffData.user.canUseAttendance,
         // Staff 정보
         employeeNo: staffData.employeeNo,
         department: staffData.department,
@@ -239,6 +240,7 @@ export default function StaffFormPage() {
           autoComplete="off"
           initialValues={{
             isActive: true,
+            canUseAttendance: false,
           }}
         >
           {/* 기본 정보 */}
@@ -365,6 +367,16 @@ export default function StaffFormPage() {
                 valuePropName="checked"
               >
                 <Switch checkedChildren="활성" unCheckedChildren="비활성" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="출퇴근 기능 사용"
+                name="canUseAttendance"
+                valuePropName="checked"
+                tooltip="출퇴근 기능을 사용할 수 있는 권한을 부여합니다. 앱 메인 화면에 출퇴근 현황이 표시됩니다."
+              >
+                <Switch checkedChildren="사용" unCheckedChildren="미사용" />
               </Form.Item>
             </Col>
           </Row>

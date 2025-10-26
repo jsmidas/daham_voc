@@ -70,6 +70,7 @@ export async function getStaffList(query: {
             role: true,
             division: true,
             isActive: true,
+            canUseAttendance: true,
             lastLoginAt: true,
           },
         },
@@ -125,6 +126,7 @@ export async function getStaffById(staffId: string) {
           role: true,
           division: true,
           isActive: true,
+          canUseAttendance: true,
           lastLoginAt: true,
           createdAt: true,
         },
@@ -172,6 +174,7 @@ export async function createStaff(data: {
   password: string;
   role: Role;
   division?: Division;
+  canUseAttendance?: boolean;
   // Staff 정보
   employeeNo?: string;
   department?: string;
@@ -210,6 +213,7 @@ export async function createStaff(data: {
         role: data.role,
         division: data.division,
         isActive: true,
+        canUseAttendance: data.canUseAttendance ?? false,
       },
     });
 
@@ -231,6 +235,7 @@ export async function createStaff(data: {
             email: true,
             role: true,
             division: true,
+            canUseAttendance: true,
           },
         },
       },
@@ -266,6 +271,7 @@ export async function updateStaff(
     role?: Role;
     division?: Division;
     isActive?: boolean;
+    canUseAttendance?: boolean;
     // Staff 정보
     department?: string;
     position?: string;
@@ -300,6 +306,7 @@ export async function updateStaff(
     if (data.role !== undefined) userUpdateData.role = data.role;
     if (data.division !== undefined) userUpdateData.division = data.division;
     if (data.isActive !== undefined) userUpdateData.isActive = data.isActive;
+    if (data.canUseAttendance !== undefined) userUpdateData.canUseAttendance = data.canUseAttendance;
 
     if (Object.keys(userUpdateData).length > 0) {
       await tx.user.update({
@@ -327,6 +334,7 @@ export async function updateStaff(
             role: true,
             division: true,
             isActive: true,
+            canUseAttendance: true,
           },
         },
       },
