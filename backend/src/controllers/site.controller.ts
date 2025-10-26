@@ -20,12 +20,24 @@ export class SiteController {
    */
   getSites = async (req: Request, res: Response): Promise<void> => {
     try {
+      const user = (req as any).user;
+
       const filter = {
         type: req.query.type as any,
         division: req.query.division as any,
         groupId: req.query.groupId as string,
         search: req.query.search as string,
       };
+
+      // 권한별 필터링
+      // SUPER_ADMIN: 모든 사업장
+      // HQ_ADMIN: 본사(HQ) 사업장만
+      // YEONGNAM_ADMIN: 영남지사(YEONGNAM) 사업장만
+      if (user.role === 'HQ_ADMIN' && !filter.division) {
+        filter.division = 'HQ';
+      } else if (user.role === 'YEONGNAM_ADMIN' && !filter.division) {
+        filter.division = 'YEONGNAM';
+      }
 
       const pagination = parsePaginationParams(
         req.query.page as string,

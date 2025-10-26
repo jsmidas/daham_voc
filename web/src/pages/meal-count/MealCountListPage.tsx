@@ -470,14 +470,30 @@ export default function MealCountListPage() {
       key: 'date',
       width: 120,
       fixed: 'left' as const,
-      render: (date: string) => (
-        <div>
-          <div style={{ fontWeight: 600 }}>{dayjs(date).format('MM/DD')}</div>
-          <div style={{ fontSize: 12, color: '#999' }}>
-            {getDayOfWeek(date)}
+      render: (date: string) => {
+        const dateObj = dayjs(date);
+        const today = dayjs();
+        const isFuture = dateObj.isAfter(today, 'day');
+        const isToday = dateObj.isSame(today, 'day');
+
+        return (
+          <div>
+            <div style={{
+              fontWeight: 600,
+              color: isFuture ? '#52c41a' : isToday ? '#1890ff' : '#000'
+            }}>
+              {dateObj.format('MM/DD')}
+            </div>
+            <div style={{
+              fontSize: 12,
+              color: isFuture ? '#52c41a' : '#999'
+            }}>
+              {getDayOfWeek(date)}
+              {isFuture && ' (예정)'}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     ...MEAL_TYPES.map((mealType) => ({
       title: mealType.label,
@@ -485,6 +501,12 @@ export default function MealCountListPage() {
       width: 150,
       render: (_: any, record: any) => {
         const mealDataArray = record.mealData[mealType.value];
+        const dateObj = dayjs(record.date);
+        const today = dayjs();
+        const isFuture = dateObj.isAfter(today, 'day');
+        const isToday = dateObj.isSame(today, 'day');
+        const isPast = dateObj.isBefore(today, 'day');
+
         if (!mealDataArray || mealDataArray.length === 0) {
           return <div style={{ color: '#999' }}>-</div>;
         }
@@ -496,14 +518,16 @@ export default function MealCountListPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sortedData.map((mealData) => {
               const menuName = getMenuName(mealType.value as MealType, mealData.menuNumber);
+              const canEdit = isFuture || (isToday && !mealData.isConfirmed);
+
               return (
                 <div
                   key={mealData.id}
                   style={{
                     padding: 8,
-                    backgroundColor: '#f9f9f9',
+                    backgroundColor: isFuture ? '#f6ffed' : '#f9f9f9',
                     borderRadius: 4,
-                    borderLeft: '3px solid #1890ff',
+                    borderLeft: `3px solid ${isFuture ? '#52c41a' : '#1890ff'}`,
                   }}
                 >
                   {menuName && (
@@ -511,7 +535,11 @@ export default function MealCountListPage() {
                       {menuName}
                     </div>
                   )}
-                  <div style={{ fontWeight: 600, color: '#1890ff', marginBottom: 4 }}>
+                  <div style={{
+                    fontWeight: 600,
+                    color: isFuture ? '#52c41a' : '#1890ff',
+                    marginBottom: 4
+                  }}>
                     {mealData.count}명
                   </div>
                   <div style={{ fontSize: 11, color: '#666' }}>
@@ -523,6 +551,8 @@ export default function MealCountListPage() {
                       size="small"
                       icon={<EditOutlined />}
                       onClick={() => handleEdit(mealData)}
+                      disabled={isPast || (isToday && mealData.isConfirmed)}
+                      title={isPast ? '과거 데이터는 수정할 수 없습니다' : (isToday && mealData.isConfirmed) ? '확정된 데이터는 수정할 수 없습니다' : '수정'}
                       style={{ padding: 0, height: 'auto', fontSize: 12 }}
                     />
                     <Button
@@ -531,6 +561,8 @@ export default function MealCountListPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       onClick={() => handleDelete(mealData.id)}
+                      disabled={isPast || (isToday && mealData.isConfirmed)}
+                      title={isPast ? '과거 데이터는 삭제할 수 없습니다' : (isToday && mealData.isConfirmed) ? '확정된 데이터는 삭제할 수 없습니다' : '삭제'}
                       style={{ padding: 0, height: 'auto', fontSize: 12 }}
                     />
                   </Space>
@@ -553,13 +585,15 @@ export default function MealCountListPage() {
     },
   ];
 
-  // 테이블 데이터 구성
-  const tableData = allDates.map((date) => ({
-    key: date,
-    date,
-    mealData: groupedData[date] || {},
-    total: getTotalForDate(date),
-  }));
+  // 테이블 데이터 구성 (최근 날짜가 위로)
+  const tableData = allDates
+    .map((date) => ({
+      key: date,
+      date,
+      mealData: groupedData[date] || {},
+      total: getTotalForDate(date),
+    }))
+    .reverse();
 
   // 전체 사업장용 테이블 컬럼
   const allSitesColumns = [
@@ -823,7 +857,21 @@ export default function MealCountListPage() {
                 name="date"
                 rules={[{ required: true, message: '날짜를 선택하세요' }]}
               >
-                <DatePicker format="YYYY-MM-DD" style={{ width: '100%' }} />
+                <DatePicker
+                  format="YYYY-MM-DD"
+                  style={{ width: '100%' }}
+                  disabledDate={(current) => {
+                    // 과거 날짜 비활성화
+                    if (current && current.isBefore(dayjs(), 'day')) {
+                      return true;
+                    }
+                    // 오늘로부터 7일 이후 날짜 비활성화
+                    if (current && current.isAfter(dayjs().add(7, 'day'), 'day')) {
+                      return true;
+                    }
+                    return false;
+                  }}
+                />
               </Form.Item>
               <Form.Item
                 label="식사 유형"

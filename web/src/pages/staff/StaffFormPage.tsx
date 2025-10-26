@@ -119,7 +119,20 @@ export default function StaffFormPage() {
   // 역할 변경 핸들러
   const handleRoleChange = (role: string) => {
     setSelectedRole(role);
-    form.setFieldsValue({ role });
+
+    // 권한에 따라 자동으로 division 설정
+    let division = undefined;
+    if (role === 'HQ_ADMIN' || role === 'SITE_MANAGER' || role === 'SITE_STAFF') {
+      division = 'HQ';
+    } else if (role === 'YEONGNAM_ADMIN') {
+      division = 'YEONGNAM';
+    } else if (role === 'DELIVERY_DRIVER') {
+      // 배송 기사는 division을 선택할 수 있도록 유지
+      division = form.getFieldValue('division');
+    }
+    // SUPER_ADMIN은 division 없음 (모든 곳 접근 가능)
+
+    form.setFieldsValue({ role, division });
   };
 
   // 배송 코스 선택 핸들러 (해당 코스의 모든 사업장을 자동으로 추가)
