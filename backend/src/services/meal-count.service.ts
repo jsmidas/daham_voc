@@ -200,6 +200,25 @@ export async function getMealCountsByRange(
 }
 
 /**
+ * 전체 사업장 식수 설정 조회
+ */
+export async function getAllMealCountSettings() {
+  return await prisma.mealCountSetting.findMany({
+    include: {
+      site: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      siteId: 'asc',
+    },
+  });
+}
+
+/**
  * 사업장 식수 설정 조회
  */
 export async function getMealCountSetting(siteId: string) {
