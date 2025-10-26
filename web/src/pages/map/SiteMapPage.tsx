@@ -300,47 +300,32 @@ export default function SiteMapPage() {
 
 
   // 카카오맵 스크립트 로드 (한 번만 실행)
-  useEffect(() => {
-    // 이미 스크립트가 로드되어 있는지 확인
-    const existingScript = document.querySelector('script[src*="dapi.kakao.com"]');
-
-    if (existingScript || window.kakao?.maps) {
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${
-      import.meta.env.VITE_KAKAO_MAP_APP_KEY
-    }&autoload=false&libraries=services,drawing`;
-    script.async = true;
-
-    script.onload = () => {
-      console.log('✅ Kakao Maps SDK loaded successfully');
-    };
-
-    script.onerror = (error) => {
-      console.error('Failed to load Kakao script:', error);
-      console.error('Please check:');
-      console.error('1. Kakao Developers Console (https://developers.kakao.com)');
-      console.error('2. Your app has a JavaScript API key (not REST API)');
-      console.error('3. Web platform domain is registered (http://localhost:5173)');
-    };
-
-    document.head.appendChild(script);
-  }, []); // 한 번만 실행
+  // Kakao Maps SDK는 index.html에서 로드됨 - 추가 로드 불필요
 
   // 카카오맵 초기화 및 마커 표시 (sites나 routeId가 변경될 때)
   useEffect(() => {
+    console.log('🔍 [MAP DEBUG] useEffect triggered');
+    console.log('🔍 [MAP DEBUG] sites:', sites);
+    console.log('🔍 [MAP DEBUG] sites?.data?.sites length:', sites?.data?.sites?.length);
+
     if (!sites?.data?.sites || sites.data.sites.length === 0) {
+      console.log('⚠️ [MAP DEBUG] No sites data, returning early');
       return;
     }
 
+    console.log('🔍 [MAP DEBUG] window.kakao:', window.kakao);
+    console.log('🔍 [MAP DEBUG] window.kakao?.maps:', window.kakao?.maps);
+
     if (!window.kakao?.maps) {
+      console.log('⏳ [MAP DEBUG] Kakao Maps SDK not loaded yet, waiting...');
       // 스크립트가 아직 로드되지 않았으면 대기
       const checkKakao = setInterval(() => {
+        console.log('🔄 [MAP DEBUG] Checking for Kakao Maps SDK...');
         if (window.kakao?.maps) {
+          console.log('✅ [MAP DEBUG] Kakao Maps SDK found!');
           clearInterval(checkKakao);
           window.kakao.maps.load(() => {
+            console.log('📍 [MAP DEBUG] Kakao Maps SDK loaded, calling initializeMap()');
             initializeMap();
           });
         }
@@ -349,7 +334,9 @@ export default function SiteMapPage() {
       return () => clearInterval(checkKakao);
     }
 
+    console.log('✅ [MAP DEBUG] Kakao Maps SDK already loaded, calling load()');
     window.kakao.maps.load(() => {
+      console.log('📍 [MAP DEBUG] Inside kakao.maps.load() callback, calling initializeMap()');
       initializeMap();
     });
 
@@ -392,35 +379,47 @@ export default function SiteMapPage() {
   }, [sites, routeId]);
 
   const initializeMap = () => {
-    if (!sites?.data?.sites || sites.data.sites.length === 0) return;
+    console.log('🚀 [MAP DEBUG] initializeMap() called');
 
-    console.log('🗺️ Total sites loaded:', sites.data.sites.length);
-    console.log('📊 Sites data:', sites.data);
+    if (!sites?.data?.sites || sites.data.sites.length === 0) {
+      console.log('⚠️ [MAP DEBUG] No sites in initializeMap, returning');
+      return;
+    }
+
+    console.log('🗺️ [MAP DEBUG] Total sites loaded:', sites.data.sites.length);
+    console.log('📊 [MAP DEBUG] Sites data:', sites.data);
 
     // 기존 마커와 오버레이 정리
     markersRef.current.forEach((marker) => marker?.setMap(null));
     overlaysRef.current.forEach((overlay) => overlay?.setMap(null));
     markersRef.current = [];
     overlaysRef.current = [];
+    console.log('🧹 [MAP DEBUG] Cleaned up existing markers and overlays');
 
     try {
       const container = document.getElementById('map');
+      console.log('🔍 [MAP DEBUG] Map container:', container);
+      console.log('🔍 [MAP DEBUG] Container dimensions:', container?.offsetWidth, 'x', container?.offsetHeight);
 
       if (!container) {
-        console.error('Map container not found!');
+        console.error('❌ [MAP DEBUG] Map container not found!');
         return;
       }
 
       // 대구시청을 중심으로 설정 (위도: 35.8714, 경도: 128.6014)
-      console.log('Setting map center to Daegu City Hall');
+      console.log('📍 [MAP DEBUG] Setting map center to Daegu City Hall (35.8714, 128.6014)');
 
       const options = {
         center: new window.kakao.maps.LatLng(35.8714, 128.6014),
         level: 8, // 확대 레벨 (약 2km 척도)
       };
+      console.log('⚙️ [MAP DEBUG] Map options:', options);
 
+      console.log('🔨 [MAP DEBUG] Creating Kakao Map instance...');
       const map = new window.kakao.maps.Map(container, options);
+      console.log('✅ [MAP DEBUG] Kakao Map instance created:', map);
       mapRef.current = map;
+      console.log('✅ [MAP DEBUG] Map stored in mapRef');
 
         // 현재 열려있는 InfoWindow를 추적
         let currentInfoWindow: any = null;
