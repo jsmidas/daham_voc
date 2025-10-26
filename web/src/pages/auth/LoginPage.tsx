@@ -3,19 +3,38 @@
  * @description 로그인 페이지
  */
 
-import { Form, Input, Button, Card, message, Typography } from 'antd';
+import { Form, Input, Button, Card, message, Typography, Checkbox } from 'antd';
 import { PhoneOutlined, LockOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { login } from '@/api/auth.api';
 import { useAuthStore } from '@/store/authStore';
 import logoImage from '@/assets/logo.png';
+import { useEffect } from 'react';
 
 const { Title, Text } = Typography;
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login: setAuth } = useAuthStore();
+  const [form] = Form.useForm();
+
+  // 저장된 로그인 정보 불러오기
+  useEffect(() => {
+    const savedPhone = localStorage.getItem('savedPhone');
+    const savedPassword = localStorage.getItem('savedPassword');
+    const rememberPhone = localStorage.getItem('rememberPhone') === 'true';
+    const rememberPassword = localStorage.getItem('rememberPassword') === 'true';
+
+    if (savedPhone && rememberPhone) {
+      form.setFieldValue('phone', savedPhone);
+      form.setFieldValue('rememberPhone', true);
+    }
+    if (savedPassword && rememberPassword) {
+      form.setFieldValue('password', savedPassword);
+      form.setFieldValue('rememberPassword', true);
+    }
+  }, [form]);
 
   const loginMutation = useMutation({
     mutationFn: login,
@@ -57,7 +76,28 @@ export default function LoginPage() {
   });
 
   const onFinish = (values: any) => {
-    loginMutation.mutate(values);
+    // 로그인 정보 저장 처리
+    if (values.rememberPhone) {
+      localStorage.setItem('savedPhone', values.phone);
+      localStorage.setItem('rememberPhone', 'true');
+    } else {
+      localStorage.removeItem('savedPhone');
+      localStorage.removeItem('rememberPhone');
+    }
+
+    if (values.rememberPassword) {
+      localStorage.setItem('savedPassword', values.password);
+      localStorage.setItem('rememberPassword', 'true');
+    } else {
+      localStorage.removeItem('savedPassword');
+      localStorage.removeItem('rememberPassword');
+    }
+
+    // 로그인 실행
+    loginMutation.mutate({
+      phone: values.phone,
+      password: values.password,
+    });
   };
 
   return (
@@ -110,7 +150,13 @@ export default function LoginPage() {
           </Text>
         </div>
 
-        <Form name="login" onFinish={onFinish} autoComplete="off" layout="vertical">
+        <Form
+          form={form}
+          name="login"
+          onFinish={onFinish}
+          autoComplete="off"
+          layout="vertical"
+        >
           <Form.Item
             label={<span style={{ fontSize: 14, fontWeight: 500 }}>전화번호</span>}
             name="phone"
@@ -141,7 +187,19 @@ export default function LoginPage() {
             />
           </Form.Item>
 
-          <Form.Item style={{ marginTop: 32, marginBottom: 0 }}>
+          {/* 로그인 정보 저장 체크박스 */}
+          <Form.Item style={{ marginBottom: 24 }}>
+            <div style={{ display: 'flex', gap: 24 }}>
+              <Form.Item name="rememberPhone" valuePropName="checked" noStyle>
+                <Checkbox>전화번호 저장</Checkbox>
+              </Form.Item>
+              <Form.Item name="rememberPassword" valuePropName="checked" noStyle>
+                <Checkbox>비밀번호 저장</Checkbox>
+              </Form.Item>
+            </div>
+          </Form.Item>
+
+          <Form.Item style={{ marginBottom: 0 }}>
             <Button
               type="primary"
               htmlType="submit"
