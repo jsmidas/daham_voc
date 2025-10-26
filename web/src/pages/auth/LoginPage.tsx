@@ -25,7 +25,34 @@ export default function LoginPage() {
       navigate('/dashboard');
     },
     onError: (error: any) => {
-      message.error(error.message || '로그인 실패');
+      // 에러 타입에 따른 상세 메시지 표시
+      let errorMessage = '로그인에 실패했습니다';
+
+      if (error.response) {
+        const { status, data } = error.response;
+
+        if (status === 401) {
+          errorMessage = '전화번호 또는 비밀번호가 일치하지 않습니다';
+        } else if (status === 403) {
+          errorMessage = '계정이 비활성화되었습니다. 관리자에게 문의하세요';
+        } else if (status === 422) {
+          // 검증 에러
+          if (data.error?.details && Array.isArray(data.error.details)) {
+            const messages = data.error.details.map((d: any) => d.message).join(', ');
+            errorMessage = messages;
+          } else {
+            errorMessage = '입력 형식이 올바르지 않습니다';
+          }
+        } else if (status >= 500) {
+          errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요';
+        } else if (data.error?.message) {
+          errorMessage = data.error.message;
+        }
+      } else if (error.request) {
+        errorMessage = '서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요';
+      }
+
+      message.error(errorMessage, 4);
     },
   });
 
