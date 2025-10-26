@@ -42,6 +42,12 @@ export default function SiteMapPage() {
     return typeLabels[type] || type;
   };
 
+  // 사이트 이름에서 중복된 단어 제거 (예: "YA코스 - Y_A코스" → "YA - Y_A코스")
+  const cleanSiteName = (name: string): string => {
+    // "단어코스 - 단어_단어코스" 패턴에서 첫 번째 "코스" 제거
+    return name.replace(/^(.+?)코스(\s*-\s*)/, '$1$2');
+  };
+
   // 배송 코스 목록 조회
   const { data: routesData } = useQuery({
     queryKey: ['delivery-routes', { division }],
@@ -286,7 +292,7 @@ export default function SiteMapPage() {
             nearestSitesOverlaysRef.current.push(nearestOverlay);
           });
 
-          message.success(`주소를 찾았습니다! 가장 가까운 사업장: ${nearestSites[0].name} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
+          message.success(`주소를 찾았습니다! 가장 가까운 사업장: ${cleanSiteName(nearestSites[0].name)} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
         } else {
           message.error('주소를 찾을 수 없습니다. 다시 시도해주세요.');
         }
@@ -459,9 +465,11 @@ export default function SiteMapPage() {
 
           const markerImage = createMarkerImage(markerShape, markerColor, window.kakao.maps);
 
+          const cleanedName = cleanSiteName(site.name);
+
           const marker = new window.kakao.maps.Marker({
             position: markerPosition,
-            title: site.name,
+            title: cleanedName,
             image: markerImage,
           });
 
@@ -478,7 +486,7 @@ export default function SiteMapPage() {
               font-family: sans-serif;
               text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;
             ">
-              ${site.name}
+              ${cleanedName}
             </div>
           `;
 
@@ -505,7 +513,7 @@ export default function SiteMapPage() {
             content: `
               <div style="padding:15px;min-width:250px;font-family:sans-serif;">
                 <h4 style="margin:0 0 8px 0;font-size:16px;font-weight:bold;">
-                  ${site.name}
+                  ${cleanedName}
                 </h4>
                 <div style="margin-bottom:8px;">
                   <span style="display:inline-block;padding:2px 8px;background:#1890ff;color:white;border-radius:4px;font-size:12px;margin-right:4px;">
