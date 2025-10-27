@@ -24,13 +24,20 @@ npm install
 echo "🔨 Building production bundle..."
 npm run build
 
-# 6. PM2로 웹 서버 재시작
+# 6. PM2로 웹 서버 재시작 (ecosystem 설정 사용)
 echo "🔄 Restarting web server with PM2..."
+cd ~/daham_voc
 pm2 stop daham-web 2>/dev/null || true
 pm2 delete daham-web 2>/dev/null || true
-pm2 serve dist 5173 --name daham-web --spa
 
-# 7. PM2 설정 저장
+# serve 패키지가 설치되어 있는지 확인
+npm list -g serve || npm install -g serve
+
+# ecosystem 설정으로 시작 (안정성 향상)
+pm2 start ecosystem.config.js --only daham-web
+
+# 7. PM2 startup 설정 (서버 재부팅 시 자동 시작)
+pm2 startup systemd -u $(whoami) --hp $(eval echo ~$(whoami)) 2>/dev/null || true
 pm2 save
 
 echo "✅ Web deployment completed!"

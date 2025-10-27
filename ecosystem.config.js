@@ -1,0 +1,43 @@
+module.exports = {
+  apps: [
+    {
+      name: 'daham-voc-api',
+      script: './backend/dist/server.js',
+      cwd: '/root/daham_voc',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '500M',
+      env: {
+        NODE_ENV: 'production',
+      },
+      error_file: './logs/api-error.log',
+      out_file: './logs/api-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 10,
+      min_uptime: '10s',
+    },
+    {
+      name: 'daham-web',
+      script: 'serve',
+      args: 'dist -p 5173 --single',
+      cwd: '/root/daham_voc/web',
+      instances: 1,
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '300M',
+      env: {
+        NODE_ENV: 'production',
+      },
+      error_file: './logs/web-error.log',
+      out_file: './logs/web-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+      merge_logs: true,
+      exp_backoff_restart_delay: 100,
+      max_restarts: 10,
+      min_uptime: '10s',
+    },
+  ],
+};

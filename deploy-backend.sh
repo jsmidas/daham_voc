@@ -28,11 +28,17 @@ npx prisma generate
 echo "🔨 Building TypeScript..."
 npm run build
 
-# 7. PM2로 백엔드 재시작
+# 7. PM2로 백엔드 재시작 (ecosystem 설정 사용)
 echo "🔄 Restarting backend with PM2..."
-pm2 restart daham-voc-api || pm2 start dist/server.js --name daham-voc-api
+cd ~/daham_voc
+pm2 stop daham-voc-api 2>/dev/null || true
+pm2 delete daham-voc-api 2>/dev/null || true
 
-# 8. PM2 설정 저장
+# ecosystem 설정으로 시작 (안정성 향상)
+pm2 start ecosystem.config.js --only daham-voc-api
+
+# 8. PM2 startup 설정 (서버 재부팅 시 자동 시작)
+pm2 startup systemd -u $(whoami) --hp $(eval echo ~$(whoami)) 2>/dev/null || true
 pm2 save
 
 echo "✅ Backend deployment completed!"
