@@ -13,6 +13,7 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
       },
+      env_file: './backend/.env',
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
