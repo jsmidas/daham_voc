@@ -518,7 +518,6 @@ export default function MealCountListPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sortedData.map((mealData) => {
               const menuName = getMenuName(mealType.value as MealType, mealData.menuNumber);
-              const canEdit = isFuture || (isToday && !mealData.isConfirmed);
 
               return (
                 <div

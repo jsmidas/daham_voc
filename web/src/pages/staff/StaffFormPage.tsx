@@ -68,7 +68,7 @@ export default function StaffFormPage() {
         role: staffData.user.role,
         division: staffData.user.division,
         isActive: staffData.user.isActive,
-        canUseAttendance: staffData.user.canUseAttendance,
+        canUseAttendance: (staffData.user as any).canUseAttendance || false,
         // Staff 정보
         employeeNo: staffData.employeeNo,
         department: staffData.department,
