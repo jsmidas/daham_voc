@@ -2,25 +2,67 @@ name: Deploy to GCP VM
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:  # 수동 실행 가능
+    branches: [main]
+  workflow_dispatch: # 수동 실행 가능
 
 jobs:
   deploy:
-    name: Deploy to Production
+    name: Deploy Backend and Web
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Deploy to GCP VM
-        uses: appleboy/ssh-action@master
+        uses: actions/checkout@v4
         with:
-          host: ${{ secrets.GCP_HOST }}
-          username: ${{ secrets.GCP_USERNAME }}
-          key: ${{ secrets.GCP_SSH_KEY }}
-          script: |
+          submodules: true
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+
+      - name: Add GCP VM to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
+
+      - name: Deploy Backend
+        run: |
+          ssh ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} << 'ENDSSH'
+            set -e
             cd ~/daham_voc
-            bash deploy-all.sh
+            git pull origin main
+            cd backend
+            npm install
+            npx prisma generate
+            npm run build
+            pm2 stop daham-voc-api 2>/dev/null || true
+            pm2 delete daham-voc-api 2>/dev/null || true
+            cd ~/daham_voc
+            pm2 start ecosystem.config.js --only daham-voc-api
+            pm2 save
+            sleep 3
+            pm2 status daham-voc-api
+          ENDSSH
+
+      - name: Deploy Frontend
+        run: |
+          ssh ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} << 'ENDSSH'
+            set -e
+            cd ~/daham_voc/web
+            npm install
+            npm run build
+            sudo rm -rf /var/www/admin.dahamvoc.co.kr/*
+            sudo cp -r dist/* /var/www/admin.dahamvoc.co.kr/
+            sudo chown -R www-data:www-data /var/www/admin.dahamvoc.co.kr
+          ENDSSH
+
+      - name: Verify Deployment
+        run: |
+          echo "✅ Checking backend health..."
+          curl -f https://api.dahamvoc.co.kr/health || exit 1
+          
+          echo "✅ Checking frontend..."
+          curl -f https://admin.dahamvoc.co.kr || exit 1
+          
+          echo "🎉 Deployment completed successfully!"
