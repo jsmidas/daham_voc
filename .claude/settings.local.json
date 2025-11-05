@@ -117,7 +117,14 @@
       "Bash(chmod:*)",
       "Bash(gh run list:*)",
       "Bash(unzip:*)",
-      "Bash(start https://expo.dev/accounts/jsmidas/settings/billing)"
+      "Bash(start https://expo.dev/accounts/jsmidas/settings/billing)",
+      "Bash(gcloud compute ssh:*)",
+      "Bash(start https://github.com/jsmidas/daham_voc/settings/secrets/actions)",
+      "Bash(start https://admin.dahamvoc.co.kr/staff/new)",
+      "Bash(start https://github.com/jsmidas/daham_voc/actions)",
+      "Bash(railway:*)",
+      "Bash(start https://railway.app/dashboard)",
+      "Bash(start https://console.cloud.google.com/compute/instances)"
     ],
     "deny": [],
     "ask": []
