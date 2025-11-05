@@ -37,20 +37,21 @@ model User {
 }
 
 model Staff {
-  id            String      @id @default(uuid())
-  userId        String      @unique
-  employeeNo    String?     @unique
-  department    String?
-  position      String?
-  managerId     String?
-  averageRating Float       @default(0)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  deletedAt     DateTime?
-  manager       Staff?      @relation("StaffHierarchy", fields: [managerId], references: [id])
-  subordinates  Staff[]     @relation("StaffHierarchy")
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  staffSites    StaffSite[]
+  id             String           @id @default(uuid())
+  userId         String           @unique
+  employeeNo     String?          @unique
+  department     String?
+  position       String?
+  managerId      String?
+  averageRating  Float            @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  manager        Staff?           @relation("StaffHierarchy", fields: [managerId], references: [id])
+  subordinates   Staff[]          @relation("StaffHierarchy")
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffSites     StaffSite[]
+  staffSiteGroups StaffSiteGroup[]
 
   @@index([managerId])
   @@index([department])
@@ -89,18 +90,19 @@ model SiteMenuType {
 }
 
 model SiteGroup {
-  id          String      @id @default(uuid())
-  name        String
-  division    Division
-  description String?
-  markerShape MarkerShape @default(CIRCLE)
-  markerColor String      @default("#1890ff")
-  sortOrder   Int         @default(0)
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  deletedAt   DateTime?
-  sites       Site[]
+  id             String           @id @default(uuid())
+  name           String
+  division       Division
+  description    String?
+  markerShape    MarkerShape      @default(CIRCLE)
+  markerColor    String           @default("#1890ff")
+  sortOrder      Int              @default(0)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  sites          Site[]
+  staffSiteGroups StaffSiteGroup[]
 
   @@unique([division, name])
   @@index([division])
@@ -112,7 +114,7 @@ model Site {
   name               String
   type               SiteType
   division           Division
-  groupId            String?
+  groupId            String
   address            String
   latitude           Float
   longitude          Float
@@ -161,6 +163,20 @@ model StaffSite {
   @@unique([staffId, siteId])
   @@index([staffId])
   @@index([siteId])
+}
+
+model StaffSiteGroup {
+  id          String    @id @default(uuid())
+  staffId     String
+  siteGroupId String
+  assignedAt  DateTime  @default(now())
+  removedAt   DateTime?
+  siteGroup   SiteGroup @relation(fields: [siteGroupId], references: [id], onDelete: Cascade)
+  staff       Staff     @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@unique([staffId, siteGroupId])
+  @@index([staffId])
+  @@index([siteGroupId])
 }
 
 model Menu {

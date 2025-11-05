@@ -81,6 +81,7 @@ export interface CreateStaffData {
   password: string;
   role: Role;
   division?: Division;
+  canUseAttendance?: boolean;
   // Staff 정보
   employeeNo?: string;
   department?: string;
@@ -88,6 +89,7 @@ export interface CreateStaffData {
   managerId?: string;
   // 사업장 배정
   siteIds?: string[];
+  siteGroupIds?: string[];
 }
 
 export interface UpdateStaffData {
@@ -154,12 +156,12 @@ export async function deleteStaff(id: string) {
 }
 
 /**
- * 담당자 사업장 배정
+ * 담당자 사업장 및 그룹 배정
  */
-export async function assignStaffToSites(id: string, siteIds: string[]) {
+export async function assignStaffToSites(id: string, siteIds: string[], siteGroupIds: string[] = []) {
   const response = await apiClient.post<{ data: { message: string } }>(
     `/staff/${id}/sites`,
-    { siteIds }
+    { siteIds, siteGroupIds }
   );
   return response.data.data;
 }

@@ -1,15 +1,17 @@
 /**
  * Staff Form Page
- * @description 담당자 등록/수정 페이지
+ * @description 담당자 등록/수정 페이지 - 그룹/개별 사업장 선택 지원
  */
 
-import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Transfer, Space } from 'antd';
+import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Tree, Space, Tag } from 'antd';
+import type { DataNode } from 'antd/es/tree';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createStaff, updateStaff, getStaffById, assignStaffToSites } from '@/api/staff.api';
 import { getSites } from '@/api/site.api';
+import { getSiteGroups } from '@/api/site-group.api';
 import { getDeliveryRoutes } from '@/api/delivery-route.api';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 export default function StaffFormPage() {
   const navigate = useNavigate();
@@ -19,9 +21,8 @@ export default function StaffFormPage() {
 
   const isEditMode = !!id;
 
-  // 사업장 배정 관리
-  const [targetKeys, setTargetKeys] = useState<string[]>([]);
-  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  // 선택된 체크박스 키 (그룹 ID + 사업장 ID)
+  const [checkedKeys, setCheckedKeys] = useState<React.Key[]>([]);
 
   // 선택된 역할 (배송기사 여부 확인용)
   const [selectedRole, setSelectedRole] = useState<string | undefined>();
@@ -41,6 +42,12 @@ export default function StaffFormPage() {
   const { data: sitesData } = useQuery({
     queryKey: ['sites'],
     queryFn: () => getSites(),
+  });
+
+  // 사업장 그룹 목록 조회
+  const { data: siteGroupsData } = useQuery({
+    queryKey: ['site-groups'],
+    queryFn: () => getSiteGroups(),
   });
 
   // 배송 코스 목록 조회 (배송기사인 경우에만)
@@ -72,49 +79,13 @@ export default function StaffFormPage() {
       // 역할 설정
       setSelectedRole(staffData.user.role);
 
-      // 배정된 사업장 설정
-      const assignedSiteIds = staffData.staffSites?.map((ss) => ss.siteId) || [];
-      setTargetKeys(assignedSiteIds);
+      // 배정된 사업장 그룹 및 개별 사업장 설정
+      const assignedSiteIds = (staffData as any).staffSites?.map((ss: any) => ss.siteId) || [];
+      const assignedGroupIds = (staffData as any).staffSiteGroups?.map((sg: any) => `group-${sg.siteGroupId}`) || [];
+
+      setCheckedKeys([...assignedGroupIds, ...assignedSiteIds]);
     }
   }, [isEditMode, staffData, form]);
-
-  // 배송기사의 경우 배정된 코스 찾기
-  useEffect(() => {
-    const findAssignedRoute = async () => {
-      if (isEditMode && staffData && selectedRole === 'DELIVERY_DRIVER' && routesData?.data) {
-        const assignedSiteIds = staffData.staffSites?.map((ss) => ss.siteId) || [];
-
-        // 각 코스를 확인하여 사업장이 일치하는 코스 찾기
-        for (const route of routesData.data) {
-          try {
-            const { data: routeDetail } = await import('@/api/delivery-route.api').then(m =>
-              m.getDeliveryRouteById(route.id)
-            );
-
-            // API 응답 구조: routeDetail이 직접 데이터
-            const stops = routeDetail?.data?.stops || routeDetail?.stops;
-
-            if (stops && stops.length > 0) {
-              const routeSiteIds = stops.map((stop: any) => stop.siteId || stop.site?.id);
-
-              // 배정된 사업장이 코스의 모든 사업장과 일치하는지 확인
-              const allSitesMatch = routeSiteIds.every((siteId: string) => assignedSiteIds.includes(siteId));
-              const sameLength = routeSiteIds.length === assignedSiteIds.length;
-
-              if (allSitesMatch && sameLength) {
-                setSelectedRouteId(route.id);
-                break;
-              }
-            }
-          } catch (error) {
-            console.error('코스 상세 정보 조회 실패:', error);
-          }
-        }
-      }
-    };
-
-    findAssignedRoute();
-  }, [isEditMode, staffData, selectedRole, routesData]);
 
   // 역할 변경 핸들러
   const handleRoleChange = (role: string) => {
@@ -160,9 +131,9 @@ export default function StaffFormPage() {
           const newSiteIds = stops.map((stop: any) => stop.siteId || stop.site?.id);
 
           // 기존 선택된 사업장과 중복 제거하고 추가
-          const uniqueSiteIds = Array.from(new Set([...targetKeys, ...newSiteIds]));
+          const uniqueKeys = Array.from(new Set([...checkedKeys, ...newSiteIds]));
 
-          setTargetKeys(uniqueSiteIds);
+          setCheckedKeys(uniqueKeys);
           message.success(`${route.name}의 사업장 ${newSiteIds.length}개가 추가되었습니다`);
         } else {
           message.warning('해당 코스에 배정된 사업장이 없습니다');
@@ -189,9 +160,10 @@ export default function StaffFormPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: any) => updateStaff(id, data),
     onSuccess: async () => {
-      // 사업장 배정 업데이트
+      // 사업장 및 그룹 배정 업데이트
       if (id) {
-        await assignStaffToSites(id, targetKeys);
+        const { siteIds, siteGroupIds } = parseCheckedKeys(checkedKeys);
+        await assignStaffToSites(id, siteIds, siteGroupIds);
       }
       message.success('담당자가 수정되었습니다');
       queryClient.invalidateQueries({ queryKey: ['staff'] });
@@ -203,40 +175,172 @@ export default function StaffFormPage() {
   });
 
   const onFinish = (values: any) => {
+    const { siteIds, siteGroupIds } = parseCheckedKeys(checkedKeys);
+
     if (isEditMode) {
       // 수정 모드: password 제외하고 전송
       const { password, ...updateData } = values;
       updateMutation.mutate({ id, data: updateData });
     } else {
-      // 생성 모드: 사업장 배정 포함
+      // 생성 모드: 사업장 및 그룹 배정 포함
       const payload = {
         ...values,
-        siteIds: targetKeys,
+        siteIds,
+        siteGroupIds,
       };
       createMutation.mutate(payload);
     }
   };
 
-  // Transfer onChange
-  const handleTransferChange = (newTargetKeys: React.Key[]) => {
-    setTargetKeys(newTargetKeys as string[]);
+  // checkedKeys에서 그룹 ID와 사업장 ID 분리
+  const parseCheckedKeys = (keys: React.Key[]) => {
+    const siteGroupIds: string[] = [];
+    const siteIds: string[] = [];
+
+    keys.forEach((key) => {
+      const keyStr = String(key);
+      if (keyStr.startsWith('group-')) {
+        // 그룹 ID (group- 접두사 제거)
+        siteGroupIds.push(keyStr.replace('group-', ''));
+      } else if (keyStr.startsWith('site-')) {
+        // 개별 사업장 ID (site- 접두사 제거)
+        siteIds.push(keyStr.replace('site-', ''));
+      }
+    });
+
+    return { siteGroupIds, siteIds };
   };
 
-  // Transfer onSelectChange
-  const handleSelectChange = (sourceSelectedKeys: React.Key[], targetSelectedKeys: React.Key[]) => {
-    setSelectedKeys([...sourceSelectedKeys, ...targetSelectedKeys] as string[]);
-  };
+  // Tree 데이터 구조 생성
+  const treeData = useMemo(() => {
+    if (!siteGroupsData || !sitesData) return [];
 
-  // Transfer data source
-  const transferDataSource = sitesData?.data?.sites?.map((site: any) => {
-    const label = `${site.name} (${site.type})`;
-    return {
-      key: site.id,
-      title: label,
-      label: label,
-      description: site.address,
-    };
-  }) || [];
+    const groups = siteGroupsData.groups || [];
+    const sites = sitesData.data?.sites || [];
+
+    // 그룹별로 사업장 매핑
+    const groupedSites = new Map<string, any[]>();
+    const ungroupedSites: any[] = [];
+
+    sites.forEach((site: any) => {
+      if (site.groupId) {
+        if (!groupedSites.has(site.groupId)) {
+          groupedSites.set(site.groupId, []);
+        }
+        groupedSites.get(site.groupId)!.push(site);
+      } else {
+        ungroupedSites.push(site);
+      }
+    });
+
+    // Division별로 그룹화
+    const hqGroups: any[] = [];
+    const yeongnamGroups: any[] = [];
+
+    groups.forEach((group: any) => {
+      const groupSites = groupedSites.get(group.id) || [];
+
+      const treeNode: DataNode = {
+        title: (
+          <span>
+            <strong>{group.name}</strong>
+            <Tag color="blue" style={{ marginLeft: 8 }}>
+              그룹 ({groupSites.length}개 사업장)
+            </Tag>
+          </span>
+        ),
+        key: `group-${group.id}`,
+        children: groupSites.map((site: any) => ({
+          title: `${site.name} (${site.type})`,
+          key: `site-${site.id}`,
+          isLeaf: true,
+        })),
+      };
+
+      if (group.division === 'HQ') {
+        hqGroups.push(treeNode);
+      } else if (group.division === 'YEONGNAM') {
+        yeongnamGroups.push(treeNode);
+      }
+    });
+
+    // 그룹 미배정 사업장 처리
+    const hqUngrouped = ungroupedSites.filter(s => s.division === 'HQ');
+    const yeongnamUngrouped = ungroupedSites.filter(s => s.division === 'YEONGNAM');
+
+    const result: DataNode[] = [];
+
+    // 본사
+    if (hqGroups.length > 0 || hqUngrouped.length > 0) {
+      const hqChildren = [...hqGroups];
+
+      if (hqUngrouped.length > 0) {
+        hqChildren.push({
+          title: (
+            <span>
+              <strong>그룹 미배정</strong>
+              <Tag color="gray" style={{ marginLeft: 8 }}>
+                {hqUngrouped.length}개
+              </Tag>
+            </span>
+          ),
+          key: 'hq-ungrouped',
+          selectable: false,
+          children: hqUngrouped.map((site: any) => ({
+            title: `${site.name} (${site.type})`,
+            key: `site-${site.id}`,
+            isLeaf: true,
+          })),
+        });
+      }
+
+      result.push({
+        title: <strong style={{ fontSize: 16 }}>본사</strong>,
+        key: 'HQ',
+        selectable: false,
+        children: hqChildren,
+      });
+    }
+
+    // 영남지사
+    if (yeongnamGroups.length > 0 || yeongnamUngrouped.length > 0) {
+      const yeongnamChildren = [...yeongnamGroups];
+
+      if (yeongnamUngrouped.length > 0) {
+        yeongnamChildren.push({
+          title: (
+            <span>
+              <strong>그룹 미배정</strong>
+              <Tag color="gray" style={{ marginLeft: 8 }}>
+                {yeongnamUngrouped.length}개
+              </Tag>
+            </span>
+          ),
+          key: 'yeongnam-ungrouped',
+          selectable: false,
+          children: yeongnamUngrouped.map((site: any) => ({
+            title: `${site.name} (${site.type})`,
+            key: `site-${site.id}`,
+            isLeaf: true,
+          })),
+        });
+      }
+
+      result.push({
+        title: <strong style={{ fontSize: 16 }}>영남지사</strong>,
+        key: 'YEONGNAM',
+        selectable: false,
+        children: yeongnamChildren,
+      });
+    }
+
+    return result;
+  }, [siteGroupsData, sitesData]);
+
+  // Tree 체크 핸들러
+  const onCheck = (checked: any) => {
+    setCheckedKeys(checked);
+  };
 
   return (
     <div>
@@ -424,24 +528,35 @@ export default function StaffFormPage() {
             </Form.Item>
           )}
 
-          <Form.Item label="배정할 사업장 선택">
-            <Transfer
-              dataSource={transferDataSource}
-              titles={['사용 가능한 사업장', '배정된 사업장']}
-              targetKeys={targetKeys}
-              selectedKeys={selectedKeys}
-              onChange={handleTransferChange}
-              onSelectChange={handleSelectChange}
-              render={(item) => item.title || ''}
-              listStyle={{
-                width: '100%',
-                height: 400,
-              }}
-              showSearch
-              filterOption={(inputValue, item) =>
-                (item.title || '').toLowerCase().includes(inputValue.toLowerCase())
-              }
-            />
+          <Form.Item label="배정할 사업장/그룹 선택">
+            <div style={{
+              border: '1px solid #d9d9d9',
+              borderRadius: 4,
+              padding: 16,
+              maxHeight: 500,
+              overflow: 'auto'
+            }}>
+              <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
+                💡 <strong>그룹 체크</strong>: 해당 그룹의 모든 사업장 자동 관리 (신규 사업장 추가 시 자동 반영)<br />
+                💡 <strong>개별 사업장 체크</strong>: 특정 사업장만 관리
+              </div>
+              {treeData.length > 0 ? (
+                <Tree
+                  checkable
+                  checkedKeys={checkedKeys}
+                  onCheck={onCheck}
+                  treeData={treeData}
+                  defaultExpandAll
+                />
+              ) : (
+                <div style={{ textAlign: 'center', padding: 32, color: '#999' }}>
+                  사업장 데이터를 불러오는 중...
+                </div>
+              )}
+            </div>
+            <div style={{ marginTop: 8, color: '#999', fontSize: 12 }}>
+              선택됨: {checkedKeys.length}개
+            </div>
           </Form.Item>
 
           <Form.Item>

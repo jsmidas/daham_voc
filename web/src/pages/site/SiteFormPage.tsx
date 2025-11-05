@@ -179,14 +179,14 @@ export default function SiteFormPage() {
           <Form.Item
             label="사업장 그룹"
             name="groupId"
-            tooltip="사업장이 속한 그룹을 선택하세요 (선택사항)"
+            rules={[{ required: true, message: '사업장 그룹을 선택하세요' }]}
+            tooltip="사업장이 속한 그룹을 선택하세요 (필수)"
           >
             <Select
-              placeholder="그룹 선택 (미지정)"
-              allowClear
+              placeholder="그룹 선택"
               loading={isLoadingGroups}
               options={[
-                
+
                 ...(siteGroupsData?.groups?.map((group: any) => ({
                   label: `${group.name} (${group.division === 'HQ' ? '본사' : '영남지사'})`,
                   value: group.id,

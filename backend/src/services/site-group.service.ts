@@ -60,11 +60,12 @@ export class SiteGroupService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    // Get consignment sites (no group)
+    // Get consignment sites (no group) - DEPRECATED: groupId is now required
+    // All sites must belong to a group, so this query returns empty result
     const consignmentSites = await prisma.site.findMany({
       where: {
         type: 'CONSIGNMENT',
-        groupId: null,
+        id: 'non-existent', // Force empty result since all sites must have groupId
         isActive: true,
       },
       select: {
@@ -340,19 +341,11 @@ export class SiteGroupService {
 
   /**
    * Remove sites from group
+   * DEPRECATED: groupId is now required, sites cannot be removed from groups
+   * Sites must be moved to another group instead
    */
-  async removeSitesFromGroup(groupId: string, siteIds: string[], userId: string) {
-    await this.checkPermission(groupId, userId);
-
-    await prisma.site.updateMany({
-      where: {
-        id: { in: siteIds },
-        groupId,
-      },
-      data: { groupId: null },
-    });
-
-    await this.invalidateCache();
+  async removeSitesFromGroup(_groupId: string, _siteIds: string[], _userId: string) {
+    throw new Error('사업장은 항상 그룹에 속해야 합니다. 사업장을 제거하려면 다른 그룹으로 이동시켜주세요.');
   }
 
   /**
@@ -401,3 +394,4 @@ export class SiteGroupService {
     }
   }
 }
+

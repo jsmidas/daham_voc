@@ -94,6 +94,19 @@ export async function getStaffList(query: {
             },
           },
         },
+        staffSiteGroups: {
+          where: { removedAt: null },
+          include: {
+            siteGroup: {
+              select: {
+                id: true,
+                name: true,
+                division: true,
+                description: true,
+              },
+            },
+          },
+        },
       },
     }),
     prisma.staff.count({ where }),
@@ -153,6 +166,20 @@ export async function getStaffById(staffId: string) {
         },
         orderBy: { assignedAt: 'desc' },
       },
+      staffSiteGroups: {
+        where: { removedAt: null },
+        include: {
+          siteGroup: {
+            select: {
+              id: true,
+              name: true,
+              division: true,
+              description: true,
+            },
+          },
+        },
+        orderBy: { assignedAt: 'desc' },
+      },
     },
   });
 
@@ -182,6 +209,7 @@ export async function createStaff(data: {
   managerId?: string;
   // 사업장 배정
   siteIds?: string[];
+  siteGroupIds?: string[];
 }) {
   // 중복 체크: phone
   const existingUser = await prisma.user.findUnique({ where: { phone: data.phone } });
@@ -248,6 +276,16 @@ export async function createStaff(data: {
           staffId: newStaff.id,
           siteId,
           isPrimary: false,
+        })),
+      });
+    }
+
+    // 4. StaffSiteGroup 생성 (그룹 배정)
+    if (data.siteGroupIds && data.siteGroupIds.length > 0) {
+      await tx.staffSiteGroup.createMany({
+        data: data.siteGroupIds.map((siteGroupId) => ({
+          staffId: newStaff.id,
+          siteGroupId,
         })),
       });
     }
@@ -376,11 +414,12 @@ export async function deleteStaff(staffId: string) {
 }
 
 /**
- * 담당자 사업장 배정 (StaffSite 관리)
+ * 담당자 사업장 및 그룹 배정 (StaffSite + StaffSiteGroup 관리)
  */
-export async function assignStaffToSites(
+export async function assignStaffToSitesAndGroups(
   staffId: string,
-  siteIds: string[]
+  siteIds: string[],
+  siteGroupIds: string[]
 ) {
   const staff = await prisma.staff.findFirst({
     where: { id: staffId, deletedAt: null },
@@ -390,25 +429,50 @@ export async function assignStaffToSites(
     throw new Error('담당자를 찾을 수 없습니다');
   }
 
-  // 기존 배정 완전히 삭제 (unique constraint 충돌 방지)
-  await prisma.staffSite.deleteMany({
-    where: {
-      staffId,
-    },
+  await prisma.$transaction(async (tx) => {
+    // 기존 사업장 배정 삭제
+    await tx.staffSite.deleteMany({
+      where: { staffId },
+    });
+
+    // 기존 그룹 배정 삭제
+    await tx.staffSiteGroup.deleteMany({
+      where: { staffId },
+    });
+
+    // 새로운 사업장 배정
+    if (siteIds.length > 0) {
+      await tx.staffSite.createMany({
+        data: siteIds.map((siteId) => ({
+          staffId,
+          siteId,
+          isPrimary: false,
+        })),
+      });
+    }
+
+    // 새로운 그룹 배정
+    if (siteGroupIds.length > 0) {
+      await tx.staffSiteGroup.createMany({
+        data: siteGroupIds.map((siteGroupId) => ({
+          staffId,
+          siteGroupId,
+        })),
+      });
+    }
   });
 
-  // 새로운 사업장 배정
-  if (siteIds.length > 0) {
-    await prisma.staffSite.createMany({
-      data: siteIds.map((siteId) => ({
-        staffId,
-        siteId,
-        isPrimary: false,
-      })),
-    });
-  }
+  return { message: '사업장 및 그룹이 배정되었습니다' };
+}
 
-  return { message: '사업장이 배정되었습니다' };
+/**
+ * 담당자 사업장 배정 (하위 호환성을 위한 래퍼)
+ */
+export async function assignStaffToSites(
+  staffId: string,
+  siteIds: string[]
+) {
+  return assignStaffToSitesAndGroups(staffId, siteIds, []);
 }
 
 /**

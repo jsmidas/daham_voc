@@ -101,21 +101,26 @@ export const deleteStaff = async (req: Request, res: Response): Promise<void> =>
 };
 
 /**
- * 담당자 사업장 배정
+ * 담당자 사업장 및 그룹 배정
  * POST /api/v1/staff/:id/sites
  */
 export const assignStaffToSites = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { siteIds } = req.body;
+    const { siteIds = [], siteGroupIds = [] } = req.body;
 
     if (!Array.isArray(siteIds)) {
       res.status(400).json(errorResponse('siteIds는 배열이어야 합니다', 'INVALID_SITE_IDS'));
       return;
     }
 
-    const result = await staffService.assignStaffToSites(id, siteIds);
-    res.json(successResponse(result, '사업장이 배정되었습니다'));
+    if (!Array.isArray(siteGroupIds)) {
+      res.status(400).json(errorResponse('siteGroupIds는 배열이어야 합니다', 'INVALID_SITE_GROUP_IDS'));
+      return;
+    }
+
+    const result = await staffService.assignStaffToSitesAndGroups(id, siteIds, siteGroupIds);
+    res.json(successResponse(result, '사업장 및 그룹이 배정되었습니다'));
   } catch (error: any) {
     console.error('사업장 배정 오류:', error);
     res.status(400).json(errorResponse(error.message, 'ASSIGN_SITES_ERROR'));
