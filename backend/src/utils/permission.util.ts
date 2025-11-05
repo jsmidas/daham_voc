@@ -3,7 +3,7 @@
  * @description 사업장 접근 권한 체크 유틸리티
  */
 
-import { PrismaClient, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
