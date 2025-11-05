@@ -28,6 +28,7 @@ module.exports = {
       args: 'dist -p 5173 --single',
       cwd: path.resolve(__dirname, 'web'),
       instances: 1,
+      exec_mode: 'fork',
       autorestart: true,
       watch: false,
       max_memory_restart: '300M',
