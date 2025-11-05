@@ -25,7 +25,7 @@ module.exports = {
     {
       name: 'daham-web',
       script: 'serve',
-      args: 'dist -p 5173 --single',
+      args: '-s dist -l 5173',
       cwd: path.resolve(__dirname, 'web'),
       instances: 1,
       exec_mode: 'fork',
