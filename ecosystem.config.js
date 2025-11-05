@@ -1,9 +1,11 @@
+const path = require('path');
+
 module.exports = {
   apps: [
     {
       name: 'daham-voc-api',
       script: './backend/dist/server.js',
-      cwd: '/root/daham_voc',
+      cwd: path.resolve(__dirname),
       instances: 1,
       autorestart: true,
       watch: false,
@@ -23,7 +25,7 @@ module.exports = {
       name: 'daham-web',
       script: 'serve',
       args: 'dist -p 5173 --single',
-      cwd: '/root/daham_voc/web',
+      cwd: path.resolve(__dirname, 'web'),
       instances: 1,
       autorestart: true,
       watch: false,
