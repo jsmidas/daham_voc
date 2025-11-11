@@ -99,59 +99,19 @@ export default function SiteGroupPage() {
             <Space>
               <BankOutlined />
               <strong>{division.name}</strong>
-              {division.code !== 'CONSIGNMENT' && (
-                <Button
-                  type="link"
-                  size="small"
-                  icon={<PlusOutlined />}
-                  onClick={() => handleAddGroup(division.code as 'HQ' | 'YEONGNAM')}
-                >
-                  그룹 추가
-                </Button>
-              )}
+              <Button
+                type="link"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={() => handleAddGroup(division.code as 'HQ' | 'YEONGNAM')}
+              >
+                그룹 추가
+              </Button>
             </Space>
           ),
           key: `division-${division.code}`,
           selectable: false,
-          children: division.code === 'CONSIGNMENT'
-            ? // 위탁사업장은 그룹 없이 바로 사업장 표시
-              [
-                {
-                  title: (
-                    <Button
-                      type="dashed"
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() => navigate('/sites/new', {
-                        state: {
-                          type: 'CONSIGNMENT',
-                          groupId: null
-                        }
-                      })}
-                      style={{ marginBottom: '8px' }}
-                    >
-                      사업장 추가
-                    </Button>
-                  ),
-                  key: 'add-consignment-site',
-                  selectable: false,
-                  isLeaf: true,
-                },
-                ...(division.sites?.map((site) => ({
-                  title: (
-                    <Space>
-                      <ShopOutlined />
-                      <span>{site.name}</span>
-                      <span style={{ color: '#999', fontSize: '12px' }}>
-                        ({site.address})
-                      </span>
-                    </Space>
-                  ),
-                  key: `site-${site.id}`,
-                  isLeaf: true,
-                })) || []),
-              ]
-            : [
+          children: [
                 // 그룹들 (본사/영남지사)
                 ...(division.groups?.map((group) => ({
               title: (

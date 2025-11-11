@@ -60,27 +60,6 @@ export class SiteGroupService {
       orderBy: { sortOrder: 'asc' },
     });
 
-    // Get consignment sites (no group) - DEPRECATED: groupId is now required
-    // All sites must belong to a group, so this query returns empty result
-    const consignmentSites = await prisma.site.findMany({
-      where: {
-        type: 'CONSIGNMENT',
-        id: 'non-existent', // Force empty result since all sites must have groupId
-        isActive: true,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        division: true,
-        address: true,
-        latitude: true,
-        longitude: true,
-        sortOrder: true,
-      },
-      orderBy: { sortOrder: 'asc' },
-    });
-
     // Build hierarchy
     const hierarchy = {
       company: '다함푸드',
@@ -114,11 +93,6 @@ export class SiteGroupService {
               sortOrder: g.sortOrder,
               sites: g.sites,
             })),
-        },
-        {
-          code: 'CONSIGNMENT',
-          name: '위탁사업장',
-          sites: consignmentSites,
         },
       ],
     };
