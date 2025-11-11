@@ -12,6 +12,7 @@ import { createSite, updateSite, getSiteById } from '@/api/site.api';
 import { getMenuTypes } from '@/api/menu-type.api';
 import { getSiteGroups } from '@/api/site-group.api';
 import { useEffect } from 'react';
+import { DivisionLabels } from '@/types';
 
 export default function SiteFormPage() {
   const navigate = useNavigate();
@@ -188,7 +189,7 @@ export default function SiteFormPage() {
               options={[
 
                 ...(siteGroupsData?.groups?.map((group: any) => ({
-                  label: `${group.name} (${group.division === 'HQ' ? '본사' : '영남지사'})`,
+                  label: `${group.name} (${DivisionLabels[group.division as keyof typeof DivisionLabels]})`,
                   value: group.id,
                 })) || [])
               ]}
