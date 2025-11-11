@@ -16,3 +16,7 @@ sample/*.png
 sample/*.JPG
 sample/*.PNG
 .credentials/
+
+# Database Backups
+backup/
+*.dump
