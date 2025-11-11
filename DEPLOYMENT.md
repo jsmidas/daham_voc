@@ -52,23 +52,42 @@ GitHub Actions 탭에서 실시간 로그 확인:
 
 ## 수동 배포
 
-### 1️⃣ GCP VM SSH 접속
+### 🚀 빠른 배포 (현재 사용 방식)
+
+#### 전체 배포 (Backend + Frontend)
+```bash
+cd ~/daham_voc && git pull origin main && cd backend && npm install && npx prisma generate && npm run build && cd ../web && npm install && npm run build && cd .. && pm2 restart ecosystem.config.js && pm2 save
+```
+
+#### Backend만 배포
+```bash
+cd ~/daham_voc && git pull origin main && cd backend && npm install && npx prisma generate && npm run build && cd .. && pm2 restart daham-voc-api && pm2 save
+```
+
+#### Frontend만 배포
+```bash
+cd ~/daham_voc && git pull origin main && cd web && npm install && npm run build && cd .. && pm2 restart daham-web && pm2 save
+```
+
+---
+
+### 📝 단계별 배포
+
+#### 1️⃣ GCP VM SSH 접속
 
 ```bash
 ssh sos1253@dahamvoc.co.kr
-# 또는
-gcloud compute ssh daham-voc-vm --zone=asia-northeast3-a
+# 또는 GCP Console에서 SSH 버튼 클릭
 ```
 
-### 2️⃣ 코드 업데이트
+#### 2️⃣ 코드 업데이트
 
 ```bash
 cd ~/daham_voc
 git pull origin main
-git submodule update --init --recursive  # mobile 서브모듈 업데이트
 ```
 
-### 3️⃣ Backend 배포
+#### 3️⃣ Backend 배포
 
 ```bash
 cd ~/daham_voc/backend
@@ -77,7 +96,7 @@ npx prisma generate
 npm run build
 ```
 
-### 4️⃣ Frontend 배포
+#### 4️⃣ Frontend 배포
 
 ```bash
 cd ~/daham_voc/web
@@ -85,7 +104,7 @@ npm install
 npm run build
 ```
 
-### 5️⃣ 서비스 재시작
+#### 5️⃣ 서비스 재시작
 
 ```bash
 cd ~/daham_voc
