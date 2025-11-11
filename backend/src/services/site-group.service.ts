@@ -94,6 +94,21 @@ export class SiteGroupService {
               sites: g.sites,
             })),
         },
+        {
+          code: 'CONSIGNMENT',
+          name: '위탁사업장',
+          groups: groups
+            .filter((g) => g.division === 'CONSIGNMENT')
+            .map((g) => ({
+              id: g.id,
+              name: g.name,
+              markerShape: g.markerShape,
+              markerColor: g.markerColor,
+              description: g.description,
+              sortOrder: g.sortOrder,
+              sites: g.sites,
+            })),
+        },
       ],
     };
 

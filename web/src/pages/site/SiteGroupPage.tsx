@@ -59,7 +59,7 @@ export default function SiteGroupPage() {
   const [hierarchy, setHierarchy] = useState<SiteHierarchy | null>(null);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedDivision, setSelectedDivision] = useState<'HQ' | 'YEONGNAM'>('HQ');
+  const [selectedDivision, setSelectedDivision] = useState<'HQ' | 'YEONGNAM' | 'CONSIGNMENT'>('HQ');
   const [editingGroup, setEditingGroup] = useState<GroupInHierarchy | null>(null);
   const [form] = Form.useForm();
 
@@ -103,7 +103,7 @@ export default function SiteGroupPage() {
                 type="link"
                 size="small"
                 icon={<PlusOutlined />}
-                onClick={() => handleAddGroup(division.code as 'HQ' | 'YEONGNAM')}
+                onClick={() => handleAddGroup(division.code as 'HQ' | 'YEONGNAM' | 'CONSIGNMENT')}
               >
                 그룹 추가
               </Button>
@@ -140,7 +140,7 @@ export default function SiteGroupPage() {
                     type="link"
                     size="small"
                     icon={<EditOutlined />}
-                    onClick={() => handleEditGroup(group, division.code as 'HQ' | 'YEONGNAM')}
+                    onClick={() => handleEditGroup(group, division.code as 'HQ' | 'YEONGNAM' | 'CONSIGNMENT')}
                   >
                     수정
                   </Button>
@@ -178,7 +178,7 @@ export default function SiteGroupPage() {
   };
 
   // 그룹 추가
-  const handleAddGroup = (division: 'HQ' | 'YEONGNAM') => {
+  const handleAddGroup = (division: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT') => {
     setSelectedDivision(division);
     setEditingGroup(null);
     setModalVisible(true);
@@ -186,7 +186,7 @@ export default function SiteGroupPage() {
   };
 
   // 그룹 수정
-  const handleEditGroup = (group: GroupInHierarchy, division: 'HQ' | 'YEONGNAM') => {
+  const handleEditGroup = (group: GroupInHierarchy, division: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT') => {
     setSelectedDivision(division);
     setEditingGroup(group);
     setModalVisible(true);
@@ -333,7 +333,7 @@ export default function SiteGroupPage() {
 
       {/* 그룹 추가/수정 Modal */}
       <Modal
-        title={editingGroup ? `그룹 수정: ${editingGroup.name}` : `${selectedDivision === 'HQ' ? '본사' : '영남지사'} 그룹 추가`}
+        title={editingGroup ? `그룹 수정: ${editingGroup.name}` : `${selectedDivision === 'HQ' ? '본사' : selectedDivision === 'YEONGNAM' ? '영남지사' : '위탁사업장'} 그룹 추가`}
         open={modalVisible}
         onCancel={() => {
           setModalVisible(false);

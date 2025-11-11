@@ -4,7 +4,7 @@
  */
 
 // Division (부문)
-export type Division = 'HQ' | 'YEONGNAM';
+export type Division = 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
 
 // Role (권한)
 export type Role =
@@ -33,6 +33,7 @@ export const RoleLabels: Record<Role, string> = {
 export const DivisionLabels: Record<Division, string> = {
   HQ: '본사',
   YEONGNAM: '영남지사',
+  CONSIGNMENT: '위탁사업장',
 };
 
 // Site Type (사업장 유형)
