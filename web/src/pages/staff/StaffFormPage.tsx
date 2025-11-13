@@ -38,10 +38,10 @@ export default function StaffFormPage() {
     retry: false,
   });
 
-  // 전체 사업장 목록 조회
+  // 전체 사업장 목록 조회 (limit 설정으로 모든 사업장 가져오기)
   const { data: sitesData } = useQuery({
-    queryKey: ['sites'],
-    queryFn: () => getSites(),
+    queryKey: ['sites', 'all'],
+    queryFn: () => getSites({ limit: 1000 }),
   });
 
   // 사업장 그룹 목록 조회
@@ -211,6 +211,17 @@ export default function StaffFormPage() {
     return { siteGroupIds, siteIds };
   };
 
+  // 사업장 타입을 한글로 변환
+  const getSiteTypeLabel = (type: string) => {
+    const typeLabels: Record<string, string> = {
+      CONSIGNMENT: '위탁',
+      DELIVERY: '운반급식',
+      LUNCHBOX: '도시락',
+      EVENT: '행사',
+    };
+    return typeLabels[type] || type;
+  };
+
   // Tree 데이터 구조 생성
   const treeData = useMemo(() => {
     if (!siteGroupsData || !sitesData) return [];
@@ -233,12 +244,12 @@ export default function StaffFormPage() {
       }
     });
 
-    // Division별로 그룹화
-    const hqGroups: any[] = [];
-    const yeongnamGroups: any[] = [];
+    // Division별로 그룹화 (모든 division 처리)
+    const divisionGroups = new Map<string, any[]>();
 
     groups.forEach((group: any) => {
       const groupSites = groupedSites.get(group.id) || [];
+      const division = group.division || 'OTHER'; // division이 없으면 'OTHER'로 처리
 
       const treeNode: DataNode = {
         title: (
@@ -251,43 +262,66 @@ export default function StaffFormPage() {
         ),
         key: `group-${group.id}`,
         children: groupSites.map((site: any) => ({
-          title: `${site.name} (${site.type})`,
+          title: `${site.name} (${getSiteTypeLabel(site.type)})`,
           key: `site-${site.id}`,
           isLeaf: true,
         })),
       };
 
-      if (group.division === 'HQ') {
-        hqGroups.push(treeNode);
-      } else if (group.division === 'YEONGNAM') {
-        yeongnamGroups.push(treeNode);
+      if (!divisionGroups.has(division)) {
+        divisionGroups.set(division, []);
       }
+      divisionGroups.get(division)!.push(treeNode);
     });
 
-    // 그룹 미배정 사업장 처리
-    const hqUngrouped = ungroupedSites.filter(s => s.division === 'HQ');
-    const yeongnamUngrouped = ungroupedSites.filter(s => s.division === 'YEONGNAM');
+    // Division별 라벨 매핑
+    const divisionLabels: Record<string, string> = {
+      HQ: '본사',
+      YEONGNAM: '영남지사',
+      CONSIGNMENT: '위탁사업장',
+      OTHER: '기타',
+    };
+
+    // 그룹 미배정 사업장을 division별로 분류
+    const ungroupedByDivision = new Map<string, any[]>();
+    ungroupedSites.forEach((site: any) => {
+      const division = site.division || 'OTHER';
+      if (!ungroupedByDivision.has(division)) {
+        ungroupedByDivision.set(division, []);
+      }
+      ungroupedByDivision.get(division)!.push(site);
+    });
 
     const result: DataNode[] = [];
 
-    // 본사
-    if (hqGroups.length > 0 || hqUngrouped.length > 0) {
-      const hqChildren = [...hqGroups];
+    // 모든 division 처리
+    const allDivisions = new Set([...divisionGroups.keys(), ...ungroupedByDivision.keys()]);
 
-      if (hqUngrouped.length > 0) {
-        hqChildren.push({
+    allDivisions.forEach((division) => {
+      const groups = divisionGroups.get(division) || [];
+      const ungrouped = ungroupedByDivision.get(division) || [];
+
+      if (groups.length === 0 && ungrouped.length === 0) {
+        return; // 이 division에 아무것도 없으면 스킵
+      }
+
+      const children = [...groups];
+
+      // 그룹 미배정 사업장 추가
+      if (ungrouped.length > 0) {
+        children.push({
           title: (
             <span>
               <strong>그룹 미배정</strong>
               <Tag color="gray" style={{ marginLeft: 8 }}>
-                {hqUngrouped.length}개
+                {ungrouped.length}개
               </Tag>
             </span>
           ),
-          key: 'hq-ungrouped',
+          key: `${division}-ungrouped`,
           selectable: false,
-          children: hqUngrouped.map((site: any) => ({
-            title: `${site.name} (${site.type})`,
+          children: ungrouped.map((site: any) => ({
+            title: `${site.name} (${getSiteTypeLabel(site.type)})`,
             key: `site-${site.id}`,
             isLeaf: true,
           })),
@@ -295,44 +329,12 @@ export default function StaffFormPage() {
       }
 
       result.push({
-        title: <strong style={{ fontSize: 16 }}>본사</strong>,
-        key: 'HQ',
+        title: <strong style={{ fontSize: 16 }}>{divisionLabels[division] || division}</strong>,
+        key: division,
         selectable: false,
-        children: hqChildren,
+        children,
       });
-    }
-
-    // 영남지사
-    if (yeongnamGroups.length > 0 || yeongnamUngrouped.length > 0) {
-      const yeongnamChildren = [...yeongnamGroups];
-
-      if (yeongnamUngrouped.length > 0) {
-        yeongnamChildren.push({
-          title: (
-            <span>
-              <strong>그룹 미배정</strong>
-              <Tag color="gray" style={{ marginLeft: 8 }}>
-                {yeongnamUngrouped.length}개
-              </Tag>
-            </span>
-          ),
-          key: 'yeongnam-ungrouped',
-          selectable: false,
-          children: yeongnamUngrouped.map((site: any) => ({
-            title: `${site.name} (${site.type})`,
-            key: `site-${site.id}`,
-            isLeaf: true,
-          })),
-        });
-      }
-
-      result.push({
-        title: <strong style={{ fontSize: 16 }}>영남지사</strong>,
-        key: 'YEONGNAM',
-        selectable: false,
-        children: yeongnamChildren,
-      });
-    }
+    });
 
     return result;
   }, [siteGroupsData, sitesData]);
