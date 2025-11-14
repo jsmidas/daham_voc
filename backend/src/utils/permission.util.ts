@@ -185,9 +185,9 @@ export async function getDivisionFilter(userId: string) {
     return {};
   }
 
-  // HQ_ADMIN은 본사만
+  // HQ_ADMIN은 본사 + 위탁사업장
   if (user.role === 'HQ_ADMIN') {
-    return { division: 'HQ' };
+    return { division: { in: ['HQ', 'CONSIGNMENT'] } };
   }
 
   // YEONGNAM_ADMIN은 영남지사만

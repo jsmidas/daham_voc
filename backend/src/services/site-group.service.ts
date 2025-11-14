@@ -224,8 +224,8 @@ export class SiteGroupService {
       throw new Error('사용자를 찾을 수 없습니다');
     }
 
-    if (user.role === 'HQ_ADMIN' && data.division !== 'HQ') {
-      throw new Error('본사 관리자는 본사 그룹만 생성할 수 있습니다');
+    if (user.role === 'HQ_ADMIN' && data.division !== 'HQ' && data.division !== 'CONSIGNMENT') {
+      throw new Error('본사 관리자는 본사 및 위탁 그룹만 생성할 수 있습니다');
     }
 
     if (user.role === 'YEONGNAM_ADMIN' && data.division !== 'YEONGNAM') {
@@ -354,7 +354,7 @@ export class SiteGroupService {
 
     if (user.role === 'SUPER_ADMIN') return;
 
-    if (user.role === 'HQ_ADMIN' && group.division !== 'HQ') {
+    if (user.role === 'HQ_ADMIN' && group.division !== 'HQ' && group.division !== 'CONSIGNMENT') {
       throw new Error('권한이 없습니다');
     }
 

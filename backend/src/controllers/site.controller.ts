@@ -31,10 +31,11 @@ export class SiteController {
 
       // 권한별 필터링
       // SUPER_ADMIN: 모든 사업장
-      // HQ_ADMIN: 본사(HQ) 사업장만
+      // HQ_ADMIN: 본사(HQ) + 위탁(CONSIGNMENT) 사업장
       // YEONGNAM_ADMIN: 영남지사(YEONGNAM) 사업장만
       if (user.role === 'HQ_ADMIN' && !filter.division) {
-        filter.division = 'HQ';
+        // HQ_ADMIN은 HQ와 CONSIGNMENT 모두 조회 가능
+        // filter.division을 설정하지 않고 service에서 직접 처리하도록 user 전달
       } else if (user.role === 'YEONGNAM_ADMIN' && !filter.division) {
         filter.division = 'YEONGNAM';
       }
@@ -44,7 +45,7 @@ export class SiteController {
         req.query.limit as string
       );
 
-      const { sites, total } = await this.siteService.getSites(filter, pagination);
+      const { sites, total } = await this.siteService.getSites(filter, pagination, user);
 
       const meta = createPaginationMeta(pagination.page, pagination.limit, total);
 

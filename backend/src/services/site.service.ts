@@ -104,8 +104,8 @@ export class SiteService {
   /**
    * Get sites with filtering, pagination, and caching
    */
-  async getSites(filter: SiteFilter, pagination: PaginationParams) {
-    const cacheKey = `sites:${JSON.stringify({ filter, pagination })}`;
+  async getSites(filter: SiteFilter, pagination: PaginationParams, user?: any) {
+    const cacheKey = `sites:${JSON.stringify({ filter, pagination, userRole: user?.role })}`;
 
     // Check Redis cache
     const cached = await cache.get(cacheKey);
@@ -120,7 +120,14 @@ export class SiteService {
     };
 
     if (filter.type) where.type = filter.type;
-    if (filter.division) where.division = filter.division;
+
+    // Division 필터링: HQ_ADMIN은 HQ + CONSIGNMENT 모두 조회
+    if (filter.division) {
+      where.division = filter.division;
+    } else if (user && user.role === 'HQ_ADMIN') {
+      where.division = { in: ['HQ', 'CONSIGNMENT'] };
+    }
+
     if (filter.groupId) where.groupId = filter.groupId;
     if (filter.search) {
       where.OR = [
@@ -270,8 +277,8 @@ export class SiteService {
       throw new Error('사용자를 찾을 수 없습니다');
     }
 
-    if (user.role === 'HQ_ADMIN' && data.division !== 'HQ') {
-      throw new Error('본사 관리자는 본사 사업장만 생성할 수 있습니다');
+    if (user.role === 'HQ_ADMIN' && data.division !== 'HQ' && data.division !== 'CONSIGNMENT') {
+      throw new Error('본사 관리자는 본사 및 위탁 사업장만 생성할 수 있습니다');
     }
 
     if (user.role === 'YEONGNAM_ADMIN' && data.division !== 'YEONGNAM') {
@@ -427,7 +434,7 @@ export class SiteService {
 
     if (user.role === 'SUPER_ADMIN') return;
 
-    if (user.role === 'HQ_ADMIN' && site.division !== 'HQ') {
+    if (user.role === 'HQ_ADMIN' && site.division !== 'HQ' && site.division !== 'CONSIGNMENT') {
       throw new Error('권한이 없습니다');
     }
 
@@ -453,7 +460,7 @@ export class SiteService {
       return;
     }
 
-    if (user.role === 'HQ_ADMIN' && site.division !== 'HQ') {
+    if (user.role === 'HQ_ADMIN' && site.division !== 'HQ' && site.division !== 'CONSIGNMENT') {
       throw new Error('권한이 없습니다');
     }
 
