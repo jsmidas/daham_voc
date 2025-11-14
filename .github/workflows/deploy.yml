@@ -19,16 +19,16 @@ jobs:
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.GCP_SSH_PRIVATE_KEY }}
+          ssh-private-key: ${{ secrets.GCP_SSH_KEY }}
 
       - name: Add GCP VM to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.GCP_VM_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.GCP_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to GCP VM
         run: |
-          ssh ${{ secrets.GCP_VM_USER }}@${{ secrets.GCP_VM_IP }} << 'ENDSSH'
+          ssh ${{ secrets.GCP_USERNAME }}@${{ secrets.GCP_HOST }} << 'ENDSSH'
             set -e
             echo "📦 Pulling latest code..."
             cd ~/daham_voc
