@@ -70,9 +70,50 @@ export class AuthService {
    * Login user (using phone number)
    */
   async login(phone: string, password: string): Promise<LoginResponse> {
-    // Find user by phone
+    // Find user by phone (include staff sites for mobile app)
     const user = await prisma.user.findUnique({
       where: { phone },
+      include: {
+        staff: {
+          include: {
+            staffSites: {
+              where: { removedAt: null },
+              include: {
+                site: {
+                  select: {
+                    id: true,
+                    name: true,
+                    type: true,
+                    division: true,
+                    address: true,
+                    latitude: true,
+                    longitude: true,
+                    group: {
+                      select: {
+                        id: true,
+                        name: true,
+                        division: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            staffSiteGroups: {
+              where: { removedAt: null },
+              include: {
+                siteGroup: {
+                  select: {
+                    id: true,
+                    name: true,
+                    division: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -110,11 +151,21 @@ export class AuthService {
       division: user.division || undefined,
     });
 
+    // Extract assigned sites and site groups
+    const assignedSites = user.staff?.staffSites?.map(ss => ss.site) || [];
+    const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
+
     // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    const { password: _, staff, ...userWithoutPassword } = user;
 
     return {
-      user: userWithoutPassword,
+      user: {
+        ...userWithoutPassword,
+        staffSites: assignedSites,
+        staffSiteGroups: assignedSiteGroups,
+        // Keep siteId for backward compatibility (single site)
+        siteId: assignedSites[0]?.id || null,
+      } as any,
       token,
     };
   }

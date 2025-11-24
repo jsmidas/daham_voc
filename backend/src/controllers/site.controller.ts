@@ -228,4 +228,25 @@ export class SiteController {
       res.status(400).json(errorResponse(error.message, 'EXCEL_UPLOAD_ERROR'));
     }
   };
+
+  /**
+   * GET /api/v1/user/sites
+   * Get sites assigned to current user
+   * @description 현재 로그인한 사용자에게 배정된 사업장만 반환
+   */
+  getUserAssignedSites = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        res.status(401).json(errorResponse('인증되지 않은 사용자입니다', 'UNAUTHORIZED'));
+        return;
+      }
+
+      const sites = await this.siteService.getUserAssignedSites(userId);
+      res.json(successResponse({ sites }));
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message, 'GET_USER_SITES_ERROR'));
+    }
+  };
 }

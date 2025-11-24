@@ -948,4 +948,74 @@ export class SiteService {
 
     return results;
   }
+
+  /**
+   * Get sites assigned to a specific user
+   * @description 사용자에게 배정된 사업장 목록 반환 (개별 배정 + 그룹 배정)
+   */
+  async getUserAssignedSites(userId: string) {
+    const staff: any = await prisma.staff.findUnique({
+      where: { userId },
+      include: {
+        staffSites: {
+          where: { removedAt: null },
+          include: {
+            site: {
+              include: {
+                group: {
+                  select: {
+                    id: true,
+                    name: true,
+                    division: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        staffSiteGroups: {
+          where: { removedAt: null },
+          include: {
+            siteGroup: {
+              include: {
+                sites: {
+                  include: {
+                    group: {
+                      select: {
+                        id: true,
+                        name: true,
+                        division: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!staff) {
+      return [];
+    }
+
+    // 개별 배정 사업장 수집 (활성 사업장만)
+    const individualSites = (staff.staffSites || [])
+      .map((ss: any) => ss.site)
+      .filter((site: any) => site.isActive && !site.deletedAt);
+
+    // 그룹 배정 사업장 수집 (활성 사업장만)
+    const groupSites = (staff.staffSiteGroups || [])
+      .flatMap((sg: any) => sg.siteGroup.sites)
+      .filter((site: any) => site.isActive && !site.deletedAt);
+
+    // 중복 제거 (id 기준)
+    const siteMap = new Map();
+    [...individualSites, ...groupSites].forEach((site: any) => {
+      siteMap.set(site.id, site);
+    });
+
+    return Array.from(siteMap.values());
+  }
 }
