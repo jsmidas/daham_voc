@@ -152,8 +152,43 @@ export class AuthService {
     });
 
     // Extract assigned sites and site groups
-    const assignedSites = user.staff?.staffSites?.map(ss => ss.site) || [];
+    const individualSites = user.staff?.staffSites?.map(ss => ss.site) || [];
     const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
+
+    // Expand site groups: fetch all sites belonging to assigned groups
+    let groupSites: any[] = [];
+    if (assignedSiteGroups.length > 0) {
+      const groupIds = assignedSiteGroups.map(g => g.id);
+      groupSites = await prisma.site.findMany({
+        where: {
+          groupId: { in: groupIds },
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          division: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          group: {
+            select: {
+              id: true,
+              name: true,
+              division: true,
+            },
+          },
+        },
+      });
+    }
+
+    // Combine individual sites and group sites, remove duplicates
+    const allSitesMap = new Map();
+    [...individualSites, ...groupSites].forEach(site => {
+      allSitesMap.set(site.id, site);
+    });
+    const assignedSites = Array.from(allSitesMap.values());
 
     // Remove password from response
     const { password: _, staff, ...userWithoutPassword } = user;

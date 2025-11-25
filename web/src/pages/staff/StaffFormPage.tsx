@@ -162,10 +162,17 @@ export default function StaffFormPage() {
     onSuccess: async () => {
       // 사업장 및 그룹 배정 업데이트
       if (id) {
-        const { siteIds, siteGroupIds } = parseCheckedKeys(checkedKeys);
-        await assignStaffToSites(id, siteIds, siteGroupIds);
+        try {
+          const { siteIds, siteGroupIds } = parseCheckedKeys(checkedKeys);
+          await assignStaffToSites(id, siteIds, siteGroupIds);
+          message.success('담당자 정보 및 사업장 배정이 수정되었습니다');
+        } catch (error: any) {
+          message.error('사업장 배정 업데이트 실패: ' + (error.response?.data?.error?.message || error.message));
+          console.error('사업장 배정 실패:', error);
+        }
+      } else {
+        message.success('담당자가 수정되었습니다');
       }
-      message.success('담당자가 수정되었습니다');
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       navigate('/staff');
     },
