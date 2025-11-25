@@ -12,7 +12,9 @@
       "Bash(ssh:*)",
       "Bash(cat:*)",
       "Bash(nul)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(eas build:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
