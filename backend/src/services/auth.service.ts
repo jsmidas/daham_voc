@@ -188,7 +188,38 @@ export class AuthService {
     [...individualSites, ...groupSites].forEach(site => {
       allSitesMap.set(site.id, site);
     });
-    const assignedSites = Array.from(allSitesMap.values());
+    let assignedSites = Array.from(allSitesMap.values());
+
+    // 관리자 역할인 경우 전체 사업장 목록을 반환
+    const adminRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN'];
+    const isAdmin = adminRoles.includes(user.role);
+    if (isAdmin && assignedSites.length === 0) {
+      console.log(`[Auth] Admin user ${user.name} - fetching all sites`);
+      assignedSites = await prisma.site.findMany({
+        where: {
+          isActive: true,
+          deletedAt: null,
+        },
+        select: {
+          id: true,
+          name: true,
+          type: true,
+          division: true,
+          address: true,
+          latitude: true,
+          longitude: true,
+          group: {
+            select: {
+              id: true,
+              name: true,
+              division: true,
+            },
+          },
+        },
+        orderBy: { name: 'asc' },
+      });
+      console.log(`[Auth] Admin user ${user.name} - found ${assignedSites.length} sites`);
+    }
 
     // Remove password from response
     const { password: _, staff, ...userWithoutPassword } = user;
