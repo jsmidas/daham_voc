@@ -35,6 +35,7 @@ export default function MealCountListPage() {
     dayjs().startOf('month'),
     dayjs().endOf('month'),
   ]);
+  const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs()); // 전체 사업장 조회용 단일 날짜
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MealCount | null>(null);
   const [form] = Form.useForm();
@@ -94,13 +95,12 @@ export default function MealCountListPage() {
     enabled: !!selectedSiteId && !isAllSites,
   });
 
-  // 전체 사업장 식수 데이터 조회 (단일 API 호출)
+  // 전체 사업장 식수 데이터 조회 (단일 날짜)
   const { data: allSitesMealCounts, isLoading: isLoadingAll } = useQuery({
-    queryKey: ['all-sites-meal-counts', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryKey: ['all-sites-meal-counts', selectedDate.format('YYYY-MM-DD')],
     queryFn: async () => {
-      const startDate = dateRange[0].format('YYYY-MM-DD');
-      const endDate = dateRange[1].format('YYYY-MM-DD');
-      const response = await getAllMealCountsByRange(startDate, endDate);
+      const dateStr = selectedDate.format('YYYY-MM-DD');
+      const response = await getAllMealCountsByRange(dateStr, dateStr);
       return response.data || [];
     },
     enabled: isAllSites,
@@ -585,41 +585,10 @@ export default function MealCountListPage() {
   // 전체 사업장용 테이블 컬럼
   const allSitesColumns = [
     {
-      title: '날짜',
-      dataIndex: 'date',
-      key: 'date',
-      width: 100,
-      fixed: 'left' as const,
-      render: (date: string) => {
-        const dateObj = dayjs(date);
-        const todayObj = dayjs();
-        const isFuture = dateObj.isAfter(todayObj, 'day');
-        const isToday = dateObj.isSame(todayObj, 'day');
-
-        return (
-          <div>
-            <div style={{
-              fontWeight: 600,
-              color: isFuture ? '#52c41a' : isToday ? '#1890ff' : '#000'
-            }}>
-              {dateObj.format('MM/DD')}
-            </div>
-            <div style={{
-              fontSize: 11,
-              color: isFuture ? '#52c41a' : '#999'
-            }}>
-              {getDayOfWeek(date)}
-              {isToday && ' (오늘)'}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
       title: '사업장',
       dataIndex: 'siteName',
       key: 'siteName',
-      width: 180,
+      width: 200,
       fixed: 'left' as const,
       render: (text: string, record: any) => (
         <div>
@@ -672,31 +641,29 @@ export default function MealCountListPage() {
     },
   ];
 
-  // 전체 사업장용 테이블 데이터 (날짜별, 사업장별)
+  // 전체 사업장용 테이블 데이터 (사업장별)
   const allSitesTableData = (() => {
     if (!allSitesMealCounts || !Array.isArray(allSitesMealCounts)) return [];
 
-    // 날짜+사업장 조합으로 그룹화
-    const groupedData: { [key: string]: { site: any; date: string; mealData: { [key: string]: MealCount[] } } } = {};
+    // 사업장별로 그룹화
+    const groupedData: { [siteId: string]: { site: any; mealData: { [key: string]: MealCount[] } } } = {};
 
     allSitesMealCounts.forEach((item: MealCount & { site: any }) => {
-      const dateStr = dayjs(item.date).format('YYYY-MM-DD');
-      const key = `${dateStr}_${item.site?.id || item.siteId}`;
+      const siteId = item.site?.id || item.siteId;
 
-      if (!groupedData[key]) {
-        groupedData[key] = {
+      if (!groupedData[siteId]) {
+        groupedData[siteId] = {
           site: item.site,
-          date: dateStr,
           mealData: { BREAKFAST: [], LUNCH: [], DINNER: [], SUPPER: [] },
         };
       }
 
-      if (groupedData[key].mealData[item.mealType]) {
-        groupedData[key].mealData[item.mealType].push(item);
+      if (groupedData[siteId].mealData[item.mealType]) {
+        groupedData[siteId].mealData[item.mealType].push(item);
       }
     });
 
-    // 필터링 적용 및 정렬 (최근 날짜가 위로, 같은 날짜는 사업장명 순)
+    // 필터링 적용 및 사업장명 순 정렬
     return Object.values(groupedData)
       .filter((row) => {
         const site = row.site;
@@ -710,21 +677,14 @@ export default function MealCountListPage() {
         return true;
       })
       .map((row) => ({
-        key: `${row.date}_${row.site?.id}`,
+        key: row.site?.id,
         siteId: row.site?.id,
         siteName: row.site?.name || '-',
         division: row.site?.division || '-',
         type: row.site?.type === 'CONSIGNMENT' ? '위탁' : row.site?.type === 'DELIVERY' ? '운반' : row.site?.type === 'LUNCHBOX' ? '도시락' : '행사',
-        date: row.date,
         mealData: row.mealData,
       }))
-      .sort((a, b) => {
-        // 날짜 내림차순 (최근이 위로)
-        const dateCompare = b.date.localeCompare(a.date);
-        if (dateCompare !== 0) return dateCompare;
-        // 같은 날짜면 사업장명 오름차순
-        return a.siteName.localeCompare(b.siteName);
-      });
+      .sort((a, b) => a.siteName.localeCompare(b.siteName));
   })();
 
   // 등록된 식사 유형 필터링
@@ -816,24 +776,36 @@ export default function MealCountListPage() {
             />
           </div>
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>조회 기간</div>
-            <Space.Compact>
-              <RangePicker
-                value={dateRange}
-                onChange={(dates) => {
-                  if (dates && dates[0] && dates[1]) {
-                    setDateRange([dates[0], dates[1]]);
-                  }
-                }}
-                format="YYYY-MM-DD"
-                style={{ width: 280 }}
-              />
-              <Button
-                onClick={() => setDateRange([dayjs(), dayjs()])}
-              >
-                오늘
-              </Button>
-            </Space.Compact>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>{isAllSites ? '조회 날짜' : '조회 기간'}</div>
+            {isAllSites ? (
+              <Space.Compact>
+                <DatePicker
+                  value={selectedDate}
+                  onChange={(date) => {
+                    if (date) setSelectedDate(date);
+                  }}
+                  format="YYYY-MM-DD"
+                  style={{ width: 150 }}
+                />
+                <Button onClick={() => setSelectedDate(dayjs())}>오늘</Button>
+                <Button onClick={() => setSelectedDate(selectedDate.subtract(1, 'day'))}>◀</Button>
+                <Button onClick={() => setSelectedDate(selectedDate.add(1, 'day'))}>▶</Button>
+              </Space.Compact>
+            ) : (
+              <Space.Compact>
+                <RangePicker
+                  value={dateRange}
+                  onChange={(dates) => {
+                    if (dates && dates[0] && dates[1]) {
+                      setDateRange([dates[0], dates[1]]);
+                    }
+                  }}
+                  format="YYYY-MM-DD"
+                  style={{ width: 280 }}
+                />
+                <Button onClick={() => setDateRange([dayjs(), dayjs()])}>오늘</Button>
+              </Space.Compact>
+            )}
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
             <Button
