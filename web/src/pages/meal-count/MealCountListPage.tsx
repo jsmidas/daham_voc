@@ -10,7 +10,7 @@ const { RangePicker } = DatePicker;
 import { EditOutlined, DeleteOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
-import { getMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
+import { getMealCountsByRange, getAllMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -94,28 +94,16 @@ export default function MealCountListPage() {
     enabled: !!selectedSiteId && !isAllSites,
   });
 
-  // 전체 사업장 식수 데이터 조회
+  // 전체 사업장 식수 데이터 조회 (단일 API 호출)
   const { data: allSitesMealCounts, isLoading: isLoadingAll } = useQuery({
-    queryKey: ['all-sites-meal-counts', filteredSites.map((s: any) => s.id).join(','), dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+    queryKey: ['all-sites-meal-counts', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
     queryFn: async () => {
       const startDate = dateRange[0].format('YYYY-MM-DD');
       const endDate = dateRange[1].format('YYYY-MM-DD');
-
-      // 필터링된 사업장들의 데이터를 병렬로 가져옴
-      const promises = filteredSites.map((site: any) =>
-        getMealCountsByRange(site.id, startDate, endDate).catch(() => ({ data: [] }))
-      );
-      const results = await Promise.all(promises);
-
-      // 사업장별로 데이터 매핑
-      const dataMap: { [siteId: string]: MealCount[] } = {};
-      filteredSites.forEach((site: any, index: number) => {
-        dataMap[site.id] = results[index]?.data || [];
-      });
-
-      return dataMap;
+      const response = await getAllMealCountsByRange(startDate, endDate);
+      return response.data || [];
     },
-    enabled: isAllSites && filteredSites.length > 0,
+    enabled: isAllSites,
   });
 
   // 오늘 날짜의 전체 사업장 식수 입력 데이터 (입력 상태 필터용)
@@ -597,10 +585,41 @@ export default function MealCountListPage() {
   // 전체 사업장용 테이블 컬럼
   const allSitesColumns = [
     {
+      title: '날짜',
+      dataIndex: 'date',
+      key: 'date',
+      width: 100,
+      fixed: 'left' as const,
+      render: (date: string) => {
+        const dateObj = dayjs(date);
+        const todayObj = dayjs();
+        const isFuture = dateObj.isAfter(todayObj, 'day');
+        const isToday = dateObj.isSame(todayObj, 'day');
+
+        return (
+          <div>
+            <div style={{
+              fontWeight: 600,
+              color: isFuture ? '#52c41a' : isToday ? '#1890ff' : '#000'
+            }}>
+              {dateObj.format('MM/DD')}
+            </div>
+            <div style={{
+              fontSize: 11,
+              color: isFuture ? '#52c41a' : '#999'
+            }}>
+              {getDayOfWeek(date)}
+              {isToday && ' (오늘)'}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
       title: '사업장',
       dataIndex: 'siteName',
       key: 'siteName',
-      width: 200,
+      width: 180,
       fixed: 'left' as const,
       render: (text: string, record: any) => (
         <div>
@@ -653,31 +672,60 @@ export default function MealCountListPage() {
     },
   ];
 
-  // 전체 사업장용 테이블 데이터
-  const allSitesTableData = filteredSites.map((site: any) => {
-    const siteData = allSitesMealCounts?.[site.id] || [];
+  // 전체 사업장용 테이블 데이터 (날짜별, 사업장별)
+  const allSitesTableData = (() => {
+    if (!allSitesMealCounts || !Array.isArray(allSitesMealCounts)) return [];
 
-    // 조회 기간 내 데이터만 필터링
-    const filteredData = siteData.filter((item: MealCount) => {
-      const itemDate = dayjs(item.date);
-      return itemDate.isSameOrAfter(dateRange[0], 'day') && itemDate.isSameOrBefore(dateRange[1], 'day');
+    // 날짜+사업장 조합으로 그룹화
+    const groupedData: { [key: string]: { site: any; date: string; mealData: { [key: string]: MealCount[] } } } = {};
+
+    allSitesMealCounts.forEach((item: MealCount & { site: any }) => {
+      const dateStr = dayjs(item.date).format('YYYY-MM-DD');
+      const key = `${dateStr}_${item.site?.id || item.siteId}`;
+
+      if (!groupedData[key]) {
+        groupedData[key] = {
+          site: item.site,
+          date: dateStr,
+          mealData: { BREAKFAST: [], LUNCH: [], DINNER: [], SUPPER: [] },
+        };
+      }
+
+      if (groupedData[key].mealData[item.mealType]) {
+        groupedData[key].mealData[item.mealType].push(item);
+      }
     });
 
-    // 식사 유형별로 그룹화
-    const mealData: { [key: string]: MealCount[] } = {};
-    MEAL_TYPES.forEach((type) => {
-      mealData[type.value] = filteredData.filter((item: MealCount) => item.mealType === type.value);
-    });
+    // 필터링 적용 및 정렬 (최근 날짜가 위로, 같은 날짜는 사업장명 순)
+    return Object.values(groupedData)
+      .filter((row) => {
+        const site = row.site;
+        if (!site) return false;
 
-    return {
-      key: site.id,
-      siteId: site.id,
-      siteName: site.name,
-      division: site.division,
-      type: site.type === 'CONSIGNMENT' ? '위탁' : site.type === 'DELIVERY' ? '운반' : site.type === 'LUNCHBOX' ? '도시락' : '행사',
-      mealData,
-    };
-  });
+        // 지사 필터
+        if (filterDivision !== 'ALL' && site.division !== filterDivision) return false;
+        // 유형 필터
+        if (filterType !== 'ALL' && site.type !== filterType) return false;
+
+        return true;
+      })
+      .map((row) => ({
+        key: `${row.date}_${row.site?.id}`,
+        siteId: row.site?.id,
+        siteName: row.site?.name || '-',
+        division: row.site?.division || '-',
+        type: row.site?.type === 'CONSIGNMENT' ? '위탁' : row.site?.type === 'DELIVERY' ? '운반' : row.site?.type === 'LUNCHBOX' ? '도시락' : '행사',
+        date: row.date,
+        mealData: row.mealData,
+      }))
+      .sort((a, b) => {
+        // 날짜 내림차순 (최근이 위로)
+        const dateCompare = b.date.localeCompare(a.date);
+        if (dateCompare !== 0) return dateCompare;
+        // 같은 날짜면 사업장명 오름차순
+        return a.siteName.localeCompare(b.siteName);
+      });
+  })();
 
   // 등록된 식사 유형 필터링
   const registeredTypes = mealCounts?.data?.map((mc: MealCount) => mc.mealType) || [];

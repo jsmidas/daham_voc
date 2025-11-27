@@ -125,3 +125,10 @@ export async function getMealCountsByRange(
     params: { startDate, endDate },
   });
 }
+
+// 전체 사업장 기간별 식수 인원 조회
+export async function getAllMealCountsByRange(startDate: string, endDate: string) {
+  return apiClient.get('/meal-counts/all/range', {
+    params: { startDate, endDate },
+  });
+}

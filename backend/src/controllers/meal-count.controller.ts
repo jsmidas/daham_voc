@@ -12,7 +12,7 @@ import * as mealCountService from '../services/meal-count.service';
  */
 export async function createMealCount(req: Request, res: Response) {
   try {
-    const { siteId, date, mealType, count, note } = req.body;
+    const { siteId, date, mealType, menuNumber, count, note } = req.body;
     const submittedBy = req.user!.userId;
 
     if (!siteId || !date || !mealType || count === undefined) {
@@ -26,6 +26,7 @@ export async function createMealCount(req: Request, res: Response) {
       siteId,
       date,
       mealType,
+      menuNumber: menuNumber ? Number(menuNumber) : 1,
       count: Number(count),
       submittedBy,
       note,
@@ -179,6 +180,40 @@ export async function getMealCountsByRange(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       message: '식수 인원 조회에 실패했습니다',
+    });
+  }
+}
+
+/**
+ * GET /api/v1/meal-counts/all/range
+ * 전체 사업장 기간별 식수 인원 조회
+ * Query params: startDate, endDate
+ */
+export async function getAllMealCountsByRange(req: Request, res: Response) {
+  try {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'startDate와 endDate를 입력하세요',
+      });
+    }
+
+    const mealCounts = await mealCountService.getAllMealCountsByRange(
+      startDate as string,
+      endDate as string
+    );
+
+    return res.json({
+      success: true,
+      data: mealCounts,
+    });
+  } catch (error: any) {
+    console.error('전체 사업장 식수 인원 조회 실패:', error);
+    return res.status(500).json({
+      success: false,
+      message: '전체 사업장 식수 인원 조회에 실패했습니다',
     });
   }
 }
