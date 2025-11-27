@@ -576,4 +576,46 @@ eas login
 
 ---
 
-**마지막 업데이트:** 2025-01-24
+  📱 구글 플레이 콘솔 설정
+
+  1단계: 구글 플레이 콘솔 접속
+
+  https://play.google.com/console 접속
+
+  2단계: API 액세스 페이지로 이동
+
+  1. 좌측 메뉴에서 "설정" (Settings) 클릭
+  2. "API 액세스" (API access) 클릭
+
+  3단계: 서비스 계정 연결
+
+  1. "연결" 또는 "Link" 버튼 클릭
+  2. 방금 만든 서비스 계정 선택
+    - 이메일:
+  eas-submit-account@daham-food.iam.gserviceaccount.com     
+  (또는 서비스 계정 이메일)
+  3. "확인" 또는 "Link service account" 클릭
+
+  4단계: 권한 부여
+
+  서비스 계정이 연결되면:
+
+  1. 서비스 계정 이름을 클릭하여 상세 페이지로 이동
+  2. "앱 액세스" (App access) 탭 클릭
+  3. "Daham VOC" 앱 선택
+  4. "권한 부여" 또는 "Grant access" 클릭
+  5. 다음 권한들을 체크:
+    - ✅ 출시 관리 및 출시 (View app information and        
+  make changes)
+    - ✅ 앱 정보 수정 (Manage app information)
+    - ✅ 프로덕션 출시 관리 (Manage production releases)    
+  6. "변경사항 적용" 또는 "Apply" 클릭
+
+  완료 확인
+
+  권한 설정이 완료되면 서비스 계정이 "Daham VOC" 앱에       
+  대한 출시 권한을 갖게 됩니다.
+
+  설정을 완료하시면 알려주세요. 그러면 EAS 빌드 + 자동      
+  제출 테스트를 진행하겠습니다!
+**마지막 업데이트:** 2025-11-24
