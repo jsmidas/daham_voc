@@ -24,11 +24,11 @@ jobs:
       - name: Add GCP VM to known hosts
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.GCP_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H 34.50.60.199 >> ~/.ssh/known_hosts
 
       - name: Deploy to GCP VM
         run: |
-          ssh ${{ secrets.GCP_USERNAME }}@${{ secrets.GCP_HOST }} << 'ENDSSH'
+          ssh sos1253@34.50.60.199 << 'ENDSSH'
             set -e
             echo "📦 Pulling latest code..."
             cd ~/daham_voc
