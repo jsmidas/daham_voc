@@ -285,6 +285,19 @@ export class SiteService {
       throw new Error('영남지사 관리자는 영남지사 사업장만 생성할 수 있습니다');
     }
 
+    // Check if site with same name already exists
+    const existingSite = await prisma.site.findFirst({
+      where: {
+        name: data.name,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+
+    if (existingSite) {
+      throw new Error(`이미 동일한 이름의 사업장이 존재합니다: ${data.name}`);
+    }
+
     // Create site
     const site = await prisma.site.create({
       data: {
@@ -345,6 +358,22 @@ export class SiteService {
   async updateSite(id: string, data: UpdateSiteDto, userId: string) {
     // Check permission
     await this.checkPermission(id, userId);
+
+    // If name is being changed, check for duplicates
+    if (data.name) {
+      const existingSite = await prisma.site.findFirst({
+        where: {
+          name: data.name,
+          id: { not: id }, // Exclude current site
+          isActive: true,
+          deletedAt: null,
+        },
+      });
+
+      if (existingSite) {
+        throw new Error(`이미 동일한 이름의 사업장이 존재합니다: ${data.name}`);
+      }
+    }
 
     const site = await prisma.site.update({
       where: { id },
