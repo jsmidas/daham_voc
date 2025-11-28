@@ -133,14 +133,18 @@ export async function getMealCountsByDate(req: Request, res: Response) {
   try {
     const { siteId, date } = req.params;
 
+    console.log('🔍 [MealCountsByDate] GET 요청 - siteId:', siteId, 'date:', date);
+
     const mealCounts = await mealCountService.getMealCountsByDate(siteId, date);
+
+    console.log('📦 [MealCountsByDate] 조회 결과:', mealCounts.length, '건');
 
     return res.json({
       success: true,
       data: mealCounts,
     });
   } catch (error: any) {
-    console.error('식수 인원 조회 실패:', error);
+    console.error('❌ [MealCountsByDate] 식수 인원 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 인원 조회에 실패했습니다',
@@ -158,6 +162,8 @@ export async function getMealCountsByRange(req: Request, res: Response) {
     const { siteId } = req.params;
     const { startDate, endDate } = req.query;
 
+    console.log('🔍 [MealCountsByRange] GET 요청 - siteId:', siteId, 'startDate:', startDate, 'endDate:', endDate);
+
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
@@ -171,12 +177,14 @@ export async function getMealCountsByRange(req: Request, res: Response) {
       endDate as string
     );
 
+    console.log('📦 [MealCountsByRange] 조회 결과:', mealCounts.length, '건');
+
     return res.json({
       success: true,
       data: mealCounts,
     });
   } catch (error: any) {
-    console.error('식수 인원 조회 실패:', error);
+    console.error('❌ [MealCountsByRange] 식수 인원 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 인원 조회에 실패했습니다',
