@@ -3,7 +3,7 @@
  * @description 식수 메뉴 관리 API
  */
 
-import apiClient from '@/utils/axios';
+import { apiClient } from '@/utils/axios';
 
 export interface MealMenu {
   id: string;
