@@ -52,7 +52,11 @@
       "WebFetch(domain:github.com)",
       "Bash(ping:*)",
       "Bash(nslookup:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "Bash(\"C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run deploy daham-voc-backend --source ./backend --region asia-northeast3 --allow-unauthenticated)",
+      "Bash(powershell.exe -Command \"gcloud run deploy daham-voc-backend --source ''C:/Users/js/Desktop/dev/daham_voc/backend'' --region asia-northeast3 --allow-unauthenticated\")",
+      "Bash(powershell.exe -Command \"& ''C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd'' run deploy daham-voc-backend --source ''C:/Users/js/Desktop/dev/daham_voc/backend'' --region asia-northeast3 --allow-unauthenticated\")",
+      "Bash(where.exe:*)"
     ],
     "deny": [],
     "ask": []

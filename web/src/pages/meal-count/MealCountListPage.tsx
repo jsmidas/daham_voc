@@ -11,6 +11,7 @@ import { EditOutlined, DeleteOutlined, PlusOutlined, DownloadOutlined } from '@a
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getMealCountsByRange, getAllMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
+import { useAuthStore } from '@/store/authStore';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
@@ -29,6 +30,8 @@ const MEAL_TYPES = [
 
 export default function MealCountListPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
   const [isAllSites, setIsAllSites] = useState(false); // 전체 사업장 조회 여부
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
@@ -547,8 +550,8 @@ export default function MealCountListPage() {
                       size="small"
                       icon={<EditOutlined />}
                       onClick={() => handleEdit(mealData)}
-                      disabled={isPast || (isToday && mealData.isConfirmed)}
-                      title={isPast ? '과거 데이터는 수정할 수 없습니다' : (isToday && mealData.isConfirmed) ? '확정된 데이터는 수정할 수 없습니다' : '수정'}
+                      disabled={!isSuperAdmin && (isPast || (isToday && mealData.isConfirmed))}
+                      title={isPast && !isSuperAdmin ? '과거 데이터는 수정할 수 없습니다' : (isToday && mealData.isConfirmed && !isSuperAdmin) ? '확정된 데이터는 수정할 수 없습니다' : '수정'}
                       style={{ padding: 0, height: 'auto', fontSize: 12 }}
                     />
                     <Button
@@ -557,8 +560,8 @@ export default function MealCountListPage() {
                       size="small"
                       icon={<DeleteOutlined />}
                       onClick={() => handleDelete(mealData.id)}
-                      disabled={isPast || (isToday && mealData.isConfirmed)}
-                      title={isPast ? '과거 데이터는 삭제할 수 없습니다' : (isToday && mealData.isConfirmed) ? '확정된 데이터는 삭제할 수 없습니다' : '삭제'}
+                      disabled={!isSuperAdmin && (isPast || (isToday && mealData.isConfirmed))}
+                      title={isPast && !isSuperAdmin ? '과거 데이터는 삭제할 수 없습니다' : (isToday && mealData.isConfirmed && !isSuperAdmin) ? '확정된 데이터는 삭제할 수 없습니다' : '삭제'}
                       style={{ padding: 0, height: 'auto', fontSize: 12 }}
                     />
                   </Space>
@@ -889,6 +892,10 @@ export default function MealCountListPage() {
                   format="YYYY-MM-DD"
                   style={{ width: '100%' }}
                   disabledDate={(current) => {
+                    // 슈퍼 어드민은 모든 날짜 선택 가능
+                    if (isSuperAdmin) {
+                      return false;
+                    }
                     // 과거 날짜 비활성화
                     if (current && current.isBefore(dayjs(), 'day')) {
                       return true;
