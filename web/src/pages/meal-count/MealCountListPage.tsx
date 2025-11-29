@@ -154,7 +154,8 @@ export default function MealCountListPage() {
       setModalVisible(false);
       setEditingRecord(null);
       form.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['meal-counts', selectedSiteId, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')] });
+      queryClient.invalidateQueries({ queryKey: ['meal-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-meal-counts'] });
     },
     onError: (error: any) => {
       message.error(error.message || '수정에 실패했습니다');
@@ -166,7 +167,8 @@ export default function MealCountListPage() {
     mutationFn: deleteMealCount,
     onSuccess: () => {
       message.success('삭제되었습니다');
-      queryClient.invalidateQueries({ queryKey: ['meal-counts', selectedSiteId, dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')] });
+      queryClient.invalidateQueries({ queryKey: ['meal-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-meal-counts'] });
     },
     onError: (error: any) => {
       message.error(error.message || '삭제에 실패했습니다');
@@ -614,24 +616,62 @@ export default function MealCountListPage() {
     ...MEAL_TYPES.map((mealType) => ({
       title: mealType.label,
       key: mealType.value,
-      width: 120,
+      width: 180,
       render: (_: any, record: any) => {
-        const mealData = record.mealData[mealType.value];
-        if (!mealData || mealData.length === 0) {
+        const mealDataArray = record.mealData[mealType.value];
+        if (!mealDataArray || mealDataArray.length === 0) {
           return <div style={{ color: '#ccc', textAlign: 'center' }}>-</div>;
         }
 
-        const total = mealData.reduce((sum: number, item: MealCount) => sum + item.count, 0);
+        // 메뉴 번호 순으로 정렬
+        const sortedData = [...mealDataArray].sort((a: MealCount, b: MealCount) => a.menuNumber - b.menuNumber);
+
         return (
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontWeight: 600, color: '#1890ff', fontSize: 16 }}>
-              {total}명
-            </div>
-            {mealData.length > 1 && (
-              <div style={{ fontSize: 11, color: '#999' }}>
-                ({mealData.length}개 메뉴)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {sortedData.map((mealData: MealCount) => (
+              <div
+                key={mealData.id}
+                style={{
+                  padding: 6,
+                  backgroundColor: '#f9f9f9',
+                  borderRadius: 4,
+                  borderLeft: '3px solid #1890ff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  {mealData.mealMenu?.name && (
+                    <div style={{ fontSize: 10, color: '#666', fontWeight: 600 }}>
+                      {mealData.mealMenu.name}
+                    </div>
+                  )}
+                  <div style={{ fontWeight: 600, color: '#1890ff' }}>
+                    {mealData.count}명
+                  </div>
+                </div>
+                {isSuperAdmin && (
+                  <Space size={2}>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<EditOutlined />}
+                      onClick={() => handleEdit(mealData)}
+                      style={{ padding: 0, height: 'auto', fontSize: 11 }}
+                    />
+                    <Button
+                      type="link"
+                      danger
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      onClick={() => handleDelete(mealData.id)}
+                      style={{ padding: 0, height: 'auto', fontSize: 11 }}
+                    />
+                  </Space>
+                )}
               </div>
-            )}
+            ))}
           </div>
         );
       },
