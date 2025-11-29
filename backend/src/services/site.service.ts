@@ -50,6 +50,7 @@ export interface UpdateSiteDto {
   contactPerson2?: string;
   contactPhone2?: string;
   menuTypeIds?: string[];
+  mealMenuIds?: string[];
   pricePerMeal?: number;
   deliveryRoute?: string;
   contractStartDate?: Date;
@@ -424,6 +425,25 @@ export class SiteService {
         },
       },
     });
+
+    // 식수 메뉴 할당 처리
+    if (data.mealMenuIds !== undefined) {
+      // 기존 할당 삭제
+      await prisma.siteMealMenu.deleteMany({
+        where: { siteId: id },
+      });
+
+      // 새 메뉴 할당
+      if (data.mealMenuIds.length > 0) {
+        await prisma.siteMealMenu.createMany({
+          data: data.mealMenuIds.map((mealMenuId, index) => ({
+            siteId: id,
+            mealMenuId,
+            sortOrder: index,
+          })),
+        });
+      }
+    }
 
     await this.invalidateCache();
     return site;
