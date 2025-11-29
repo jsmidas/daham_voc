@@ -233,6 +233,12 @@ export async function getAllMealCountsByRange(startDate: string, endDate: string
           name: true,
         },
       },
+      mealMenu: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
     },
     orderBy: [
       { site: { name: 'asc' } },

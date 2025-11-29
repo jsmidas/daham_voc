@@ -256,8 +256,17 @@ export default function MealCountListPage() {
     return MEAL_TYPES.find((m) => m.value === type)?.label || type;
   };
 
-  // 메뉴명 가져오기
-  const getMenuName = (mealType: MealType, menuNumber: number) => {
+  // 메뉴명 가져오기 (mealMenu가 있으면 우선 사용, 없으면 기존 setting 방식 사용)
+  const getMenuName = (mealData: MealCount) => {
+    // 새 방식: mealMenuId가 있으면 mealMenu 이름 사용
+    if (mealData.mealMenu?.name) {
+      return mealData.mealMenu.name;
+    }
+
+    // 기존 방식: menuNumber와 setting 사용
+    const mealType = mealData.mealType;
+    const menuNumber = mealData.menuNumber;
+
     if (!settingData?.data) {
       return menuNumber > 1 ? `메뉴${menuNumber}` : undefined;
     }
@@ -416,7 +425,7 @@ export default function MealCountListPage() {
       const excelData = mealCounts.data.map((record: MealCount) => ({
         '날짜': dayjs(record.date).format('YYYY-MM-DD'),
         '식사 유형': getMealTypeLabel(record.mealType),
-        '메뉴명': getMenuName(record.mealType, record.menuNumber) || '-',
+        '메뉴명': getMenuName(record) || '-',
         '인원': record.count,
         '등록자': record.submitter?.name || '-',
         '등록시간': dayjs(record.submittedAt).format('YYYY-MM-DD HH:mm'),
@@ -505,7 +514,7 @@ export default function MealCountListPage() {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sortedData.map((mealData) => {
-              const menuName = getMenuName(mealType.value as MealType, mealData.menuNumber);
+              const menuName = getMenuName(mealData);
 
               return (
                 <div

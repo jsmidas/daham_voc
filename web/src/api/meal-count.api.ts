@@ -59,6 +59,7 @@ export interface MealCount {
   date: string;
   mealType: MealType;
   menuNumber: number;
+  mealMenuId?: string;
   count: number;
   submittedBy: string;
   submittedAt: string;
@@ -72,6 +73,10 @@ export interface MealCount {
     id: string;
     name: string;
     phone: string;
+  };
+  mealMenu?: {
+    id: string;
+    name: string;
   };
 }
 
