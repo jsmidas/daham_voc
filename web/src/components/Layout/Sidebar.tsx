@@ -74,6 +74,11 @@ export default function Sidebar() {
       label: <span>식수 조회/수정</span>,
     },
     {
+      key: '/meal-menus',
+      icon: <AppstoreOutlined />,
+      label: <span>식수 메뉴 관리</span>,
+    },
+    {
       key: '/meal-count-settings',
       icon: <ClockCircleOutlined />,
       label: <span>식수 마감시간</span>,
@@ -120,6 +125,7 @@ export default function Sidebar() {
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
     if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';
     if (path.startsWith('/meal-counts')) return '/meal-counts';
+    if (path.startsWith('/meal-menus')) return '/meal-menus';
     if (path.startsWith('/meal-photos')) return '/meal-photos';
     return path;
   };

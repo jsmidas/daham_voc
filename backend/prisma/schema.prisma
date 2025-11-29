@@ -140,6 +140,7 @@ model Site {
   menus              Menu[]
   group              SiteGroup?          @relation(fields: [groupId], references: [id])
   siteMenuTypes      SiteMenuType[]
+  siteMealMenus      SiteMealMenu[]
   staffSites         StaffSite[]
   deliveryLogs       DeliveryLog[]
   routeStops         DeliveryRouteStop[]
@@ -372,24 +373,59 @@ model MealCountSetting {
 }
 
 model MealCount {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   siteId      String
-  date        DateTime @db.Date
+  date        DateTime  @db.Date
   mealType    MealType
-  menuNumber  Int      @default(1)
+  menuNumber  Int       @default(1)
+  mealMenuId  String?   // 선택한 메뉴 (MealMenu 참조)
   count       Int
   submittedBy String
-  submittedAt DateTime @default(now())
-  isLate      Boolean  @default(false)
+  submittedAt DateTime  @default(now())
+  isLate      Boolean   @default(false)
   note        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  site        Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  submitter   User     @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  submitter   User      @relation(fields: [submittedBy], references: [id], onDelete: Cascade)
+  mealMenu    MealMenu? @relation(fields: [mealMenuId], references: [id])
 
   @@unique([siteId, date, mealType, menuNumber])
   @@index([siteId, date])
   @@index([date])
+  @@index([mealMenuId])
+}
+
+// 식수 메뉴 마스터 (제공 가능한 메뉴 목록)
+model MealMenu {
+  id          String         @id @default(uuid())
+  name        String         @unique  // 메뉴명 (예: A코스, B코스, 일반식, 다이어트식)
+  description String?                 // 메뉴 설명
+  sortOrder   Int            @default(0)
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  deletedAt   DateTime?
+  siteMealMenus SiteMealMenu[]
+  mealCounts    MealCount[]
+
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+// 고객사별 선택 가능 메뉴 연결 테이블
+model SiteMealMenu {
+  id         String   @id @default(uuid())
+  siteId     String
+  mealMenuId String
+  sortOrder  Int      @default(0)  // 해당 사업장에서의 메뉴 표시 순서
+  createdAt  DateTime @default(now())
+  site       Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  mealMenu   MealMenu @relation(fields: [mealMenuId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, mealMenuId])
+  @@index([siteId])
+  @@index([mealMenuId])
 }
 
 model DeliveryRoute {

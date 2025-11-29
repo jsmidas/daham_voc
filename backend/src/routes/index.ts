@@ -11,6 +11,7 @@ import staffRoutes from './staff.routes';
 import attendanceRoutes from './attendance.routes';
 import dashboardRoutes from './dashboard.routes';
 import mealCountRoutes from './meal-count.routes';
+import mealMenuRoutes from './meal-menu.routes';
 import deliveryRouteRoutes from './delivery-route.routes';
 import deliveryLogRoutes from './delivery-log.routes';
 
@@ -35,6 +36,7 @@ router.get('/', (_req, res) => {
       staff: '/staff',
       attendances: '/attendances',
       mealCounts: '/meal-counts',
+      mealMenus: '/meal-menus',
       deliveryRoutes: '/delivery-routes',
       deliveryLogs: '/delivery-logs',
     },
@@ -54,6 +56,7 @@ router.use('/feedbacks', feedbackRoutes);
 router.use('/staff', staffRoutes);
 router.use('/attendances', attendanceRoutes);
 router.use('/meal-counts', mealCountRoutes);
+router.use('/meal-menus', mealMenuRoutes);
 router.use('/delivery-routes', deliveryRouteRoutes);
 router.use('/delivery-logs', deliveryLogRoutes);
 

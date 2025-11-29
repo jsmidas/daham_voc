@@ -12,6 +12,7 @@ export interface CreateMealCountDTO {
   date: string; // YYYY-MM-DD
   mealType: MealType;
   menuNumber?: number;
+  mealMenuId?: string;
   count: number;
   submittedBy: string;
   note?: string;
@@ -63,6 +64,7 @@ export async function createMealCount(data: CreateMealCountDTO) {
       date: new Date(data.date),
       mealType: data.mealType,
       menuNumber: data.menuNumber || 1,
+      mealMenuId: data.mealMenuId,
       count: data.count,
       submittedBy: data.submittedBy,
       note: data.note,
@@ -186,6 +188,12 @@ export async function getMealCountsByRange(
     },
     include: {
       submitter: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      mealMenu: {
         select: {
           id: true,
           name: true,

@@ -12,7 +12,7 @@ import * as mealCountService from '../services/meal-count.service';
  */
 export async function createMealCount(req: Request, res: Response) {
   try {
-    const { siteId, date, mealType, menuNumber, count, note } = req.body;
+    const { siteId, date, mealType, menuNumber, mealMenuId, count, note } = req.body;
     const submittedBy = req.user!.userId;
 
     if (!siteId || !date || !mealType || count === undefined) {
@@ -27,6 +27,7 @@ export async function createMealCount(req: Request, res: Response) {
       date,
       mealType,
       menuNumber: menuNumber ? Number(menuNumber) : 1,
+      mealMenuId,
       count: Number(count),
       submittedBy,
       note,

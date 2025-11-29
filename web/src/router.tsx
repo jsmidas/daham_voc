@@ -28,6 +28,7 @@ import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
 import StatsPage from '@/pages/stats/StatsPage';
 import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
 import MealCountListPage from '@/pages/meal-count/MealCountListPage';
+import MealMenuPage from '@/pages/meal-menu/MealMenuPage';
 import DeliveryRouteListPage from '@/pages/delivery-route/DeliveryRouteListPage';
 import DeliveryRouteDetailPage from '@/pages/delivery-route/DeliveryRouteDetailPage';
 import DeliveryLogPage from '@/pages/delivery-log/DeliveryLogPage';
@@ -137,6 +138,10 @@ export const router = createBrowserRouter([
       {
         path: 'meal-counts',
         element: <MealCountListPage />,
+      },
+      {
+        path: 'meal-menus',
+        element: <MealMenuPage />,
       },
       {
         path: 'delivery-routes',

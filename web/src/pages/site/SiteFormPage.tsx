@@ -11,6 +11,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { createSite, updateSite, getSiteById } from '@/api/site.api';
 import { getMenuTypes } from '@/api/menu-type.api';
 import { getSiteGroups } from '@/api/site-group.api';
+import { getMealMenus, getSiteMealMenus, assignMealMenusToSite } from '@/api/meal-menu.api';
 import { useEffect } from 'react';
 import { DivisionLabels } from '@/types';
 
@@ -46,6 +47,19 @@ export default function SiteFormPage() {
     queryFn: () => getSiteGroups(),
   });
 
+  // 식수 메뉴 목록 조회
+  const { data: mealMenusData, isLoading: isLoadingMealMenus } = useQuery({
+    queryKey: ['meal-menus'],
+    queryFn: () => getMealMenus(),
+  });
+
+  // 사업장에 할당된 식수 메뉴 조회 (수정 모드)
+  const { data: siteMealMenusData } = useQuery({
+    queryKey: ['site-meal-menus', id],
+    queryFn: () => getSiteMealMenus(id!),
+    enabled: isEditMode && !!id,
+  });
+
   // 폼에 기존 데이터 설정 (수정 모드) 또는 초기값 설정 (생성 모드)
   useEffect(() => {
     if (isEditMode && siteData?.data) {
@@ -56,6 +70,8 @@ export default function SiteFormPage() {
         contractEndDate: siteData.data.contractEndDate ? dayjs(siteData.data.contractEndDate) : undefined,
         // siteMenuTypes를 menuTypeIds 배열로 변환
         menuTypeIds: siteData.data.siteMenuTypes?.map((smt: any) => smt.menuTypeId) || [],
+        // siteMealMenus를 mealMenuIds 배열로 변환
+        mealMenuIds: siteMealMenusData?.data?.map((m: any) => m.id) || [],
       };
       form.setFieldsValue(formData);
     } else if (!isEditMode && stateData) {
@@ -66,7 +82,7 @@ export default function SiteFormPage() {
         type: stateData.type,
       });
     }
-  }, [isEditMode, siteData, stateData, form]);
+  }, [isEditMode, siteData, stateData, form, siteMealMenusData]);
 
   const createMutation = useMutation({
     mutationFn: createSite,
@@ -117,24 +133,27 @@ export default function SiteFormPage() {
     },
   });
 
-  const onFinish = (values: any) => {
+  const onFinish = async (values: any) => {
     console.log('=== onFinish 호출 ===');
     console.log('Form values:', values);
 
+    // mealMenuIds는 별도로 처리
+    const { mealMenuIds, ...restValues } = values;
+
     // 좌표를 숫자로 변환하고 날짜를 ISO 문자열로 변환
     const payload = {
-      ...values,
-      groupId: values.groupId || undefined, // 빈 문자열을 undefined로 변환
-      latitude: parseFloat(values.latitude),
-      longitude: parseFloat(values.longitude),
-      contactPerson1: values.contactPerson1 || undefined,
-      contactPhone1: values.contactPhone1 || undefined,
-      contactPerson2: values.contactPerson2 || undefined,
-      contactPhone2: values.contactPhone2 || undefined,
-      deliveryRoute: values.deliveryRoute || undefined,
-      pricePerMeal: values.pricePerMeal ? parseFloat(values.pricePerMeal) : undefined,
-      contractStartDate: values.contractStartDate ? values.contractStartDate.toISOString() : undefined,
-      contractEndDate: values.contractEndDate ? values.contractEndDate.toISOString() : undefined,
+      ...restValues,
+      groupId: restValues.groupId || undefined, // 빈 문자열을 undefined로 변환
+      latitude: parseFloat(restValues.latitude),
+      longitude: parseFloat(restValues.longitude),
+      contactPerson1: restValues.contactPerson1 || undefined,
+      contactPhone1: restValues.contactPhone1 || undefined,
+      contactPerson2: restValues.contactPerson2 || undefined,
+      contactPhone2: restValues.contactPhone2 || undefined,
+      deliveryRoute: restValues.deliveryRoute || undefined,
+      pricePerMeal: restValues.pricePerMeal ? parseFloat(restValues.pricePerMeal) : undefined,
+      contractStartDate: restValues.contractStartDate ? restValues.contractStartDate.toISOString() : undefined,
+      contractEndDate: restValues.contractEndDate ? restValues.contractEndDate.toISOString() : undefined,
     };
 
     console.log('Payload to send:', payload);
@@ -149,7 +168,17 @@ export default function SiteFormPage() {
 
     if (isEditMode) {
       updateMutation.mutate({ id, data: payload });
+      // 식수 메뉴 할당 (사업장 수정 시)
+      if (mealMenuIds && id) {
+        try {
+          await assignMealMenusToSite(id, mealMenuIds);
+        } catch (error) {
+          console.error('식수 메뉴 할당 실패:', error);
+        }
+      }
     } else {
+      // 신규 등록 시에는 사업장이 생성된 후 mealMenuIds 할당 필요
+      // createMutation onSuccess에서 처리
       createMutation.mutate(payload);
     }
   };
@@ -415,22 +444,43 @@ export default function SiteFormPage() {
             </Col>
           </Row>
 
-          {/* 식단유형 */}
-          <Form.Item
-            label="식단유형"
-            name="menuTypeIds"
-            tooltip="제공하는 식단 유형을 선택하세요 (예: 5찬 저가, 4찬 고가 등)"
-          >
-            <Select
-              mode="multiple"
-              placeholder="식단유형 선택"
-              loading={isLoadingMenuTypes}
-              options={menuTypesData?.menuTypes?.map((menuType) => ({
-                label: menuType.name,
-                value: menuType.id,
-              })) || []}
-            />
-          </Form.Item>
+          {/* 식단유형, 식수메뉴 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="식단유형"
+                name="menuTypeIds"
+                tooltip="식단표에 표시할 식단 유형 (예: 5찬 저가, 4찬 고가 등)"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="식단유형 선택"
+                  loading={isLoadingMenuTypes}
+                  options={menuTypesData?.menuTypes?.map((menuType) => ({
+                    label: menuType.name,
+                    value: menuType.id,
+                  })) || []}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="식수 메뉴"
+                name="mealMenuIds"
+                tooltip="고객이 식수 입력 시 선택할 수 있는 메뉴 (예: A코스, B코스)"
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="식수 메뉴 선택"
+                  loading={isLoadingMealMenus}
+                  options={mealMenusData?.data?.map((menu: any) => ({
+                    label: menu.name,
+                    value: menu.id,
+                  })) || []}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
           {/* 단가, 배송코스 */}
           <Row gutter={16}>
