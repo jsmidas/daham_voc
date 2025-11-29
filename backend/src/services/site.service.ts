@@ -56,6 +56,7 @@ export interface UpdateSiteDto {
   contractStartDate?: Date;
   contractEndDate?: Date;
   staffIds?: string[];
+  isActive?: boolean;
 }
 
 export class SiteService {
@@ -394,6 +395,7 @@ export class SiteService {
         deliveryRoute: data.deliveryRoute,
         contractStartDate: data.contractStartDate,
         contractEndDate: data.contractEndDate,
+        isActive: data.isActive,
         staffSites: data.staffIds
           ? {
               deleteMany: {},

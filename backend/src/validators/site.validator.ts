@@ -126,6 +126,7 @@ export const updateSiteSchema = Joi.object({
   contractStartDate: Joi.date().iso().allow(null).optional(),
   contractEndDate: Joi.date().iso().allow(null).optional(),
   sortOrder: Joi.number().min(0).optional(),
+  isActive: Joi.boolean().optional(),
 });
 
 /**
