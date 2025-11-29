@@ -22,7 +22,7 @@ export async function getMealMenus(includeInactive = false) {
   const response = await apiClient.get('/meal-menus', {
     params: { includeInactive },
   });
-  return response.data;
+  return response;
 }
 
 /**
@@ -30,7 +30,7 @@ export async function getMealMenus(includeInactive = false) {
  */
 export async function getMealMenuById(id: string) {
   const response = await apiClient.get(`/meal-menus/${id}`);
-  return response.data;
+  return response;
 }
 
 /**
@@ -43,7 +43,7 @@ export async function createMealMenu(data: {
   isActive?: boolean;
 }) {
   const response = await apiClient.post('/meal-menus', data);
-  return response.data;
+  return response;
 }
 
 /**
@@ -59,7 +59,7 @@ export async function updateMealMenu(
   }
 ) {
   const response = await apiClient.put(`/meal-menus/${id}`, data);
-  return response.data;
+  return response;
 }
 
 /**
@@ -67,7 +67,7 @@ export async function updateMealMenu(
  */
 export async function deleteMealMenu(id: string) {
   const response = await apiClient.delete(`/meal-menus/${id}`);
-  return response.data;
+  return response;
 }
 
 /**
@@ -75,7 +75,7 @@ export async function deleteMealMenu(id: string) {
  */
 export async function getSiteMealMenus(siteId: string) {
   const response = await apiClient.get(`/meal-menus/site/${siteId}`);
-  return response.data;
+  return response;
 }
 
 /**
@@ -85,5 +85,5 @@ export async function assignMealMenusToSite(siteId: string, mealMenuIds: string[
   const response = await apiClient.post(`/meal-menus/site/${siteId}`, {
     mealMenuIds,
   });
-  return response.data;
+  return response;
 }
