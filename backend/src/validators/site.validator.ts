@@ -116,6 +116,8 @@ export const updateSiteSchema = Joi.object({
     .allow(null, '')
     .optional(),
   staffIds: Joi.array().items(Joi.string().uuid()).optional(),
+  menuTypeIds: Joi.array().items(Joi.string().uuid()).optional(),
+  mealMenuIds: Joi.array().items(Joi.string().uuid()).optional(),
   mealTypes: Joi.array()
     .items(Joi.string().valid('BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'))
     .optional(),
