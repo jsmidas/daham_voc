@@ -129,6 +129,36 @@ JWT_SECRET=your-secret-key
 
 자세한 설정은 `backend/.env.example` 파일을 참고하세요.
 
+## 변경 이력
+
+### 2025.11.29
+
+#### 웹 (Web)
+- **식수 조회 페이지 전체 수정 기능 추가**
+  - 개별 메뉴 수정 대신 전체 수정(Bulk Edit) 방식으로 변경
+  - 날짜/끼니별로 모든 메뉴를 한 번에 수정 가능
+  - 아직 입력되지 않은 메뉴도 추가 가능
+
+- **사업장 등록 시 식수 메뉴 필수 선택**
+  - 사업장 등록/수정 시 식수 메뉴를 1개 이상 반드시 선택하도록 변경
+  - 모바일 앱에서 메뉴가 없어서 입력이 안 되는 상황 방지
+
+#### 모바일 (Mobile)
+- **식수 입력 UI 개선**
+  - 끼니 선택 버튼(조식/중식/석식/야식) 항상 표시
+  - 끼니 선택 시 모달에서 메뉴별 인원수 입력 가능
+  - 복수 메뉴 동시 입력 지원
+
+- **식수 메뉴 API 버그 수정**
+  - axios default export 추가 (meal-menu.api.ts에서 apiClient가 undefined되는 문제 해결)
+  - 메뉴 데이터 파싱 로직 개선 (다양한 API 응답 구조 처리)
+
+#### 빌드 정보
+- 최신 모바일 빌드: `e7b97ab8-e1e5-44e0-ab67-ecdae2b31dd3`
+- 빌드 URL: https://expo.dev/accounts/jsmidas/projects/daham-voc/builds/e7b97ab8-e1e5-44e0-ab67-ecdae2b31dd3
+
+---
+
 ## 라이선스
 
 Private - 다함푸드시스템
