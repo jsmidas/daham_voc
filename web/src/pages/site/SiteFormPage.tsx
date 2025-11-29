@@ -467,11 +467,12 @@ export default function SiteFormPage() {
               <Form.Item
                 label="식수 메뉴"
                 name="mealMenuIds"
-                tooltip="고객이 식수 입력 시 선택할 수 있는 메뉴 (예: A코스, B코스)"
+                rules={[{ required: true, message: '식수 메뉴를 1개 이상 선택하세요' }]}
+                tooltip="고객이 식수 입력 시 선택할 수 있는 메뉴 (예: A코스, B코스) - 필수"
               >
                 <Select
                   mode="multiple"
-                  placeholder="식수 메뉴 선택"
+                  placeholder="식수 메뉴 선택 (필수)"
                   loading={isLoadingMealMenus}
                   options={mealMenusData?.data?.map((menu: any) => ({
                     label: menu.name,
