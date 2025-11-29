@@ -107,12 +107,12 @@ export const updateSiteSchema = Joi.object({
   longitude: Joi.number().min(-180).max(180).optional(),
   contactPerson1: Joi.string().max(50).allow(null, '').optional(),
   contactPhone1: Joi.string()
-    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional(),
   contactPerson2: Joi.string().max(50).allow(null, '').optional(),
   contactPhone2: Joi.string()
-    .pattern(/^0\d{1,2}-\d{3,4}-\d{4}$/)
+    .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional(),
   staffIds: Joi.array().items(Joi.string().uuid()).optional(),
