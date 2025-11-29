@@ -96,6 +96,7 @@ export async function createMealCount(data: {
   date: string;
   mealType: MealType;
   menuNumber?: number;
+  mealMenuId?: string;
   count: number;
   note?: string;
 }) {

@@ -7,10 +7,12 @@ import { useState } from 'react';
 import { Card, Select, DatePicker, Table, Button, Space, Modal, Form, InputNumber, Input, message } from 'antd';
 
 const { RangePicker } = DatePicker;
-import { EditOutlined, DeleteOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
+import { EditOutlined, PlusOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import { getMealCountsByRange, getAllMealCountsByRange, getMealCountSetting, createMealCount, updateMealCount, deleteMealCount } from '@/api/meal-count.api';
+import { getSiteMealMenus, getMealMenus } from '@/api/meal-menu.api';
+import type { MealMenu } from '@/api/meal-menu.api';
 import { useAuthStore } from '@/store/authStore';
 import type { MealCount, MealType } from '@/api/meal-count.api';
 import dayjs, { Dayjs } from 'dayjs';
@@ -42,6 +44,13 @@ export default function MealCountListPage() {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<MealCount | null>(null);
   const [form] = Form.useForm();
+
+  // 전체 수정 모달 관련 상태
+  const [bulkEditModalVisible, setBulkEditModalVisible] = useState(false);
+  const [bulkEditDate, setBulkEditDate] = useState<string>('');
+  const [bulkEditMealType, setBulkEditMealType] = useState<MealType | null>(null);
+  const [bulkEditSiteId, setBulkEditSiteId] = useState<string>('');
+  const [menuInputs, setMenuInputs] = useState<{ [menuId: string]: { count: number | null; existingId?: string } }>({});
 
   // 필터 상태
   const [filterDivision, setFilterDivision] = useState<string>('ALL');
@@ -86,6 +95,27 @@ export default function MealCountListPage() {
     queryFn: () => getMealCountSetting(selectedSiteId!),
     enabled: !!selectedSiteId,
   });
+
+  // 전체 수정 모달용 사업장 메뉴 목록 조회
+  const { data: bulkEditSiteMenusData } = useQuery({
+    queryKey: ['site-meal-menus', bulkEditSiteId],
+    queryFn: () => getSiteMealMenus(bulkEditSiteId),
+    enabled: !!bulkEditSiteId && bulkEditModalVisible,
+  });
+
+  // 전체 메뉴 목록 조회 (사업장 메뉴가 없을 때 폴백)
+  const { data: allMenusData } = useQuery({
+    queryKey: ['all-meal-menus'],
+    queryFn: () => getMealMenus(false),
+    enabled: bulkEditModalVisible,
+  });
+
+  // 사용 가능한 메뉴 목록 계산
+  const bulkEditMenus: MealMenu[] = (() => {
+    const siteMenus = bulkEditSiteMenusData?.data || [];
+    const allMenus = allMenusData?.data || [];
+    return Array.isArray(siteMenus) && siteMenus.length > 0 ? siteMenus : (Array.isArray(allMenus) ? allMenus : []);
+  })();
 
   // 식수 데이터 조회 (단일 사업장)
   const { data: mealCounts, isLoading } = useQuery({
@@ -188,22 +218,66 @@ export default function MealCountListPage() {
     setModalVisible(true);
   };
 
-  const handleEdit = (record: MealCount) => {
-    setEditingRecord(record);
-    form.setFieldsValue({
-      mealType: record.mealType,
-      count: record.count,
-      note: record.note,
+  // 전체 수정 모달 열기 (날짜/식사유형 기준으로 모든 메뉴 수정)
+  const handleBulkEdit = (date: string, mealType: MealType, siteId: string, existingData: MealCount[]) => {
+    setBulkEditDate(date);
+    setBulkEditMealType(mealType);
+    setBulkEditSiteId(siteId);
+
+    // 기존 데이터를 menuInputs에 매핑
+    const inputs: { [menuId: string]: { count: number | null; existingId?: string } } = {};
+    existingData.forEach((item) => {
+      if (item.mealMenuId) {
+        inputs[item.mealMenuId] = { count: item.count, existingId: item.id };
+      }
     });
-    setModalVisible(true);
+    setMenuInputs(inputs);
+    setBulkEditModalVisible(true);
   };
 
-  const handleDelete = (id: string) => {
-    Modal.confirm({
-      title: '삭제하시겠습니까?',
-      content: '삭제된 데이터는 복구할 수 없습니다.',
-      onOk: () => deleteMutation.mutate(id),
-    });
+  // 전체 수정 저장
+  const handleBulkSave = async () => {
+    if (!bulkEditSiteId || !bulkEditMealType || !bulkEditDate) return;
+
+    const promises: Promise<any>[] = [];
+
+    for (const menu of bulkEditMenus) {
+      const input = menuInputs[menu.id];
+      const count = input?.count;
+      const existingId = input?.existingId;
+
+      if (existingId) {
+        // 기존 데이터가 있는 경우
+        if (count === null || count === undefined || count === 0) {
+          // 0명이면 삭제
+          promises.push(deleteMealCount(existingId));
+        } else {
+          // 수정
+          promises.push(updateMealCount(existingId, { count }));
+        }
+      } else if (count !== null && count !== undefined && count > 0) {
+        // 새로운 데이터 추가
+        promises.push(createMealCount({
+          siteId: bulkEditSiteId,
+          date: bulkEditDate,
+          mealType: bulkEditMealType,
+          menuNumber: 1,
+          mealMenuId: menu.id,
+          count,
+        }));
+      }
+    }
+
+    try {
+      await Promise.all(promises);
+      message.success('저장되었습니다');
+      setBulkEditModalVisible(false);
+      setMenuInputs({});
+      queryClient.invalidateQueries({ queryKey: ['meal-counts'] });
+      queryClient.invalidateQueries({ queryKey: ['all-sites-meal-counts'] });
+    } catch (error: any) {
+      message.error(error.message || '저장에 실패했습니다');
+    }
   };
 
   const handleSave = async () => {
@@ -500,76 +574,64 @@ export default function MealCountListPage() {
     ...MEAL_TYPES.map((mealType) => ({
       title: mealType.label,
       key: mealType.value,
-      width: 150,
+      width: 180,
       render: (_: any, record: any) => {
-        const mealDataArray = record.mealData[mealType.value];
+        const mealDataArray = record.mealData[mealType.value] || [];
         const dateObj = dayjs(record.date);
         const today = dayjs();
         const isFuture = dateObj.isAfter(today, 'day');
-        const isToday = dateObj.isSame(today, 'day');
         const isPast = dateObj.isBefore(today, 'day');
 
-        if (!mealDataArray || mealDataArray.length === 0) {
-          return <div style={{ color: '#999' }}>-</div>;
-        }
-
         // 메뉴 번호 순으로 정렬
-        const sortedData = [...mealDataArray].sort((a, b) => a.menuNumber - b.menuNumber);
+        const sortedData = [...mealDataArray].sort((a: MealCount, b: MealCount) => a.menuNumber - b.menuNumber);
+        const total = sortedData.reduce((sum: number, item: MealCount) => sum + item.count, 0);
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {sortedData.map((mealData) => {
-              const menuName = getMenuName(mealData);
-
-              return (
-                <div
-                  key={mealData.id}
-                  style={{
-                    padding: 8,
-                    backgroundColor: isFuture ? '#f6ffed' : '#f9f9f9',
-                    borderRadius: 4,
-                    borderLeft: `3px solid ${isFuture ? '#52c41a' : '#1890ff'}`,
-                  }}
-                >
-                  {menuName && (
-                    <div style={{ fontSize: 11, color: '#666', marginBottom: 2, fontWeight: 600 }}>
-                      {menuName}
+          <div
+            style={{
+              padding: 8,
+              backgroundColor: mealDataArray.length > 0 ? (isFuture ? '#f6ffed' : '#f9f9f9') : '#fff',
+              borderRadius: 4,
+              borderLeft: mealDataArray.length > 0 ? `3px solid ${isFuture ? '#52c41a' : '#1890ff'}` : '3px solid #d9d9d9',
+              minHeight: 60,
+            }}
+          >
+            {sortedData.length > 0 ? (
+              <>
+                {sortedData.map((mealData: MealCount) => {
+                  const menuName = getMenuName(mealData);
+                  return (
+                    <div key={mealData.id} style={{ marginBottom: 4 }}>
+                      <span style={{ fontSize: 11, color: '#666', fontWeight: 600 }}>
+                        {menuName || '기본'}:
+                      </span>
+                      <span style={{ fontWeight: 600, color: isFuture ? '#52c41a' : '#1890ff', marginLeft: 4 }}>
+                        {mealData.count}명
+                      </span>
                     </div>
-                  )}
-                  <div style={{
-                    fontWeight: 600,
-                    color: isFuture ? '#52c41a' : '#1890ff',
-                    marginBottom: 4
-                  }}>
-                    {mealData.count}명
+                  );
+                })}
+                {sortedData.length > 1 && (
+                  <div style={{ fontSize: 12, fontWeight: 'bold', color: '#333', borderTop: '1px solid #eee', paddingTop: 4, marginTop: 4 }}>
+                    합계: {total}명
                   </div>
-                  <div style={{ fontSize: 11, color: '#666' }}>
-                    {mealData.submitter?.name || '-'}
-                  </div>
-                  <Space size={4} style={{ marginTop: 4 }}>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEdit(mealData)}
-                      disabled={!isSuperAdmin && (isPast || (isToday && mealData.isConfirmed))}
-                      title={isPast && !isSuperAdmin ? '과거 데이터는 수정할 수 없습니다' : (isToday && mealData.isConfirmed && !isSuperAdmin) ? '확정된 데이터는 수정할 수 없습니다' : '수정'}
-                      style={{ padding: 0, height: 'auto', fontSize: 12 }}
-                    />
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDelete(mealData.id)}
-                      disabled={!isSuperAdmin && (isPast || (isToday && mealData.isConfirmed))}
-                      title={isPast && !isSuperAdmin ? '과거 데이터는 삭제할 수 없습니다' : (isToday && mealData.isConfirmed && !isSuperAdmin) ? '확정된 데이터는 삭제할 수 없습니다' : '삭제'}
-                      style={{ padding: 0, height: 'auto', fontSize: 12 }}
-                    />
-                  </Space>
-                </div>
-              );
-            })}
+                )}
+              </>
+            ) : (
+              <div style={{ color: '#bbb', fontSize: 12, textAlign: 'center' }}>미등록</div>
+            )}
+            {/* 전체 수정 버튼 (슈퍼어드민이거나 과거가 아닌 경우) */}
+            {(isSuperAdmin || !isPast) && selectedSiteId && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleBulkEdit(record.date, mealType.value as MealType, selectedSiteId, mealDataArray)}
+                style={{ padding: 0, height: 'auto', fontSize: 11, marginTop: 4 }}
+              >
+                {mealDataArray.length > 0 ? '전체수정' : '등록'}
+              </Button>
+            )}
           </div>
         );
       },
@@ -618,60 +680,55 @@ export default function MealCountListPage() {
       key: mealType.value,
       width: 180,
       render: (_: any, record: any) => {
-        const mealDataArray = record.mealData[mealType.value];
-        if (!mealDataArray || mealDataArray.length === 0) {
-          return <div style={{ color: '#ccc', textAlign: 'center' }}>-</div>;
-        }
+        const mealDataArray = record.mealData[mealType.value] || [];
 
         // 메뉴 번호 순으로 정렬
         const sortedData = [...mealDataArray].sort((a: MealCount, b: MealCount) => a.menuNumber - b.menuNumber);
+        const total = sortedData.reduce((sum: number, item: MealCount) => sum + item.count, 0);
 
         return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {sortedData.map((mealData: MealCount) => (
-              <div
-                key={mealData.id}
-                style={{
-                  padding: 6,
-                  backgroundColor: '#f9f9f9',
-                  borderRadius: 4,
-                  borderLeft: '3px solid #1890ff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}
-              >
-                <div>
-                  {mealData.mealMenu?.name && (
-                    <div style={{ fontSize: 10, color: '#666', fontWeight: 600 }}>
-                      {mealData.mealMenu.name}
-                    </div>
-                  )}
-                  <div style={{ fontWeight: 600, color: '#1890ff' }}>
-                    {mealData.count}명
+          <div
+            style={{
+              padding: 6,
+              backgroundColor: mealDataArray.length > 0 ? '#f9f9f9' : '#fff',
+              borderRadius: 4,
+              borderLeft: mealDataArray.length > 0 ? '3px solid #1890ff' : '3px solid #d9d9d9',
+              minHeight: 50,
+            }}
+          >
+            {sortedData.length > 0 ? (
+              <>
+                {sortedData.map((mealData: MealCount) => (
+                  <div key={mealData.id} style={{ marginBottom: 2 }}>
+                    <span style={{ fontSize: 10, color: '#666', fontWeight: 600 }}>
+                      {mealData.mealMenu?.name || '기본'}:
+                    </span>
+                    <span style={{ fontWeight: 600, color: '#1890ff', marginLeft: 4 }}>
+                      {mealData.count}명
+                    </span>
                   </div>
-                </div>
-                {isSuperAdmin && (
-                  <Space size={2}>
-                    <Button
-                      type="link"
-                      size="small"
-                      icon={<EditOutlined />}
-                      onClick={() => handleEdit(mealData)}
-                      style={{ padding: 0, height: 'auto', fontSize: 11 }}
-                    />
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                      icon={<DeleteOutlined />}
-                      onClick={() => handleDelete(mealData.id)}
-                      style={{ padding: 0, height: 'auto', fontSize: 11 }}
-                    />
-                  </Space>
+                ))}
+                {sortedData.length > 1 && (
+                  <div style={{ fontSize: 11, fontWeight: 'bold', color: '#333', borderTop: '1px solid #eee', paddingTop: 2, marginTop: 2 }}>
+                    합계: {total}명
+                  </div>
                 )}
-              </div>
-            ))}
+              </>
+            ) : (
+              <div style={{ color: '#bbb', fontSize: 11, textAlign: 'center' }}>미등록</div>
+            )}
+            {/* 슈퍼어드민 전체 수정 버튼 */}
+            {isSuperAdmin && record.siteId && (
+              <Button
+                type="link"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => handleBulkEdit(selectedDate.format('YYYY-MM-DD'), mealType.value as MealType, record.siteId, mealDataArray)}
+                style={{ padding: 0, height: 'auto', fontSize: 10, marginTop: 4 }}
+              >
+                {mealDataArray.length > 0 ? '수정' : '등록'}
+              </Button>
+            )}
           </div>
         );
       },
@@ -979,6 +1036,71 @@ export default function MealCountListPage() {
             <Input.TextArea rows={3} placeholder="특이사항을 입력하세요 (선택)" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 전체 수정 모달 */}
+      <Modal
+        title={`${getMealTypeLabel(bulkEditMealType!)} 전체 수정 - ${dayjs(bulkEditDate).format('YYYY-MM-DD')}`}
+        open={bulkEditModalVisible}
+        onOk={handleBulkSave}
+        onCancel={() => {
+          setBulkEditModalVisible(false);
+          setMenuInputs({});
+        }}
+        okText="저장"
+        cancelText="취소"
+        width={500}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ color: '#666', fontSize: 13 }}>
+            각 메뉴별 수량을 입력하세요. 0명 또는 빈칸은 해당 메뉴가 삭제됩니다.
+          </p>
+        </div>
+        {bulkEditMenus.length > 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {bulkEditMenus.map((menu) => (
+              <div
+                key={menu.id}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: 12,
+                  backgroundColor: menuInputs[menu.id]?.count ? '#f6ffed' : '#fafafa',
+                  borderRadius: 8,
+                  border: menuInputs[menu.id]?.existingId ? '1px solid #52c41a' : '1px solid #d9d9d9',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{menu.name}</div>
+                  {menu.description && (
+                    <div style={{ fontSize: 12, color: '#888' }}>{menu.description}</div>
+                  )}
+                  {menuInputs[menu.id]?.existingId && (
+                    <div style={{ fontSize: 11, color: '#52c41a' }}>기존 등록됨</div>
+                  )}
+                </div>
+                <InputNumber
+                  style={{ width: 100 }}
+                  min={0}
+                  placeholder="인원"
+                  addonAfter="명"
+                  value={menuInputs[menu.id]?.count}
+                  onChange={(value) => {
+                    setMenuInputs((prev) => ({
+                      ...prev,
+                      [menu.id]: { ...prev[menu.id], count: value },
+                    }));
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>
+            등록된 메뉴가 없습니다. 사업장에 메뉴를 먼저 할당해주세요.
+          </div>
+        )}
       </Modal>
     </div>
   );
