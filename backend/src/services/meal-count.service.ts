@@ -24,7 +24,7 @@ export interface UpdateMealCountDTO {
 }
 
 /**
- * 식수 인원 등록
+ * 식수 인원 등록 (upsert 방식 - 이미 존재하면 업데이트)
  */
 export async function createMealCount(data: CreateMealCountDTO) {
   // 마감 시간 체크
@@ -58,12 +58,31 @@ export async function createMealCount(data: CreateMealCountDTO) {
     }
   }
 
-  return await prisma.mealCount.create({
-    data: {
+  const dateObj = new Date(data.date);
+  const menuNumber = data.menuNumber || 1;
+
+  // upsert를 사용하여 이미 존재하면 업데이트, 없으면 생성
+  return await prisma.mealCount.upsert({
+    where: {
+      siteId_date_mealType_menuNumber: {
+        siteId: data.siteId,
+        date: dateObj,
+        mealType: data.mealType,
+        menuNumber: menuNumber,
+      },
+    },
+    create: {
       siteId: data.siteId,
-      date: new Date(data.date),
+      date: dateObj,
       mealType: data.mealType,
-      menuNumber: data.menuNumber || 1,
+      menuNumber: menuNumber,
+      mealMenuId: data.mealMenuId,
+      count: data.count,
+      submittedBy: data.submittedBy,
+      note: data.note,
+      isLate,
+    },
+    update: {
       mealMenuId: data.mealMenuId,
       count: data.count,
       submittedBy: data.submittedBy,
