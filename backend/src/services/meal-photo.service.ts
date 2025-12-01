@@ -48,7 +48,7 @@ export interface MealPhotoFilter {
 }
 
 /**
- * 식사 사진 생성 (GPS 검증 포함)
+ * 식사 사진 생성 (GPS 검증은 선택적 - 저장은 항상 허용)
  */
 export async function createMealPhoto(
   dto: CreateMealPhotoDto,
@@ -63,7 +63,7 @@ export async function createMealPhoto(
     throw new Error('Site not found');
   }
 
-  // GPS 검증 (위도/경도가 제공된 경우)
+  // GPS 검증 (위도/경도가 제공된 경우) - 로깅만 하고 저장은 항상 허용
   if (dto.latitude !== undefined && dto.longitude !== undefined) {
     const userCoord: Coordinates = {
       lat: dto.latitude,
@@ -81,7 +81,8 @@ export async function createMealPhoto(
 
     if (!isWithinRange) {
       const info = getGeofencingInfo(userCoord, siteCoord, allowedRadius);
-      throw new Error(info.message);
+      console.log(`[GPS 경고] ${site.name}: ${info.message}`);
+      // 에러를 던지지 않고 저장은 허용 (관리 목적으로 로깅만)
     }
   }
 
@@ -118,7 +119,7 @@ export async function createMealPhoto(
 }
 
 /**
- * 식사 사진 일괄 업로드 (GPS 검증 포함)
+ * 식사 사진 일괄 업로드 (GPS 검증은 선택적 - 저장은 항상 허용)
  */
 export async function bulkCreateMealPhotos(
   dto: BulkCreateMealPhotoDto,
@@ -133,7 +134,7 @@ export async function bulkCreateMealPhotos(
     throw new Error('Site not found');
   }
 
-  // GPS 검증 (위도/경도가 제공된 경우)
+  // GPS 검증 (위도/경도가 제공된 경우) - 로깅만 하고 저장은 항상 허용
   if (dto.latitude !== undefined && dto.longitude !== undefined) {
     const userCoord: Coordinates = {
       lat: dto.latitude,
@@ -151,7 +152,8 @@ export async function bulkCreateMealPhotos(
 
     if (!isWithinRange) {
       const info = getGeofencingInfo(userCoord, siteCoord, allowedRadius);
-      throw new Error(info.message);
+      console.log(`[GPS 경고 - 일괄업로드] ${site.name}: ${info.message}`);
+      // 에러를 던지지 않고 저장은 허용 (관리 목적으로 로깅만)
     }
   }
 
