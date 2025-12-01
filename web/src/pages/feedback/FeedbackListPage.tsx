@@ -139,6 +139,21 @@ export default function FeedbackListPage() {
       },
     },
     {
+      title: '부문',
+      key: 'division',
+      width: 80,
+      render: (_: any, record: any) => (
+        <Tag color={record.site?.division === 'HQ' ? 'blue' : 'green'}>
+          {record.site?.division === 'HQ' ? '본사' : '영남'}
+        </Tag>
+      ),
+      filters: [
+        { text: '본사', value: 'HQ' },
+        { text: '영남지사', value: 'YEONGNAM' },
+      ],
+      onFilter: (value: any, record: any) => record.site?.division === value,
+    },
+    {
       title: '사업장',
       dataIndex: ['site', 'name'],
       key: 'site',
@@ -263,7 +278,7 @@ export default function FeedbackListPage() {
               }
               options={sites?.data?.sites?.map((site: any) => ({
                 value: site.id,
-                label: `${site.name} (${site.type === 'CLIENT' ? '고객사' : '당사'})`,
+                label: `[${site.division === 'HQ' ? '본사' : '영남'}] ${site.name}`,
               })) || []}
             />
           </Form.Item>

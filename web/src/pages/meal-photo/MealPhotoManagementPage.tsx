@@ -538,6 +538,16 @@ export default function MealPhotoManagementPage() {
       render: (date: string) => new Date(date).toLocaleDateString('ko-KR'),
     },
     {
+      title: '부문',
+      key: 'division',
+      width: 80,
+      render: (_: any, record: any) => (
+        <Tag color={record.site?.division === 'HQ' ? 'blue' : 'green'}>
+          {record.site?.division === 'HQ' ? '본사' : '영남'}
+        </Tag>
+      ),
+    },
+    {
       title: '사업장',
       dataIndex: ['site', 'name'],
       key: 'site',
@@ -776,7 +786,7 @@ export default function MealPhotoManagementPage() {
               }
               options={filteredSites.map((site: any) => ({
                 value: site.id,
-                label: `${site.name} (${site.type})`,
+                label: `[${site.division === 'HQ' ? '본사' : '영남'}] ${site.name}`,
               }))}
             />
           </div>

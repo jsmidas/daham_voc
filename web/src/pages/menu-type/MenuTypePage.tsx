@@ -102,7 +102,7 @@ export default function MenuTypePage() {
       division: menuType.division,
       name: menuType.name,
       description: menuType.description,
-      price: menuType.price,
+      price: menuType.price ? Number(menuType.price) : undefined,
       sortOrder: menuType.sortOrder,
     });
   };
@@ -349,13 +349,16 @@ export default function MenuTypePage() {
               { type: 'number', min: 0, message: '식단가는 0 이상이어야 합니다' },
             ]}
           >
-            <InputNumber
+            <InputNumber<number>
               min={0}
               precision={2}
               style={{ width: '100%' }}
               placeholder="식단가를 입력하세요"
-              formatter={(value) => `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-              parser={(value) => (value!.replace(/₩\s?|(,*)/g, '') ? parseFloat(value!.replace(/₩\s?|(,*)/g, '')) : 0) as 0}
+              formatter={(value) => value ? `₩ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''}
+              parser={(value) => {
+                const parsed = value?.replace(/₩\s?|(,*)/g, '');
+                return parsed ? parseFloat(parsed) : (null as unknown as number);
+              }}
             />
           </Form.Item>
 

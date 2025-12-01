@@ -229,17 +229,36 @@ export default function MealCountSettingPage() {
     }),
   };
 
+  // 부문 표시 함수
+  const getDivisionTag = (division: string) => {
+    if (division === 'HQ') {
+      return <Tag color="blue">본사</Tag>;
+    } else if (division === 'YEONGNAM') {
+      return <Tag color="green">영남</Tag>;
+    }
+    return <Tag>{division}</Tag>;
+  };
+
   const columns = [
+    {
+      title: '부문',
+      dataIndex: 'division',
+      key: 'division',
+      width: 80,
+      render: (division: string) => getDivisionTag(division),
+      filters: [
+        { text: '본사', value: 'HQ' },
+        { text: '영남지사', value: 'YEONGNAM' },
+      ],
+      onFilter: (value: any, record: SiteWithSetting) => record.division === value,
+    },
     {
       title: '사업장',
       dataIndex: 'siteName',
       key: 'siteName',
-      width: 200,
+      width: 180,
       render: (_: any, record: SiteWithSetting) => (
-        <Space direction="vertical" size={0}>
-          <span style={{ fontWeight: 500 }}>{record.siteName}</span>
-          <span style={{ fontSize: 12, color: '#999' }}>{record.division}</span>
-        </Space>
+        <span style={{ fontWeight: 500 }}>{record.siteName}</span>
       ),
     },
     {

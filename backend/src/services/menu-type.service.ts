@@ -3,6 +3,7 @@ import { cache } from '../config/redis';
 
 export interface CreateMenuTypeDto {
   name: string;
+  division?: 'HQ' | 'YEONGNAM';
   description?: string;
   price?: number;
   sortOrder?: number;
@@ -10,6 +11,7 @@ export interface CreateMenuTypeDto {
 
 export interface UpdateMenuTypeDto {
   name?: string;
+  division?: 'HQ' | 'YEONGNAM';
   description?: string;
   price?: number;
   sortOrder?: number;
@@ -113,6 +115,7 @@ export class MenuTypeService {
     const menuType = await prisma.menuType.create({
       data: {
         name: data.name,
+        division: data.division ?? 'HQ',
         description: data.description,
         price: data.price,
         sortOrder: data.sortOrder ?? 0,
@@ -150,6 +153,7 @@ export class MenuTypeService {
       where: { id },
       data: {
         name: data.name,
+        division: data.division,
         description: data.description,
         price: data.price,
         sortOrder: data.sortOrder,
