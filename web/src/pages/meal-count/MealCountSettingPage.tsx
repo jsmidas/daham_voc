@@ -6,8 +6,8 @@
 import { Button, Space, message, Modal, Form, Switch, TimePicker, Card, Tag, Input, Row, Col, Table, Alert } from 'antd';
 import { CopyOutlined, EditOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getSites } from '@/api/site.api';
-import { getMealCountSetting, upsertMealCountSetting } from '@/api/meal-count.api';
+import { getSitesLight } from '@/api/site.api';
+import { getAllMealCountSettings, upsertMealCountSetting } from '@/api/meal-count.api';
 import type { MealCountSetting } from '@/api/meal-count.api';
 import { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
@@ -28,33 +28,29 @@ export default function MealCountSettingPage() {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [form] = Form.useForm();
 
-  // 사업장 목록 조회
+  // 사업장 목록 조회 (경량 버전)
   const { data: sites, isLoading: sitesLoading } = useQuery({
-    queryKey: ['sites'],
-    queryFn: () => getSites({ isActive: true }),
+    queryKey: ['sites-light'],
+    queryFn: () => getSitesLight({ isActive: true }),
+    staleTime: 5 * 60 * 1000, // 5분 캐시
   });
 
-  // 모든 사업장의 설정 조회
-  const { data: allSettings, isLoading: settingsLoading, refetch: refetchSettings } = useQuery({
+  // 모든 사업장의 설정 조회 (단일 API 호출)
+  const { data: allSettingsData, isLoading: settingsLoading, refetch: refetchSettings } = useQuery({
     queryKey: ['meal-count-settings-all'],
-    queryFn: async () => {
-      if (!sites?.data?.sites) return {};
-      const promises = sites.data.sites.map((site: any) =>
-        getMealCountSetting(site.id)
-          .then(res => ({ siteId: site.id, setting: res.data }))
-          .catch(() => ({ siteId: site.id, setting: null }))
-      );
-      const results = await Promise.all(promises);
-      const settingsMap: Record<string, MealCountSetting | null> = {};
-      results.forEach(r => {
-        settingsMap[r.siteId] = r.setting;
-      });
-      return settingsMap;
-    },
-    enabled: !!sites?.data?.sites,
-    staleTime: 0, // 항상 최신 데이터 가져오기
-    gcTime: 0, // 캐시 즉시 만료
+    queryFn: () => getAllMealCountSettings(),
+    staleTime: 30000, // 30초 캐시
   });
+
+  // 설정 데이터를 siteId를 키로 하는 맵으로 변환
+  const allSettings = useMemo(() => {
+    if (!allSettingsData?.data) return {};
+    const settingsMap: Record<string, MealCountSetting | null> = {};
+    allSettingsData.data.forEach((setting: MealCountSetting) => {
+      settingsMap[setting.siteId] = setting;
+    });
+    return settingsMap;
+  }, [allSettingsData]);
 
   // 전체 사업장 리스트 (설정 유무와 관계없이)
   const allSitesList = useMemo<SiteWithSetting[]>(() => {

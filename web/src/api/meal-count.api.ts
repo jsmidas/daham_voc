@@ -138,3 +138,8 @@ export async function getAllMealCountsByRange(startDate: string, endDate: string
     params: { startDate, endDate },
   });
 }
+
+// 전체 사업장 식수 설정 조회 (한 번에)
+export async function getAllMealCountSettings() {
+  return apiClient.get('/meal-counts/settings/all');
+}

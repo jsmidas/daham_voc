@@ -56,6 +56,27 @@ export class SiteController {
   };
 
   /**
+   * GET /api/v1/sites/light
+   * Get lightweight sites list (for dropdowns, selects, etc.)
+   */
+  getSitesLight = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const user = (req as any).user;
+
+      const filter = {
+        division: req.query.division as any,
+        isActive: req.query.isActive !== 'false',
+      };
+
+      const sites = await this.siteService.getSitesLight(filter, user);
+
+      res.json(successResponse({ sites }));
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message, 'GET_SITES_LIGHT_ERROR'));
+    }
+  };
+
+  /**
    * GET /api/v1/sites/:id
    * Get site by ID
    */

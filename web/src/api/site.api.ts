@@ -5,9 +5,14 @@
 
 import { apiClient } from '@/utils/axios';
 
-// 사업장 목록 조회
+// 사업장 목록 조회 (전체 데이터 - 관계 포함)
 export async function getSites(params?: any) {
   return apiClient.get('/sites', { params });
+}
+
+// 사업장 목록 조회 (경량 버전 - 드롭다운, 선택박스용)
+export async function getSitesLight(params?: { division?: string; isActive?: boolean }) {
+  return apiClient.get('/sites/light', { params });
 }
 
 // 사업장 상세 조회

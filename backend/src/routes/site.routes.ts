@@ -14,6 +14,9 @@ const controller = new SiteController();
 // GET /api/v1/sites - Get all sites (All authenticated users)
 router.get('/', authMiddleware, controller.getSites);
 
+// GET /api/v1/sites/light - Get lightweight sites list (for dropdowns)
+router.get('/light', authMiddleware, controller.getSitesLight);
+
 // GET /api/v1/sites/user/sites - Get sites assigned to current user
 router.get('/user/sites', authMiddleware, controller.getUserAssignedSites);
 

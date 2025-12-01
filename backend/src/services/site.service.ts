@@ -1001,6 +1001,54 @@ export class SiteService {
   }
 
   /**
+   * Get lightweight sites list (for dropdowns, selects, etc.)
+   * @description 관계 데이터 없이 기본 사업장 정보만 반환 (빠른 로딩)
+   */
+  async getSitesLight(filter: { division?: Division; isActive?: boolean } = {}, user?: any) {
+    const cacheKey = `sites-light:${JSON.stringify({ filter, userRole: user?.role })}`;
+
+    // Check Redis cache
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    // Build filter conditions
+    const where: any = {
+      isActive: filter.isActive !== false,
+      deletedAt: null,
+    };
+
+    // Division 필터링
+    if (filter.division) {
+      where.division = filter.division;
+    } else if (user && user.role === 'HQ_ADMIN') {
+      where.division = { in: ['HQ', 'CONSIGNMENT'] };
+    } else if (user && user.role === 'YEONGNAM_ADMIN') {
+      where.division = 'YEONGNAM';
+    }
+
+    // 경량 쿼리 - 관계 데이터 최소화
+    const sites = await prisma.site.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        division: true,
+        address: true,
+        isActive: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    // Cache for 5 minutes
+    await cache.set(cacheKey, JSON.stringify(sites), 300);
+
+    return sites;
+  }
+
+  /**
    * Get sites assigned to a specific user
    * @description 사용자에게 배정된 사업장 목록 반환 (개별 배정 + 그룹 배정)
    */
