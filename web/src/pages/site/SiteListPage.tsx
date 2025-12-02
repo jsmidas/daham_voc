@@ -6,28 +6,43 @@
 import { Table, Button, Space, Input, Select, message, Popconfirm, Modal, Upload, Tag } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, FileExcelOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSites, deleteSite, downloadExcelTemplate, uploadExcelFile } from '@/api/site.api';
 import { getSiteGroups } from '@/api/site-group.api';
 import { SiteTypeLabels, DivisionLabels } from '@/types/index';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UploadFile } from 'antd/es/upload/interface';
 
 const { Search } = Input;
 
 export default function SiteListPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<string | undefined>();
-  const [divisionFilter, setDivisionFilter] = useState<string | undefined>();
-  const [groupFilter, setGroupFilter] = useState<string | undefined>();
+
+  // URL 쿼리 파라미터에서 상태 초기화
+  const [search, setSearch] = useState(searchParams.get('search') || '');
+  const [typeFilter, setTypeFilter] = useState<string | undefined>(searchParams.get('type') || undefined);
+  const [divisionFilter, setDivisionFilter] = useState<string | undefined>(searchParams.get('division') || undefined);
+  const [groupFilter, setGroupFilter] = useState<string | undefined>(searchParams.get('group') || undefined);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(parseInt(searchParams.get('page') || '1', 10));
+  const [pageSize, setPageSize] = useState(parseInt(searchParams.get('pageSize') || '50', 10));
+
+  // 상태가 변경될 때 URL 쿼리 파라미터 업데이트
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    if (pageSize !== 50) params.set('pageSize', pageSize.toString());
+    if (search) params.set('search', search);
+    if (typeFilter) params.set('type', typeFilter);
+    if (divisionFilter) params.set('division', divisionFilter);
+    if (groupFilter) params.set('group', groupFilter);
+    setSearchParams(params, { replace: true });
+  }, [page, pageSize, search, typeFilter, divisionFilter, groupFilter, setSearchParams]);
 
   // Reset to first page when filters change
   const handleSearchChange = (value: string) => {
@@ -177,7 +192,9 @@ export default function SiteListPage() {
           <Button
             icon={<EditOutlined />}
             size="small"
-            onClick={() => navigate(`/sites/${record.id}/edit`)}
+            onClick={() => navigate(`/sites/${record.id}/edit`, {
+              state: { returnPage: page, returnPageSize: pageSize }
+            })}
           >
             수정
           </Button>

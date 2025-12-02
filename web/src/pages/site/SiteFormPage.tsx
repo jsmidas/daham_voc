@@ -24,8 +24,14 @@ export default function SiteFormPage() {
 
   const isEditMode = !!id;
 
-  // 계층 구조에서 전달된 초기값 가져오기
-  const stateData = location.state as { groupId?: string; division?: string; type?: string } | null;
+  // 계층 구조에서 전달된 초기값 가져오기 또는 목록에서 전달된 페이지 정보
+  const stateData = location.state as {
+    groupId?: string;
+    division?: string;
+    type?: string;
+    returnPage?: number;
+    returnPageSize?: number;
+  } | null;
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: siteData } = useQuery({
@@ -121,7 +127,15 @@ export default function SiteFormPage() {
       queryClient.invalidateQueries({ queryKey: ['sites'] });
       queryClient.invalidateQueries({ queryKey: ['site', id] });
       queryClient.invalidateQueries({ queryKey: ['site-groups'] });
-      navigate('/sites');
+      // 이전 페이지 정보가 있으면 해당 페이지로 이동
+      if (stateData?.returnPage) {
+        const params = new URLSearchParams();
+        params.set('page', stateData.returnPage.toString());
+        if (stateData.returnPageSize) params.set('pageSize', stateData.returnPageSize.toString());
+        navigate(`/sites?${params.toString()}`);
+      } else {
+        navigate('/sites');
+      }
     },
     onError: (error: any) => {
       console.error('=== Update Error ===');
@@ -540,7 +554,17 @@ export default function SiteFormPage() {
             >
               {isEditMode ? '수정' : '등록'}
             </Button>
-            <Button onClick={() => navigate('/sites')}>취소</Button>
+            <Button onClick={() => {
+              // 이전 페이지 정보가 있으면 해당 페이지로 이동
+              if (stateData?.returnPage) {
+                const params = new URLSearchParams();
+                params.set('page', stateData.returnPage.toString());
+                if (stateData.returnPageSize) params.set('pageSize', stateData.returnPageSize.toString());
+                navigate(`/sites?${params.toString()}`);
+              } else {
+                navigate('/sites');
+              }
+            }}>취소</Button>
           </Form.Item>
         </Form>
       </Card>
