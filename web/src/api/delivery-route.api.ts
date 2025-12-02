@@ -87,3 +87,10 @@ export async function assignDrivers(routeId: string, driverIds: string[]): Promi
 export async function unassignDriver(routeId: string, driverId: string): Promise<void> {
   await apiClient.delete(`/delivery-routes/${routeId}/drivers/${driverId}`);
 }
+
+/**
+ * 특정 기사에게 배정된 코스 조회 (관리자용)
+ */
+export async function getDriverRoutes(driverId: string) {
+  return apiClient.get(`/delivery-routes/driver/${driverId}`);
+}

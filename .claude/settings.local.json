@@ -75,7 +75,8 @@
       "Bash(https://api.github.com/repos/jsmidas/daham_voc/actions/workflows/deploy.yml/dispatches )",
       "Bash(powershell.exe -Command \"gh run list --repo jsmidas/daham_voc --limit 3\")",
       "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 3)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "Bash(powershell.exe -Command \"gh workflow run deploy.yml --repo jsmidas/daham_voc\")"
     ],
     "deny": [],
     "ask": []

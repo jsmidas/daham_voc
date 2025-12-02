@@ -10,7 +10,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { createStaff, updateStaff, getStaffById, assignStaffToSites } from '@/api/staff.api';
 import { getSites } from '@/api/site.api';
 import { getSiteGroups } from '@/api/site-group.api';
-import { getDeliveryRoutes } from '@/api/delivery-route.api';
+import { getDeliveryRoutes, getDriverRoutes } from '@/api/delivery-route.api';
 import { useEffect, useState, useMemo } from 'react';
 
 export default function StaffFormPage() {
@@ -29,6 +29,9 @@ export default function StaffFormPage() {
 
   // 선택된 배송 코스
   const [selectedRouteId, setSelectedRouteId] = useState<string | undefined>();
+
+  // 배정된 코스 목록 (수정 모드에서 배송기사인 경우)
+  const [assignedRoutes, setAssignedRoutes] = useState<any[]>([]);
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: staffData } = useQuery({
@@ -80,12 +83,49 @@ export default function StaffFormPage() {
       setSelectedRole(staffData.user.role);
 
       // 배정된 사업장 그룹 및 개별 사업장 설정
-      const assignedSiteIds = (staffData as any).staffSites?.map((ss: any) => ss.siteId) || [];
+      const assignedSiteIds = (staffData as any).staffSites?.map((ss: any) => `site-${ss.siteId}`) || [];
       const assignedGroupIds = (staffData as any).staffSiteGroups?.map((sg: any) => `group-${sg.siteGroupId}`) || [];
 
       setCheckedKeys([...assignedGroupIds, ...assignedSiteIds]);
+
+      // 배송기사인 경우 배정된 코스 조회
+      if (staffData.user.role === 'DELIVERY_DRIVER' && staffData.user.id) {
+        loadAssignedRoutes(staffData.user.id);
+      }
     }
   }, [isEditMode, staffData, form]);
+
+  // 배송기사에게 배정된 코스 로드
+  const loadAssignedRoutes = async (driverId: string) => {
+    try {
+      const response = await getDriverRoutes(driverId);
+      const routes = response.data?.data || [];
+      setAssignedRoutes(routes);
+
+      // 배정된 코스의 사업장들을 checkedKeys에 추가
+      if (routes.length > 0) {
+        const routeSiteIds: string[] = [];
+        routes.forEach((route: any) => {
+          if (route.stops && route.stops.length > 0) {
+            route.stops.forEach((stop: any) => {
+              const siteId = stop.siteId || stop.site?.id;
+              if (siteId) {
+                routeSiteIds.push(`site-${siteId}`);
+              }
+            });
+          }
+        });
+
+        // 기존 체크된 키에 코스 사업장 추가 (중복 제거)
+        setCheckedKeys((prevKeys) => {
+          const allKeys = [...prevKeys, ...routeSiteIds];
+          return Array.from(new Set(allKeys));
+        });
+      }
+    } catch (error) {
+      console.error('배정된 코스 조회 실패:', error);
+    }
+  };
 
   // 역할 변경 핸들러
   const handleRoleChange = (role: string) => {
@@ -510,31 +550,62 @@ export default function StaffFormPage() {
           {/* 사업장 배정 */}
           <h3 style={{ marginTop: 24 }}>사업장 배정</h3>
 
-          {/* 배송기사인 경우 코스 선택 옵션 표시 */}
+          {/* 배송기사인 경우 배정된 코스 표시 및 코스 선택 옵션 표시 */}
           {selectedRole === 'DELIVERY_DRIVER' && (
-            <Form.Item label="배송 코스로 사업장 배정">
-              <Space direction="vertical" style={{ width: '100%' }}>
-                <div style={{ color: '#666', marginBottom: 8 }}>
-                  💡 배송 코스를 선택하면 해당 코스의 모든 사업장이 자동으로 추가됩니다.
-                </div>
-                <Select
-                  placeholder="배송 코스 선택"
-                  style={{ width: '100%' }}
-                  value={selectedRouteId}
-                  onChange={handleRouteSelect}
-                  allowClear
-                >
-                  {routesData?.data?.map((route: any) => {
-                    const label = `${route.name} (${route.division}) - ${route.stopsCount}개 사업장`;
-                    return (
-                      <Select.Option key={route.id} value={route.id} label={label}>
-                        {label}
-                      </Select.Option>
-                    );
-                  })}
-                </Select>
-              </Space>
-            </Form.Item>
+            <>
+              {/* 배정된 코스 목록 표시 (수정 모드일 때) */}
+              {isEditMode && assignedRoutes.length > 0 && (
+                <Form.Item label="배정된 배송 코스">
+                  <div style={{
+                    background: '#f6ffed',
+                    border: '1px solid #b7eb8f',
+                    borderRadius: 4,
+                    padding: 12,
+                    marginBottom: 8
+                  }}>
+                    <Space wrap size={[8, 8]}>
+                      {assignedRoutes.map((route: any) => (
+                        <Tag
+                          key={route.id}
+                          color="green"
+                          style={{ fontSize: 14, padding: '4px 12px' }}
+                        >
+                          {route.name} ({route.division === 'HQ' ? '본사' : '영남'}) - {route.stopsCount || route.stops?.length || 0}개 사업장
+                        </Tag>
+                      ))}
+                    </Space>
+                    <div style={{ color: '#52c41a', marginTop: 8, fontSize: 12 }}>
+                      위 코스의 사업장은 아래 목록에서 자동으로 체크 표시됩니다.
+                    </div>
+                  </div>
+                </Form.Item>
+              )}
+
+              <Form.Item label="배송 코스로 사업장 추가 배정">
+                <Space direction="vertical" style={{ width: '100%' }}>
+                  <div style={{ color: '#666', marginBottom: 8 }}>
+                    💡 배송 코스를 선택하면 해당 코스의 모든 사업장이 자동으로 추가됩니다.
+                  </div>
+                  <Select
+                    placeholder="배송 코스 선택"
+                    style={{ width: '100%' }}
+                    value={selectedRouteId}
+                    onChange={handleRouteSelect}
+                    allowClear
+                  >
+                    {routesData?.data?.map((route: any) => {
+                      const isAssigned = assignedRoutes.some((ar: any) => ar.id === route.id);
+                      const label = `${route.name} (${route.division === 'HQ' ? '본사' : '영남'}) - ${route.stopsCount}개 사업장${isAssigned ? ' (배정됨)' : ''}`;
+                      return (
+                        <Select.Option key={route.id} value={route.id} label={label} disabled={isAssigned}>
+                          {label}
+                        </Select.Option>
+                      );
+                    })}
+                  </Select>
+                </Space>
+              </Form.Item>
+            </>
           )}
 
           <Form.Item label="배정할 사업장/그룹 선택">

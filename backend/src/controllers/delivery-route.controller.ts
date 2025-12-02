@@ -200,3 +200,22 @@ export async function getMyRoutes(req: Request, res: Response, next: NextFunctio
     next(error);
   }
 }
+
+/**
+ * GET /api/v1/delivery-routes/driver/:driverId
+ * 특정 기사에게 배정된 코스 조회 (관리자용)
+ */
+export async function getDriverRoutes(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { driverId } = req.params;
+
+    const routes = await deliveryRouteService.getDriverRoutes(driverId);
+
+    res.json({
+      success: true,
+      data: routes,
+    });
+  } catch (error) {
+    next(error);
+  }
+}

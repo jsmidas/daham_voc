@@ -31,6 +31,16 @@ router.get(
 );
 
 /**
+ * GET /api/v1/delivery-routes/driver/:driverId
+ * 특정 기사에게 배정된 코스 조회 (관리자용)
+ */
+router.get(
+  '/driver/:driverId',
+  roleMiddleware(['GROUP_MANAGER', 'SITE_MANAGER', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SUPER_ADMIN']),
+  deliveryRouteController.getDriverRoutes
+);
+
+/**
  * GET /api/v1/delivery-routes/:id
  * 배송 코스 상세 조회
  */
