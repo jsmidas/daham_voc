@@ -17,7 +17,7 @@ async function startServer() {
     await connectRedis();
 
     // Initialize GCP Storage (optional)
-    initializeGCPStorage();
+    await initializeGCPStorage();
 
     // Start server
     const PORT = env.PORT;
