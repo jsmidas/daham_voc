@@ -20,14 +20,26 @@ export function initializeGCPStorage(): void {
       return;
     }
 
-    storage = new Storage({
+    // Cloud Run에서는 기본 서비스 계정 사용, 로컬에서는 키 파일 사용
+    const storageOptions: any = {
       projectId: env.GCP_PROJECT_ID,
-      keyFilename: env.GCP_KEY_FILE,
-    });
+    };
 
+    // 키 파일이 설정되어 있고 실제 존재하는 경우에만 사용
+    if (env.GCP_KEY_FILE) {
+      const fs = require('fs');
+      if (fs.existsSync(env.GCP_KEY_FILE)) {
+        storageOptions.keyFilename = env.GCP_KEY_FILE;
+        console.log('📁 Using GCP key file:', env.GCP_KEY_FILE);
+      } else {
+        console.log('📁 GCP key file not found, using default credentials (Cloud Run)');
+      }
+    }
+
+    storage = new Storage(storageOptions);
     bucket = storage.bucket(env.GCP_BUCKET_NAME);
 
-    console.log('✅ GCP Storage initialized');
+    console.log('✅ GCP Storage initialized:', env.GCP_BUCKET_NAME);
   } catch (error: any) {
     console.warn('⚠️  GCP Storage initialization failed:', error.message);
     storage = null;
