@@ -18,6 +18,7 @@ export interface BulkUploadMealPhotoDto {
 export interface MealPhotoFilter {
   siteId?: string;
   siteIds?: string;
+  division?: 'ALL' | 'HQ' | 'YEONGNAM';
   uploaderId?: string;
   photoType?: 'SERVING' | 'LEFTOVER' | 'FACILITY';
   mealType?: 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
@@ -32,6 +33,7 @@ export async function getMealPhotos(filter?: MealPhotoFilter) {
   const params = new URLSearchParams();
   if (filter?.siteId) params.append('siteId', filter.siteId);
   if (filter?.siteIds) params.append('siteIds', filter.siteIds);
+  if (filter?.division) params.append('division', filter.division);
   if (filter?.uploaderId) params.append('uploaderId', filter.uploaderId);
   if (filter?.photoType) params.append('photoType', filter.photoType);
   if (filter?.mealType) params.append('mealType', filter.mealType);

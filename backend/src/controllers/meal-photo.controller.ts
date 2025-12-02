@@ -104,7 +104,7 @@ export async function bulkCreateMealPhotos(req: Request, res: Response): Promise
  */
 export async function getMealPhotos(req: Request, res: Response): Promise<void> {
   try {
-    const { siteId, siteIds, uploaderId, photoType, mealType, dateFrom, dateTo } = req.query;
+    const { siteId, siteIds, division, uploaderId, photoType, mealType, dateFrom, dateTo } = req.query;
 
     const filter: mealPhotoService.MealPhotoFilter = {};
 
@@ -112,6 +112,7 @@ export async function getMealPhotos(req: Request, res: Response): Promise<void> 
     if (siteIds) {
       filter.siteIds = (siteIds as string).split(',');
     }
+    if (division) filter.division = division as string;
     if (uploaderId) filter.uploaderId = uploaderId as string;
     if (photoType) filter.photoType = photoType as PhotoType;
     if (mealType) filter.mealType = mealType as MealType;

@@ -40,6 +40,7 @@ export interface UpdateMealPhotoDto {
 export interface MealPhotoFilter {
   siteId?: string;
   siteIds?: string[];
+  division?: string;
   uploaderId?: string;
   photoType?: PhotoType;
   mealType?: MealType;
@@ -221,6 +222,13 @@ export async function getMealPhotos(filter: MealPhotoFilter): Promise<any[]> {
 
   if (filter.siteIds && filter.siteIds.length > 0) {
     where.siteId = { in: filter.siteIds };
+  }
+
+  // division 필터: site의 division으로 필터링
+  if (filter.division && filter.division !== 'ALL') {
+    where.site = {
+      division: filter.division,
+    };
   }
 
   if (filter.uploaderId) {

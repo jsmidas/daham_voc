@@ -66,24 +66,17 @@ export default function MealPhotoManagementPage() {
     return allSites.filter((site: any) => site.division === selectedDivision);
   }, [sites, selectedDivision]);
 
-  // 조회용 사이트 IDs (사업장 선택 안하면 부문 전체, 선택하면 해당 사업장만)
-  const querySiteIds = useMemo(() => {
-    if (selectedSiteId) return selectedSiteId;
-    return filteredSitesByDivision.map((s: any) => s.id).join(',');
-  }, [selectedSiteId, filteredSitesByDivision]);
-
   // 부문 기준 사진 조회 (사업장 선택은 선택적)
+  // siteIds 대신 division 파라미터를 사용하여 URL 길이 문제 해결
   const { data: dailyPhotos, isLoading: isLoadingPhotos } = useQuery({
-    queryKey: ['meal-photos', querySiteIds, selectedDate.format('YYYY-MM-DD')],
+    queryKey: ['meal-photos', selectedDivision, selectedSiteId, selectedDate.format('YYYY-MM-DD')],
     queryFn: () =>
-      querySiteIds
-        ? getMealPhotos({
-            siteIds: querySiteIds,
-            dateFrom: selectedDate.format('YYYY-MM-DD'),
-            dateTo: selectedDate.format('YYYY-MM-DD'),
-          })
-        : Promise.resolve([]),
-    enabled: !!querySiteIds,
+      getMealPhotos({
+        siteId: selectedSiteId || undefined,
+        division: !selectedSiteId ? selectedDivision : undefined,
+        dateFrom: selectedDate.format('YYYY-MM-DD'),
+        dateTo: selectedDate.format('YYYY-MM-DD'),
+      }),
     retry: false,
   });
 
@@ -862,8 +855,7 @@ export default function MealPhotoManagementPage() {
       </Card>
 
       {/* 업로드 내역 테이블 */}
-      {querySiteIds && (
-        <Card
+      <Card
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
               <span>업로드 내역</span>
@@ -937,8 +929,7 @@ export default function MealPhotoManagementPage() {
               emptyText: '업로드된 사진이 없습니다.',
             }}
           />
-        </Card>
-      )}
+      </Card>
 
       {/* 끼니별 업로드 탭 (사업장 선택 시에만 표시) */}
       {selectedSiteId && (
