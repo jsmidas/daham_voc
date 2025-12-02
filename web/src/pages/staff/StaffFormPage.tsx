@@ -100,7 +100,15 @@ export default function StaffFormPage() {
     try {
       const response = await getDriverRoutes(driverId);
       console.log('getDriverRoutes response:', response);
-      const routes = response.data?.data || response.data || [];
+
+      // API 응답이 배열인지 확인
+      let routes = response.data?.data || response.data || [];
+
+      // 단일 객체인 경우 배열로 변환
+      if (!Array.isArray(routes)) {
+        routes = routes ? [routes] : [];
+      }
+
       console.log('Parsed routes:', routes);
       setAssignedRoutes(routes);
 
@@ -111,7 +119,6 @@ export default function StaffFormPage() {
           console.log('Route:', route.name, 'stops:', route.stops);
           if (route.stops && route.stops.length > 0) {
             route.stops.forEach((stop: any) => {
-              console.log('Stop:', stop);
               const siteId = stop.siteId || stop.site?.id;
               if (siteId) {
                 routeSiteIds.push(`site-${siteId}`);
