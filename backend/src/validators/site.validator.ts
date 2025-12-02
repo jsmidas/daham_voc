@@ -38,20 +38,22 @@ export const createSiteSchema = Joi.object({
     'number.max': '경도는 -180에서 180 사이여야 합니다',
     'any.required': '경도는 필수 항목입니다',
   }),
-  contactPerson1: Joi.string().max(50).allow(null, '').optional().messages({
+  contactPerson1: Joi.string().trim().max(50).allow(null, '').optional().messages({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone1: Joi.string()
+    .trim()
     .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional()
     .messages({
       'string.pattern.base': '전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 02-123-4567, 051-123-4567)',
     }),
-  contactPerson2: Joi.string().max(50).allow(null, '').optional().messages({
+  contactPerson2: Joi.string().trim().max(50).allow(null, '').optional().messages({
     'string.max': '담당자 이름은 최대 50자까지 입력 가능합니다',
   }),
   contactPhone2: Joi.string()
+    .trim()
     .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional()
@@ -105,13 +107,15 @@ export const updateSiteSchema = Joi.object({
   address: Joi.string().min(5).max(200).optional(),
   latitude: Joi.number().min(-90).max(90).optional(),
   longitude: Joi.number().min(-180).max(180).optional(),
-  contactPerson1: Joi.string().max(50).allow(null, '').optional(),
+  contactPerson1: Joi.string().trim().max(50).allow(null, '').optional(),
   contactPhone1: Joi.string()
+    .trim()
     .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional(),
-  contactPerson2: Joi.string().max(50).allow(null, '').optional(),
+  contactPerson2: Joi.string().trim().max(50).allow(null, '').optional(),
   contactPhone2: Joi.string()
+    .trim()
     .pattern(/^0\d{1,2}-?\d{3,4}-?\d{4}$/)
     .allow(null, '')
     .optional(),
