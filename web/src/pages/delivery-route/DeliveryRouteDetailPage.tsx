@@ -30,8 +30,10 @@ import {
   addSiteToRoute,
   removeSiteFromRoute,
   updateRouteStops,
+  assignDrivers,
 } from '../../api/delivery-route.api';
 import { apiClient } from '../../utils/axios';
+import { getStaffList } from '../../api/staff.api';
 import type { DeliveryRouteStop } from '../../types/delivery-route';
 
 const { Title, Text } = Typography;
@@ -125,7 +127,9 @@ export default function DeliveryRouteDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [form] = Form.useForm();
+  const [driverForm] = Form.useForm();
   const [stops, setStops] = useState<DeliveryRouteStop[]>([]);
 
   // 배송 코스 상세 조회
@@ -152,6 +156,12 @@ export default function DeliveryRouteDetailPage() {
   });
 
   const allSites = allSitesData?.data?.sites;
+
+  // 배송기사 목록 조회
+  const { data: driversData } = useQuery({
+    queryKey: ['staff', 'delivery-drivers'],
+    queryFn: () => getStaffList({ role: 'DELIVERY_DRIVER', limit: 100 }),
+  });
 
   // 사업장 추가 mutation
   const addSiteMutation = useMutation({
@@ -211,6 +221,37 @@ export default function DeliveryRouteDetailPage() {
       stopNumber: index + 1,
     }));
     updateStopsMutation.mutate(updates);
+  };
+
+  // 기사 배정 mutation
+  const assignDriverMutation = useMutation({
+    mutationFn: (driverIds: string[]) => assignDrivers(id!, driverIds),
+    onSuccess: () => {
+      message.success('기사가 배정되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['delivery-route', id] });
+      setDriverModalOpen(false);
+      driverForm.resetFields();
+    },
+    onError: (error: any) => {
+      message.error(error.message || '기사 배정에 실패했습니다');
+    },
+  });
+
+  // 기사 배정 핸들러
+  const handleAssignDrivers = async () => {
+    try {
+      const values = await driverForm.validateFields();
+      assignDriverMutation.mutate(values.driverIds || []);
+    } catch (error) {
+      console.error('Validation failed:', error);
+    }
+  };
+
+  // 기사 배정 모달 열기 (현재 배정된 기사 선택 상태로)
+  const openDriverModal = () => {
+    const currentDriverIds = route?.assignedDrivers?.map((d: any) => d.id) || [];
+    driverForm.setFieldsValue({ driverIds: currentDriverIds });
+    setDriverModalOpen(true);
   };
 
   // 코스에 포함되지 않은 사업장 필터링
@@ -424,6 +465,9 @@ export default function DeliveryRouteDetailPage() {
             ) : (
               <Text type="secondary">없음</Text>
             )}
+            <Button type="link" size="small" onClick={openDriverModal}>
+              {route.assignedDrivers.length > 0 ? '변경' : '배정하기'}
+            </Button>
           </Space>
         </Space>
       </Card>
@@ -502,6 +546,44 @@ export default function DeliveryRouteDetailPage() {
 
           <Form.Item label="예상 도착 시간" name="estimatedArrival">
             <Input placeholder="예: 09:00" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 기사 배정 모달 */}
+      <Modal
+        title="배송 기사 배정"
+        open={driverModalOpen}
+        onCancel={() => {
+          setDriverModalOpen(false);
+          driverForm.resetFields();
+        }}
+        onOk={handleAssignDrivers}
+        confirmLoading={assignDriverMutation.isPending}
+        okText="저장"
+        cancelText="취소"
+      >
+        <Form form={driverForm} layout="vertical">
+          <Form.Item
+            label="배송 기사 선택"
+            name="driverIds"
+            extra="여러 명의 기사를 선택할 수 있습니다. 기사를 선택하지 않으면 기존 배정이 해제됩니다."
+          >
+            <Select
+              mode="multiple"
+              placeholder="배송 기사를 선택하세요"
+              showSearch
+              filterOption={(input, option) =>
+                ((option?.children as unknown) as string)?.toLowerCase().includes(input.toLowerCase())
+              }
+              allowClear
+            >
+              {driversData?.items?.map((staff: any) => (
+                <Select.Option key={staff.user.id} value={staff.user.id}>
+                  {staff.user.name} ({staff.user.phone})
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
         </Form>
       </Modal>

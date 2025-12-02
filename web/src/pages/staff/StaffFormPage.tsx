@@ -99,7 +99,6 @@ export default function StaffFormPage() {
   const loadAssignedRoutes = async (driverId: string) => {
     try {
       const response = await getDriverRoutes(driverId);
-      console.log('getDriverRoutes response:', response);
 
       // API 응답이 배열인지 확인
       let routes = response.data?.data || response.data || [];
@@ -109,14 +108,12 @@ export default function StaffFormPage() {
         routes = routes ? [routes] : [];
       }
 
-      console.log('Parsed routes:', routes);
       setAssignedRoutes(routes);
 
       // 배정된 코스의 사업장들을 checkedKeys에 추가
       if (routes.length > 0) {
         const routeSiteIds: string[] = [];
         routes.forEach((route: any) => {
-          console.log('Route:', route.name, 'stops:', route.stops);
           if (route.stops && route.stops.length > 0) {
             route.stops.forEach((stop: any) => {
               const siteId = stop.siteId || stop.site?.id;
@@ -127,15 +124,10 @@ export default function StaffFormPage() {
           }
         });
 
-        console.log('Route site IDs to add:', routeSiteIds);
-
         // 기존 체크된 키에 코스 사업장 추가 (중복 제거)
         setCheckedKeys((prevKeys) => {
-          console.log('Previous keys:', prevKeys);
           const allKeys = [...prevKeys, ...routeSiteIds];
-          const uniqueKeys = Array.from(new Set(allKeys));
-          console.log('Final checked keys:', uniqueKeys);
-          return uniqueKeys;
+          return Array.from(new Set(allKeys));
         });
       }
     } catch (error) {
