@@ -85,8 +85,8 @@ export async function generateThumbnail(
  * @description 파일 타입, 크기, 유효성 검증
  */
 export function validateImageFile(file: Express.Multer.File): void {
-  // 파일 타입 검증
-  const allowedTypes = (process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp').split(',');
+  // 파일 타입 검증 (HEIC/HEIF는 아이폰 기본 포맷)
+  const allowedTypes = (process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp,image/heic,image/heif').split(',');
   if (!allowedTypes.includes(file.mimetype)) {
     throw new Error(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`);
   }

@@ -37,7 +37,7 @@ router.get('/:id', authMiddleware, mealPhotoController.getMealPhotoById);
 router.post(
   '/bulk',
   authMiddleware,
-  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SITE_STAFF', 'DELIVERY_DRIVER']),
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SITE_STAFF', 'DELIVERY_DRIVER', 'STAFF']),
   uploadMealPhotos,
   mealPhotoController.bulkCreateMealPhotos
 );

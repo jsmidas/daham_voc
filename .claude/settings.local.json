@@ -56,7 +56,18 @@
       "Bash(\"C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd\" run deploy daham-voc-backend --source ./backend --region asia-northeast3 --allow-unauthenticated)",
       "Bash(powershell.exe -Command \"gcloud run deploy daham-voc-backend --source ''C:/Users/js/Desktop/dev/daham_voc/backend'' --region asia-northeast3 --allow-unauthenticated\")",
       "Bash(powershell.exe -Command \"& ''C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd'' run deploy daham-voc-backend --source ''C:/Users/js/Desktop/dev/daham_voc/backend'' --region asia-northeast3 --allow-unauthenticated\")",
-      "Bash(where.exe:*)"
+      "Bash(where.exe:*)",
+      "Bash(powershell.exe -Command \"& ''C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd'' run deploy daham-voc-backend --source ''./backend'' --region asia-northeast3 --allow-unauthenticated\")",
+      "Bash(\"/cygdrive/c/Users/js/AppData/Local/Google Cloud SDK/google-cloud-sdk/bin/gcloud\" --version)",
+      "Bash(\"/c/Program Files/GitHub CLI/gh.exe\" --version)",
+      "Bash(powershell.exe -Command \"& ''C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd'' run deploy daham-voc-backend --source . --region asia-northeast3 --allow-unauthenticated\")",
+      "Bash(git pull:*)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" workflow run deploy.yml)",
+      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" workflow run deploy.yml)",
+      "Bash(powershell.exe -Command \"gh workflow run deploy.yml\")",
+      "Bash(git submodule:*)",
+      "Bash(powershell.exe -Command \"gh run list --limit 5\")",
+      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 5)"
     ],
     "deny": [],
     "ask": []
