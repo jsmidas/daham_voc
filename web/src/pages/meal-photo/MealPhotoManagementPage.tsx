@@ -3,14 +3,14 @@
  * @description 배식사진 관리 페이지 (탭 방식)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table, Checkbox } from 'antd';
 import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import {
   bulkUploadMealPhotos,
-  getDailyMealPhotos,
+  getMealPhotos,
   deleteMealPhoto,
   bulkDeleteMealPhotos,
   bulkCheckMealPhotos,
@@ -21,6 +21,7 @@ import * as XLSX from 'xlsx';
 
 type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
 type PhotoType = 'SERVING' | 'LEFTOVER';
+type DivisionType = 'ALL' | 'HQ' | 'YEONGNAM';
 
 interface PhotoState {
   SERVING: UploadFile[];
@@ -29,6 +30,7 @@ interface PhotoState {
 
 export default function MealPhotoManagementPage() {
   const queryClient = useQueryClient();
+  const [selectedDivision, setSelectedDivision] = useState<DivisionType>('ALL');
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MealType>('BREAKFAST');
@@ -57,14 +59,31 @@ export default function MealPhotoManagementPage() {
     retry: false,
   });
 
-  // 선택된 사업장의 일간 사진 조회
+  // 부문별로 필터링된 사업장 목록
+  const filteredSitesByDivision = useMemo(() => {
+    const allSites = sites?.data?.sites || [];
+    if (selectedDivision === 'ALL') return allSites;
+    return allSites.filter((site: any) => site.division === selectedDivision);
+  }, [sites, selectedDivision]);
+
+  // 조회용 사이트 IDs (사업장 선택 안하면 부문 전체, 선택하면 해당 사업장만)
+  const querySiteIds = useMemo(() => {
+    if (selectedSiteId) return selectedSiteId;
+    return filteredSitesByDivision.map((s: any) => s.id).join(',');
+  }, [selectedSiteId, filteredSitesByDivision]);
+
+  // 부문 기준 사진 조회 (사업장 선택은 선택적)
   const { data: dailyPhotos, isLoading: isLoadingPhotos } = useQuery({
-    queryKey: ['daily-meal-photos', selectedSiteId, selectedDate.format('YYYY-MM-DD')],
+    queryKey: ['meal-photos', querySiteIds, selectedDate.format('YYYY-MM-DD')],
     queryFn: () =>
-      selectedSiteId
-        ? getDailyMealPhotos(selectedSiteId, selectedDate.format('YYYY-MM-DD'))
-        : Promise.resolve({ data: [] }),
-    enabled: !!selectedSiteId,
+      querySiteIds
+        ? getMealPhotos({
+            siteIds: querySiteIds,
+            dateFrom: selectedDate.format('YYYY-MM-DD'),
+            dateTo: selectedDate.format('YYYY-MM-DD'),
+          })
+        : Promise.resolve([]),
+    enabled: !!querySiteIds,
     retry: false,
   });
 
@@ -73,7 +92,7 @@ export default function MealPhotoManagementPage() {
     mutationFn: bulkUploadMealPhotos,
     onSuccess: () => {
       message.success('사진이 업로드되었습니다');
-      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-photos'] });
     },
     onError: (error: any) => {
       message.error(error.message || '사진 업로드 실패');
@@ -85,7 +104,7 @@ export default function MealPhotoManagementPage() {
     mutationFn: deleteMealPhoto,
     onSuccess: () => {
       message.success('사진이 삭제되었습니다');
-      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-photos'] });
     },
     onError: (error: any) => {
       message.error(error.message || '사진 삭제 실패');
@@ -97,7 +116,7 @@ export default function MealPhotoManagementPage() {
     mutationFn: bulkDeleteMealPhotos,
     onSuccess: (data: any) => {
       message.success(data.message || '사진이 일괄 삭제되었습니다');
-      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-photos'] });
     },
     onError: (error: any) => {
       message.error(error.message || '일괄 삭제 실패');
@@ -110,15 +129,15 @@ export default function MealPhotoManagementPage() {
     onSuccess: () => {
       message.success('선택한 사진이 확인 완료되었습니다');
       setSelectedPhotoIds([]);
-      queryClient.invalidateQueries({ queryKey: ['daily-meal-photos'] });
+      queryClient.invalidateQueries({ queryKey: ['meal-photos'] });
     },
     onError: (error: any) => {
       message.error(error.message || '확인 완료 실패');
     },
   });
 
-  // 전체 사업장 목록
-  const filteredSites = sites?.data?.sites || [];
+  // 부문별 필터링된 사업장 목록 (드롭다운용)
+  const filteredSites = filteredSitesByDivision;
 
   // 업로드 핸들러
   const handleUploadChange = (
@@ -257,12 +276,13 @@ export default function MealPhotoManagementPage() {
 
   // 엑셀 다운로드 핸들러
   const handleExcelDownload = () => {
-    if (!dailyPhotos?.data || dailyPhotos.data.length === 0) {
+    const photosData = Array.isArray(dailyPhotos) ? dailyPhotos : [];
+    if (photosData.length === 0) {
       message.warning('다운로드할 데이터가 없습니다');
       return;
     }
 
-    const excelData = dailyPhotos.data.map((photo: any) => ({
+    const excelData = photosData.map((photo: any) => ({
       '사업장': photo.site?.name || '-',
       '날짜': dayjs(photo.capturedAt).format('YYYY-MM-DD'),
       '끼니': getMealTypeLabel(photo.mealType),
@@ -312,7 +332,7 @@ export default function MealPhotoManagementPage() {
 
   // 끼니별 업로드 상태 계산
   const getUploadStatus = (mealType: MealType) => {
-    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const uploadedPhotosData = Array.isArray(dailyPhotos) ? dailyPhotos : [];
     const mealPhotos = uploadedPhotosData.filter((p: any) => p.mealType === mealType);
     const servingCount = mealPhotos.filter((p: any) => p.photoType === 'SERVING').length;
     const leftoverCount = mealPhotos.filter((p: any) => p.photoType === 'LEFTOVER').length;
@@ -328,7 +348,7 @@ export default function MealPhotoManagementPage() {
 
   // 탭 렌더링
   const renderMealTab = (mealType: MealType, photoType: PhotoType) => {
-    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const uploadedPhotosData = Array.isArray(dailyPhotos) ? dailyPhotos : [];
     const uploadedPhotos = uploadedPhotosData.filter(
       (p: any) => p.mealType === mealType && p.photoType === photoType
     );
@@ -436,7 +456,7 @@ export default function MealPhotoManagementPage() {
 
   // 데이터 그룹화: 날짜 + 사업장 + 끼니 기준
   const groupedData = React.useMemo(() => {
-    const uploadedPhotosData = Array.isArray(dailyPhotos?.data) ? dailyPhotos.data : [];
+    const uploadedPhotosData = Array.isArray(dailyPhotos) ? dailyPhotos : [];
     const groups: any = {};
 
     uploadedPhotosData.forEach((photo: any) => {
@@ -767,27 +787,25 @@ export default function MealPhotoManagementPage() {
     <div>
       <h1>배식사진 관리</h1>
 
-      {/* 사업장 및 날짜 선택 */}
+      {/* 부문, 날짜, 사업장 선택 */}
       <Card style={{ marginBottom: 24 }}>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 200 }}>
+          <div style={{ minWidth: 120 }}>
             <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
-              사업장 선택
+              부문 선택
             </label>
             <Select
-              placeholder="사업장을 선택하세요"
               style={{ width: '100%' }}
-              value={selectedSiteId}
-              onChange={setSelectedSiteId}
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
-              }
-              options={filteredSites.map((site: any) => ({
-                value: site.id,
-                label: `[${site.division === 'HQ' ? '본사' : '영남'}] ${site.name}`,
-              }))}
+              value={selectedDivision}
+              onChange={(value) => {
+                setSelectedDivision(value);
+                setSelectedSiteId(null); // 부문 변경 시 사업장 선택 초기화
+              }}
+              options={[
+                { value: 'ALL', label: '전체' },
+                { value: 'HQ', label: '본사' },
+                { value: 'YEONGNAM', label: '영남' },
+              ]}
             />
           </div>
 
@@ -799,6 +817,28 @@ export default function MealPhotoManagementPage() {
               value={selectedDate}
               onChange={(date) => date && setSelectedDate(date)}
               style={{ width: '100%' }}
+            />
+          </div>
+
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
+              사업장 선택 (선택사항)
+            </label>
+            <Select
+              placeholder="전체 사업장"
+              style={{ width: '100%' }}
+              value={selectedSiteId}
+              onChange={setSelectedSiteId}
+              allowClear
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={filteredSites.map((site: any) => ({
+                value: site.id,
+                label: site.name,
+              }))}
             />
           </div>
         </div>
@@ -822,7 +862,7 @@ export default function MealPhotoManagementPage() {
       </Card>
 
       {/* 업로드 내역 테이블 */}
-      {selectedSiteId && (
+      {querySiteIds && (
         <Card
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -900,14 +940,8 @@ export default function MealPhotoManagementPage() {
         </Card>
       )}
 
-      {/* 끼니별 탭 */}
-      {!selectedSiteId ? (
-        <Card>
-          <div style={{ textAlign: 'center', padding: 40, color: '#999' }}>
-            사업장을 선택해주세요
-          </div>
-        </Card>
-      ) : (
+      {/* 끼니별 업로드 탭 (사업장 선택 시에만 표시) */}
+      {selectedSiteId && (
         <Card loading={isLoadingPhotos}>
           <Tabs
             activeKey={activeTab}
