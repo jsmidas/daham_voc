@@ -33,11 +33,11 @@ router.get('/', authMiddleware, mealPhotoController.getMealPhotos);
 // GET /api/v1/meal-photos/:id - 식사 사진 상세 조회 (All authenticated users)
 router.get('/:id', authMiddleware, mealPhotoController.getMealPhotoById);
 
-// POST /api/v1/meal-photos/bulk - 식사 사진 일괄 업로드 (Admin + STAFF, 최대 6개)
+// POST /api/v1/meal-photos/bulk - 식사 사진 일괄 업로드 (모든 인증된 사용자)
 router.post(
   '/bulk',
   authMiddleware,
-  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'SITE_STAFF', 'DELIVERY_DRIVER', 'STAFF']),
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'GROUP_MANAGER', 'SITE_MANAGER', 'SITE_STAFF', 'DELIVERY_DRIVER', 'CLIENT']),
   uploadMealPhotos,
   mealPhotoController.bulkCreateMealPhotos
 );
