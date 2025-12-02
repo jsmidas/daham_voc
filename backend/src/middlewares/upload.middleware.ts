@@ -32,7 +32,7 @@ export const uploadSingle = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
   },
 }).single('image');
 
@@ -43,7 +43,7 @@ export const uploadMultiple = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
     files: 10,
   },
 }).array('images', 10);
@@ -55,7 +55,7 @@ export const uploadFeedbackImages = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
     files: 6,
   },
 }).array('images', 6);
@@ -67,7 +67,7 @@ export const uploadMealPhotos = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '10485760'), // 10MB
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
     files: 6,
   },
 }).array('photos', 6);
