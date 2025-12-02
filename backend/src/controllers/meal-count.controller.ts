@@ -54,6 +54,24 @@ export async function updateMealCount(req: Request, res: Response) {
   try {
     const { id } = req.params;
     const { count, note } = req.body;
+    const userRole = req.user?.role;
+
+    // 기존 레코드 조회하여 날짜 확인
+    const existingRecord = await mealCountService.getMealCount(id);
+    if (!existingRecord) {
+      return res.status(404).json({
+        success: false,
+        message: '식수 정보를 찾을 수 없습니다',
+      });
+    }
+
+    // 슈퍼관리자가 아닌 경우 과거 날짜 수정 불가
+    if (userRole !== 'SUPER_ADMIN' && mealCountService.isPastDate(existingRecord.date)) {
+      return res.status(403).json({
+        success: false,
+        message: '지난 날짜의 식수 인원은 수정할 수 없습니다',
+      });
+    }
 
     const mealCount = await mealCountService.updateMealCount(id, {
       count: count !== undefined ? Number(count) : undefined,
@@ -68,7 +86,7 @@ export async function updateMealCount(req: Request, res: Response) {
     console.error('식수 인원 수정 실패:', error);
     return res.status(500).json({
       success: false,
-      message: '식수 인원 수정에 실패했습니다',
+      message: error.message || '식수 인원 수정에 실패했습니다',
     });
   }
 }
@@ -80,6 +98,24 @@ export async function updateMealCount(req: Request, res: Response) {
 export async function deleteMealCount(req: Request, res: Response) {
   try {
     const { id } = req.params;
+    const userRole = req.user?.role;
+
+    // 기존 레코드 조회하여 날짜 확인
+    const existingRecord = await mealCountService.getMealCount(id);
+    if (!existingRecord) {
+      return res.status(404).json({
+        success: false,
+        message: '식수 정보를 찾을 수 없습니다',
+      });
+    }
+
+    // 슈퍼관리자가 아닌 경우 과거 날짜 삭제 불가
+    if (userRole !== 'SUPER_ADMIN' && mealCountService.isPastDate(existingRecord.date)) {
+      return res.status(403).json({
+        success: false,
+        message: '지난 날짜의 식수 인원은 삭제할 수 없습니다',
+      });
+    }
 
     await mealCountService.deleteMealCount(id);
 
@@ -91,7 +127,7 @@ export async function deleteMealCount(req: Request, res: Response) {
     console.error('식수 인원 삭제 실패:', error);
     return res.status(500).json({
       success: false,
-      message: '식수 인원 삭제에 실패했습니다',
+      message: error.message || '식수 인원 삭제에 실패했습니다',
     });
   }
 }
@@ -134,18 +170,14 @@ export async function getMealCountsByDate(req: Request, res: Response) {
   try {
     const { siteId, date } = req.params;
 
-    console.log('🔍 [MealCountsByDate] GET 요청 - siteId:', siteId, 'date:', date);
-
     const mealCounts = await mealCountService.getMealCountsByDate(siteId, date);
-
-    console.log('📦 [MealCountsByDate] 조회 결과:', mealCounts.length, '건');
 
     return res.json({
       success: true,
       data: mealCounts,
     });
   } catch (error: any) {
-    console.error('❌ [MealCountsByDate] 식수 인원 조회 실패:', error);
+    console.error('식수 인원 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 인원 조회에 실패했습니다',
@@ -163,8 +195,6 @@ export async function getMealCountsByRange(req: Request, res: Response) {
     const { siteId } = req.params;
     const { startDate, endDate } = req.query;
 
-    console.log('🔍 [MealCountsByRange] GET 요청 - siteId:', siteId, 'startDate:', startDate, 'endDate:', endDate);
-
     if (!startDate || !endDate) {
       return res.status(400).json({
         success: false,
@@ -178,14 +208,12 @@ export async function getMealCountsByRange(req: Request, res: Response) {
       endDate as string
     );
 
-    console.log('📦 [MealCountsByRange] 조회 결과:', mealCounts.length, '건');
-
     return res.json({
       success: true,
       data: mealCounts,
     });
   } catch (error: any) {
-    console.error('❌ [MealCountsByRange] 식수 인원 조회 실패:', error);
+    console.error('식수 인원 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 인원 조회에 실패했습니다',
@@ -255,17 +283,15 @@ export async function getAllMealCountSettings(_req: Request, res: Response) {
 export async function getMealCountSetting(req: Request, res: Response) {
   try {
     const { siteId } = req.params;
-    console.log('🔍 [MealCountSetting] GET 요청 - siteId:', siteId);
 
     const setting = await mealCountService.getMealCountSetting(siteId);
-    console.log('📦 [MealCountSetting] 조회 결과:', setting);
 
     return res.json({
       success: true,
       data: setting,
     });
   } catch (error: any) {
-    console.error('❌ [MealCountSetting] 식수 설정 조회 실패:', error);
+    console.error('식수 설정 조회 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 설정 조회에 실패했습니다',
@@ -282,21 +308,14 @@ export async function upsertMealCountSetting(req: Request, res: Response) {
     const { siteId } = req.params;
     const data = req.body;
 
-    console.log('💾 [MealCountSetting] POST 요청 받음!');
-    console.log('  - siteId:', siteId);
-    console.log('  - 요청 데이터:', JSON.stringify(data, null, 2));
-
     const setting = await mealCountService.upsertMealCountSetting(siteId, data);
-
-    console.log('✅ [MealCountSetting] 저장 성공!');
-    console.log('  - 결과:', JSON.stringify(setting, null, 2));
 
     return res.json({
       success: true,
       data: setting,
     });
   } catch (error: any) {
-    console.error('❌ [MealCountSetting] 식수 설정 저장 실패:', error);
+    console.error('식수 설정 저장 실패:', error);
     return res.status(500).json({
       success: false,
       message: '식수 설정 저장에 실패했습니다',

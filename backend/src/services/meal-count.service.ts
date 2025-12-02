@@ -23,6 +23,17 @@ export interface UpdateMealCountDTO {
 }
 
 /**
+ * 과거 날짜인지 확인 (오늘 이전 날짜)
+ */
+export function isPastDate(date: Date): boolean {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDate = new Date(date);
+  targetDate.setHours(0, 0, 0, 0);
+  return targetDate < today;
+}
+
+/**
  * 식수 인원 등록 (upsert 방식 - 이미 존재하면 업데이트)
  */
 export async function createMealCount(data: CreateMealCountDTO) {
