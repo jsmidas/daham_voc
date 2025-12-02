@@ -3,9 +3,8 @@
  * @description 식수 인원 관리 서비스
  */
 
-import { PrismaClient, MealType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { MealType } from '@prisma/client';
+import { prisma } from '../config/database';
 
 export interface CreateMealCountDTO {
   siteId: string;

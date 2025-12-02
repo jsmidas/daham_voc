@@ -3,9 +3,8 @@
  * @description 담당자 관리 서비스
  */
 
-import { PrismaClient, Division, Role } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Division, Role } from '@prisma/client';
+import { prisma } from '../config/database';
 
 /**
  * 담당자 목록 조회 (필터링, 페이징)

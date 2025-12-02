@@ -3,9 +3,7 @@
  * @description 식수 메뉴 관리 서비스
  */
 
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../config/database';
 
 /**
  * 전체 메뉴 목록 조회
