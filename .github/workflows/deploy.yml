@@ -45,6 +45,10 @@ jobs:
             npm install
             npm run build
 
+            echo "🔧 Updating nginx config..."
+            sudo cp ~/daham_voc/nginx-dahamvoc.conf /etc/nginx/sites-available/dahamvoc.conf
+            sudo nginx -t && sudo systemctl reload nginx
+
             echo "🚀 Restarting services with PM2..."
             cd ~/daham_voc
             pm2 restart ecosystem.config.js

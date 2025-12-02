@@ -67,7 +67,9 @@
       "Bash(powershell.exe -Command \"gh workflow run deploy.yml\")",
       "Bash(git submodule:*)",
       "Bash(powershell.exe -Command \"gh run list --limit 5\")",
-      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 5)"
+      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 5)",
+      "Bash(npx expo install:*)",
+      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" workflow run deploy.yml --repo jsmidas/daham_voc)"
     ],
     "deny": [],
     "ask": []
