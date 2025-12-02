@@ -35,7 +35,7 @@ export default function MealCountListPage() {
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
   const [selectedSiteId, setSelectedSiteId] = useState<string | undefined>();
-  const [isAllSites, setIsAllSites] = useState(false); // 전체 사업장 조회 여부
+  const [isAllSites, setIsAllSites] = useState(true); // 전체 사업장 조회 여부 (기본값: true)
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().startOf('month'),
     dayjs().endOf('month'),
@@ -819,7 +819,7 @@ export default function MealCountListPage() {
               options={[
                 { label: '전체', value: 'ALL' },
                 { label: 'HQ', value: 'HQ' },
-                { label: '영남', value: '영남' },
+                { label: '영남', value: 'YEONGNAM' },
               ]}
             />
           </div>
