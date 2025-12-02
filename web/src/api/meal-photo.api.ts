@@ -41,7 +41,7 @@ export async function getMealPhotos(filter?: MealPhotoFilter) {
   if (filter?.dateTo) params.append('dateTo', filter.dateTo);
 
   const response = await apiClient.get(`/meal-photos?${params.toString()}`);
-  return response.data;
+  return response.data?.data || [];
 }
 
 /**
