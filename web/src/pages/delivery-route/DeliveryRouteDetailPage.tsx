@@ -229,6 +229,7 @@ export default function DeliveryRouteDetailPage() {
     onSuccess: () => {
       message.success('기사가 배정되었습니다');
       queryClient.invalidateQueries({ queryKey: ['delivery-route', id] });
+      queryClient.invalidateQueries({ queryKey: ['delivery-routes'] }); // 목록 캐시도 무효화
       setDriverModalOpen(false);
       driverForm.resetFields();
     },
