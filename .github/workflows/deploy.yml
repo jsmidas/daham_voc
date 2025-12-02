@@ -47,6 +47,10 @@ jobs:
 
             echo "🔧 Updating nginx config..."
             sudo cp ~/daham_voc/nginx-dahamvoc.conf /etc/nginx/sites-available/dahamvoc.conf
+            # nginx.conf의 http 블록에 client_max_body_size 추가 (없으면)
+            if ! grep -q "client_max_body_size" /etc/nginx/nginx.conf; then
+              sudo sed -i '/http {/a\    client_max_body_size 50M;' /etc/nginx/nginx.conf
+            fi
             sudo nginx -t && sudo systemctl reload nginx
 
             echo "🚀 Restarting services with PM2..."
