@@ -72,7 +72,10 @@
       "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" workflow run deploy.yml --repo jsmidas/daham_voc)",
       "Bash(powershell.exe -Command \"& ''C:/Users/js/AppData/Local/Google/Cloud SDK/google-cloud-sdk/bin/gcloud.cmd'' run services list --region=asia-northeast3\")",
       "Bash(powershell.exe -Command \"gh run list --repo jsmidas/daham_voc --limit 5\")",
-      "Bash(https://api.github.com/repos/jsmidas/daham_voc/actions/workflows/deploy.yml/dispatches )"
+      "Bash(https://api.github.com/repos/jsmidas/daham_voc/actions/workflows/deploy.yml/dispatches )",
+      "Bash(powershell.exe -Command \"gh run list --repo jsmidas/daham_voc --limit 3\")",
+      "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 3)",
+      "WebFetch(domain:api.github.com)"
     ],
     "deny": [],
     "ask": []
