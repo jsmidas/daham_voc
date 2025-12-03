@@ -281,29 +281,37 @@ export class DeliveryRouteService {
       throw new Error('이미 해당 코스에 등록된 사업장입니다');
     }
 
-    // 순서 중복 확인
-    const stopNumberExists = await prisma.deliveryRouteStop.findUnique({
-      where: {
-        routeId_stopNumber: {
+    // 트랜잭션으로 처리: 순서 번호 중복 시 기존 항목들의 번호를 밀어냄
+    await prisma.$transaction(async (tx) => {
+      // 해당 순서 번호 이상의 기존 항목들 조회
+      const existingStops = await tx.deliveryRouteStop.findMany({
+        where: {
           routeId,
-          stopNumber: data.stopNumber,
+          stopNumber: { gte: data.stopNumber },
+          isActive: true,
         },
-      },
-    });
+        orderBy: { stopNumber: 'desc' }, // 큰 번호부터 처리해야 충돌 방지
+      });
 
-    if (stopNumberExists) {
-      throw new Error('이미 사용 중인 순서 번호입니다');
-    }
+      // 기존 항목들의 순서 번호를 +1씩 밀어냄 (큰 번호부터)
+      for (const stop of existingStops) {
+        await tx.deliveryRouteStop.update({
+          where: { id: stop.id },
+          data: { stopNumber: stop.stopNumber + 1 },
+        });
+      }
 
-    await prisma.deliveryRouteStop.create({
-      data: {
-        routeId,
-        siteId: data.siteId,
-        stopNumber: data.stopNumber,
-        estimatedArrival: data.estimatedArrival,
-        estimatedDuration: data.estimatedDuration,
-        notes: data.notes,
-      },
+      // 새 항목 생성
+      await tx.deliveryRouteStop.create({
+        data: {
+          routeId,
+          siteId: data.siteId,
+          stopNumber: data.stopNumber,
+          estimatedArrival: data.estimatedArrival,
+          estimatedDuration: data.estimatedDuration,
+          notes: data.notes,
+        },
+      });
     });
   }
 
@@ -327,16 +335,26 @@ export class DeliveryRouteService {
   /**
    * 코스 사업장 순서 일괄 업데이트
    */
-  async updateRouteStops(_routeId: string, data: UpdateRouteStopsDto): Promise<void> {
-    // 트랜잭션으로 일괄 업데이트
-    await prisma.$transaction(
-      data.stops.map((stop) =>
-        prisma.deliveryRouteStop.update({
+  async updateRouteStops(routeId: string, data: UpdateRouteStopsDto): Promise<void> {
+    // 순서 변경 시 unique constraint 충돌을 피하기 위해
+    // 먼저 모든 stopNumber를 음수로 설정한 후 새 순서로 업데이트
+    await prisma.$transaction(async (tx) => {
+      // 1단계: 모든 stopNumber를 임시값(음수)으로 변경
+      for (let i = 0; i < data.stops.length; i++) {
+        await tx.deliveryRouteStop.update({
+          where: { id: data.stops[i].id },
+          data: { stopNumber: -(i + 1000) }, // 음수 임시값
+        });
+      }
+
+      // 2단계: 새로운 순서로 업데이트
+      for (const stop of data.stops) {
+        await tx.deliveryRouteStop.update({
           where: { id: stop.id },
           data: { stopNumber: stop.stopNumber },
-        })
-      )
-    );
+        });
+      }
+    });
   }
 
   /**

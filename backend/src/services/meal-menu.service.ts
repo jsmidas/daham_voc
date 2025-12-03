@@ -10,7 +10,9 @@ import { prisma } from '../config/database';
  */
 export async function getMealMenus(includeInactive = false) {
   return await prisma.mealMenu.findMany({
-    where: includeInactive ? {} : { isActive: true, deletedAt: null },
+    where: includeInactive
+      ? { deletedAt: null }  // 비활성 포함하되 삭제된 것은 제외
+      : { isActive: true, deletedAt: null },
     orderBy: { sortOrder: 'asc' },
   });
 }
