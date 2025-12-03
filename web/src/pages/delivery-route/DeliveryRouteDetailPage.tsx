@@ -172,6 +172,7 @@ export default function DeliveryRouteDetailPage() {
     onSuccess: () => {
       message.success('사업장이 추가되었습니다');
       queryClient.invalidateQueries({ queryKey: ['delivery-route', id] });
+      queryClient.invalidateQueries({ queryKey: ['sites', route?.division] }); // 하단 목록 갱신
       setAddModalOpen(false);
       form.resetFields();
     },
@@ -360,6 +361,12 @@ export default function DeliveryRouteDetailPage() {
     },
   ];
 
+  // 하단 테이블에서 바로 사업장 추가하는 함수
+  const handleQuickAddSite = (siteId: string) => {
+    const nextStopNumber = (route?.stops?.length || 0) + 1;
+    addSiteMutation.mutate({ siteId, stopNumber: nextStopNumber });
+  };
+
   // 코스에 포함되지 않은 사업장 테이블 컬럼
   const availableSitesColumns = [
     {
@@ -388,6 +395,22 @@ export default function DeliveryRouteDetailPage() {
         const typeInfo = typeMap[type] || { label: type, color: 'default' };
         return <Tag color={typeInfo.color}>{typeInfo.label}</Tag>;
       },
+    },
+    {
+      title: '작업',
+      key: 'actions',
+      width: 100,
+      render: (_: any, record: any) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<PlusOutlined />}
+          onClick={() => handleQuickAddSite(record.id)}
+          loading={addSiteMutation.isPending}
+        >
+          추가
+        </Button>
+      ),
     },
   ];
 
