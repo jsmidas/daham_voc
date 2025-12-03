@@ -90,3 +90,8 @@ export async function uploadExcelFile(file: File) {
     },
   });
 }
+
+// 배송 코스에 배정되지 않은 사업장 조회
+export async function getUnassignedSites() {
+  return apiClient.get("/sites/unassigned");
+}

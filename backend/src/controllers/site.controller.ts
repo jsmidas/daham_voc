@@ -270,4 +270,19 @@ export class SiteController {
       res.status(500).json(errorResponse(error.message, 'GET_USER_SITES_ERROR'));
     }
   };
+
+  /**
+   * GET /api/v1/sites/unassigned
+   * Get sites not assigned to any delivery route
+   * @description 배송 코스에 배정되지 않은 사업장 목록 조회
+   */
+  getUnassignedSites = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const user = (req as any).user;
+      const result = await this.siteService.getUnassignedSites(user);
+      res.json(successResponse(result));
+    } catch (error: any) {
+      res.status(500).json(errorResponse(error.message, 'GET_UNASSIGNED_SITES_ERROR'));
+    }
+  };
 }

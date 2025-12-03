@@ -12,6 +12,8 @@ import {
   Typography,
   Modal,
   message,
+  Alert,
+  List,
 } from 'antd';
 import {
   PlusOutlined,
@@ -19,8 +21,10 @@ import {
   DeleteOutlined,
   EyeOutlined,
   SearchOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { getDeliveryRoutes, deleteDeliveryRoute } from '../../api/delivery-route.api';
+import { getUnassignedSites } from '../../api/site.api';
 import type { DeliveryRoute } from '../../types/delivery-route';
 import CreateDeliveryRouteModal from '../../components/delivery-route/CreateDeliveryRouteModal';
 import EditDeliveryRouteModal from '../../components/delivery-route/EditDeliveryRouteModal';
@@ -35,6 +39,7 @@ export default function DeliveryRouteListPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<DeliveryRoute | null>(null);
+  const [unassignedModalOpen, setUnassignedModalOpen] = useState(false);
 
   // 배송 코스 목록 조회
   const { data: routesData, isLoading, refetch } = useQuery({
@@ -42,7 +47,15 @@ export default function DeliveryRouteListPage() {
     queryFn: () => getDeliveryRoutes({ division, isActive, search }),
   });
 
+  // 미배정 사업장 조회
+  const { data: unassignedData } = useQuery({
+    queryKey: ['unassigned-sites'],
+    queryFn: () => getUnassignedSites(),
+  });
+
   const routes = routesData?.data;
+  const unassignedCount = unassignedData?.data?.count || 0;
+  const unassignedSites = unassignedData?.data?.sites || [];
 
   // 삭제 핸들러
   const handleDelete = (route: DeliveryRoute) => {
@@ -173,6 +186,22 @@ export default function DeliveryRouteListPage() {
         </Button>
       </div>
 
+      {/* 미배정 사업장 경고 */}
+      {unassignedCount > 0 && (
+        <Alert
+          type="warning"
+          showIcon
+          icon={<WarningOutlined />}
+          message={`코스에 배정되지 않은 사업장이 ${unassignedCount}개 있습니다.`}
+          style={{ marginBottom: 16 }}
+          action={
+            <Button size="small" type="text" onClick={() => setUnassignedModalOpen(true)}>
+              확인하기
+            </Button>
+          }
+        />
+      )}
+
       <Card style={{ marginBottom: 16 }}>
         <Space wrap>
           <Input
@@ -240,6 +269,47 @@ export default function DeliveryRouteListPage() {
         }}
         route={selectedRoute}
       />
+
+      {/* 미배정 사업장 목록 모달 */}
+      <Modal
+        title={
+          <Space>
+            <WarningOutlined style={{ color: '#faad14' }} />
+            <span>코스 미배정 사업장 ({unassignedCount}개)</span>
+          </Space>
+        }
+        open={unassignedModalOpen}
+        onCancel={() => setUnassignedModalOpen(false)}
+        footer={[
+          <Button key="close" onClick={() => setUnassignedModalOpen(false)}>
+            닫기
+          </Button>,
+        ]}
+        width={600}
+      >
+        <List
+          size="small"
+          dataSource={unassignedSites}
+          renderItem={(site: any) => (
+            <List.Item>
+              <List.Item.Meta
+                title={
+                  <Space>
+                    <span>{site.name}</span>
+                    <Tag color={site.division === 'HQ' ? 'blue' : 'green'}>
+                      {site.division === 'HQ' ? '본사' : '영남지사'}
+                    </Tag>
+                    <Tag>{site.type === 'CONSIGNMENT' ? '위탁' : site.type === 'DELIVERY' ? '운반' : site.type === 'LUNCHBOX' ? '도시락' : '행사'}</Tag>
+                  </Space>
+                }
+                description={site.address}
+              />
+            </List.Item>
+          )}
+          locale={{ emptyText: '미배정 사업장이 없습니다' }}
+          style={{ maxHeight: 400, overflow: 'auto' }}
+        />
+      </Modal>
     </div>
   );
 }

@@ -19,6 +19,9 @@ router.get('/light', authMiddleware, controller.getSitesLight);
 
 // GET /api/v1/sites/user/sites - Get sites assigned to current user
 router.get('/user/sites', authMiddleware, controller.getUserAssignedSites);
+// GET /api/v1/sites/unassigned - Get sites not assigned to any delivery route
+router.get("/unassigned", authMiddleware, controller.getUnassignedSites);
+
 
 // GET /api/v1/sites/excel-template - Download Excel template (Admin only)
 router.get(

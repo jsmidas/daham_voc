@@ -3,19 +3,22 @@
  * @description 대시보드 페이지
  */
 
-import { Row, Col, Card, Statistic, DatePicker, Spin } from 'antd';
+import { Row, Col, Card, Statistic, DatePicker, Spin, Button } from 'antd';
 import {
   ShopOutlined,
   MessageOutlined,
   ClockCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   getDashboardSummary,
   getDailyVOCTrend,
   getSiteComparison,
   getStaffPerformanceStats,
 } from '@/api/dashboard.api';
+import { getUnassignedSites } from '@/api/site.api';
 import { useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
 import {
@@ -46,6 +49,7 @@ ChartJS.register(
 const { RangePicker } = DatePicker;
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([
     dayjs().subtract(30, 'days'),
     dayjs(),
@@ -90,6 +94,14 @@ export default function DashboardPage() {
       ),
     retry: false,
   });
+
+  // 미배정 사업장 조회
+  const { data: unassignedData } = useQuery({
+    queryKey: ['unassigned-sites'],
+    queryFn: () => getUnassignedSites(),
+  });
+
+  const unassignedCount = unassignedData?.data?.count || 0;
 
   const handleDateChange = (dates: null | [Dayjs | null, Dayjs | null]) => {
     if (dates && dates[0] && dates[1]) {
@@ -152,14 +164,32 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="평균 별점"
-              value={summary?.data?.avgRating || 0}
-              precision={1}
-              suffix="/ 5.0"
-            />
-          </Card>
+          {unassignedCount > 0 ? (
+            <Card
+              hoverable
+              onClick={() => navigate('/delivery-routes')}
+              style={{ cursor: 'pointer', borderColor: '#faad14' }}
+            >
+              <Statistic
+                title="코스 미배정 사업장"
+                value={unassignedCount}
+                prefix={<WarningOutlined />}
+                valueStyle={{ color: '#faad14' }}
+              />
+              <Button type="link" size="small" style={{ padding: 0, marginTop: 4 }}>
+                확인하기
+              </Button>
+            </Card>
+          ) : (
+            <Card>
+              <Statistic
+                title="평균 별점"
+                value={summary?.data?.avgRating || 0}
+                precision={1}
+                suffix="/ 5.0"
+              />
+            </Card>
+          )}
         </Col>
       </Row>
 

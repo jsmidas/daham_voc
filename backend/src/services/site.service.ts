@@ -1116,5 +1116,67 @@ export class SiteService {
     });
 
     return Array.from(siteMap.values());
+
+  }
+  /**
+   * Get sites not assigned to any delivery route
+   * @description 배송 코스에 배정되지 않은 사업장 목록 반환 (거래중인 사업장만)
+   */
+  async getUnassignedSites(user?: any) {
+    const cacheKey = `sites-unassigned:${user?.role || 'all'}`;
+
+    // Check Redis cache
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+
+    // Build filter conditions
+    const where: any = {
+      isActive: true,
+      deletedAt: null,
+      // 배송 코스에 배정되지 않은 사업장 (활성 배정만 확인)
+      routeStops: {
+        none: {
+          isActive: true,
+        },
+      },
+    };
+
+    // Division 필터링
+    if (user && user.role === 'HQ_ADMIN') {
+      where.division = { in: ['HQ', 'CONSIGNMENT'] };
+    } else if (user && user.role === 'YEONGNAM_ADMIN') {
+      where.division = 'YEONGNAM';
+    }
+
+    const sites = await prisma.site.findMany({
+      where,
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        division: true,
+        address: true,
+        createdAt: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const result = {
+      count: sites.length,
+      sites,
+    };
+
+    // Cache for 5 minutes
+    await cache.set(cacheKey, JSON.stringify(result), 300);
+
+    return result;
   }
 }
