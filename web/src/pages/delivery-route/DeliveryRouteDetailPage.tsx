@@ -363,7 +363,11 @@ export default function DeliveryRouteDetailPage() {
 
   // 하단 테이블에서 바로 사업장 추가하는 함수
   const handleQuickAddSite = (siteId: string) => {
-    const nextStopNumber = (route?.stops?.length || 0) + 1;
+    // 현재 stops에서 최대 순서 번호를 찾아서 +1
+    const maxStopNumber = stops.length > 0
+      ? Math.max(...stops.map(s => s.stopNumber))
+      : 0;
+    const nextStopNumber = maxStopNumber + 1;
     addSiteMutation.mutate({ siteId, stopNumber: nextStopNumber });
   };
 
