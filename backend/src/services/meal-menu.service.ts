@@ -66,9 +66,15 @@ export async function updateMealMenu(
     isActive?: boolean;
   }
 ) {
+  // isActive가 true로 변경될 때 deletedAt도 null로 초기화
+  const updateData: any = { ...data };
+  if (data.isActive === true) {
+    updateData.deletedAt = null;
+  }
+
   return await prisma.mealMenu.update({
     where: { id },
-    data,
+    data: updateData,
   });
 }
 
