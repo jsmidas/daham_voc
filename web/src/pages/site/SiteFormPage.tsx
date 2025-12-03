@@ -24,14 +24,32 @@ export default function SiteFormPage() {
 
   const isEditMode = !!id;
 
-  // 계층 구조에서 전달된 초기값 가져오기 또는 목록에서 전달된 페이지 정보
+  // 계층 구조에서 전달된 초기값 가져오기 또는 목록에서 전달된 페이지/필터 정보
   const stateData = location.state as {
     groupId?: string;
     division?: string;
     type?: string;
     returnPage?: number;
     returnPageSize?: number;
+    returnSearch?: string;
+    returnType?: string;
+    returnDivision?: string;
+    returnGroup?: string;
   } | null;
+
+  // 사업장 목록으로 돌아갈 때 필터 상태 포함 URL 생성
+  const getReturnUrl = () => {
+    if (!stateData) return '/sites';
+    const params = new URLSearchParams();
+    if (stateData.returnPage && stateData.returnPage > 1) params.set('page', stateData.returnPage.toString());
+    if (stateData.returnPageSize && stateData.returnPageSize !== 50) params.set('pageSize', stateData.returnPageSize.toString());
+    if (stateData.returnSearch) params.set('search', stateData.returnSearch);
+    if (stateData.returnType) params.set('type', stateData.returnType);
+    if (stateData.returnDivision) params.set('division', stateData.returnDivision);
+    if (stateData.returnGroup) params.set('group', stateData.returnGroup);
+    const queryString = params.toString();
+    return queryString ? `/sites?${queryString}` : '/sites';
+  };
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: siteData } = useQuery({
@@ -127,15 +145,8 @@ export default function SiteFormPage() {
       queryClient.invalidateQueries({ queryKey: ['sites'] });
       queryClient.invalidateQueries({ queryKey: ['site', id] });
       queryClient.invalidateQueries({ queryKey: ['site-groups'] });
-      // 이전 페이지 정보가 있으면 해당 페이지로 이동
-      if (stateData?.returnPage) {
-        const params = new URLSearchParams();
-        params.set('page', stateData.returnPage.toString());
-        if (stateData.returnPageSize) params.set('pageSize', stateData.returnPageSize.toString());
-        navigate(`/sites?${params.toString()}`);
-      } else {
-        navigate('/sites');
-      }
+      // 이전 페이지 및 필터 정보가 있으면 해당 상태로 이동
+      navigate(getReturnUrl());
     },
     onError: (error: any) => {
       console.error('=== Update Error ===');
@@ -583,17 +594,7 @@ export default function SiteFormPage() {
             >
               {isEditMode ? '수정' : '등록'}
             </Button>
-            <Button onClick={() => {
-              // 이전 페이지 정보가 있으면 해당 페이지로 이동
-              if (stateData?.returnPage) {
-                const params = new URLSearchParams();
-                params.set('page', stateData.returnPage.toString());
-                if (stateData.returnPageSize) params.set('pageSize', stateData.returnPageSize.toString());
-                navigate(`/sites?${params.toString()}`);
-              } else {
-                navigate('/sites');
-              }
-            }}>취소</Button>
+            <Button onClick={() => navigate(getReturnUrl())}>취소</Button>
           </Form.Item>
         </Form>
       </Card>

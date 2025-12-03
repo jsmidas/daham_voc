@@ -1011,7 +1011,7 @@ export class SiteService {
       where.division = 'YEONGNAM';
     }
 
-    // 경량 쿼리 - 관계 데이터 최소화
+    // 경량 쿼리 - 관계 데이터 최소화 (그룹 정보 포함)
     const sites = await prisma.site.findMany({
       where,
       select: {
@@ -1021,6 +1021,12 @@ export class SiteService {
         division: true,
         address: true,
         isActive: true,
+        group: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: { name: 'asc' },
     });

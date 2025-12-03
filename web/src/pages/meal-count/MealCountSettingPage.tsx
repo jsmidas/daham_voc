@@ -17,6 +17,7 @@ interface SiteWithSetting {
   siteId: string;
   siteName: string;
   division: string;
+  groupName?: string;
   setting?: MealCountSetting;
 }
 
@@ -59,6 +60,7 @@ export default function MealCountSettingPage() {
       siteId: site.id,
       siteName: site.name,
       division: site.division,
+      groupName: site.group?.name,
       setting: allSettings?.[site.id] || undefined,
     }));
   }, [sites, allSettings]);
@@ -235,6 +237,17 @@ export default function MealCountSettingPage() {
     return <Tag>{division}</Tag>;
   };
 
+  // 그룹 필터 옵션 생성
+  const groupFilters = useMemo(() => {
+    const groups = new Set<string>();
+    allSitesList.forEach(site => {
+      if (site.groupName) {
+        groups.add(site.groupName);
+      }
+    });
+    return Array.from(groups).sort().map(name => ({ text: name, value: name }));
+  }, [allSitesList]);
+
   const columns = [
     {
       title: '부문',
@@ -247,6 +260,17 @@ export default function MealCountSettingPage() {
         { text: '영남지사', value: 'YEONGNAM' },
       ],
       onFilter: (value: any, record: SiteWithSetting) => record.division === value,
+    },
+    {
+      title: '그룹',
+      dataIndex: 'groupName',
+      key: 'groupName',
+      width: 100,
+      render: (groupName: string | undefined) => (
+        groupName ? <Tag color="purple">{groupName}</Tag> : <span style={{ color: '#999' }}>-</span>
+      ),
+      filters: groupFilters,
+      onFilter: (value: any, record: SiteWithSetting) => record.groupName === value,
     },
     {
       title: '사업장',

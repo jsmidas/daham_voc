@@ -193,7 +193,14 @@ export default function SiteListPage() {
             icon={<EditOutlined />}
             size="small"
             onClick={() => navigate(`/sites/${record.id}/edit`, {
-              state: { returnPage: page, returnPageSize: pageSize }
+              state: {
+                returnPage: page,
+                returnPageSize: pageSize,
+                returnSearch: search,
+                returnType: typeFilter,
+                returnDivision: divisionFilter,
+                returnGroup: groupFilter,
+              }
             })}
           >
             수정
