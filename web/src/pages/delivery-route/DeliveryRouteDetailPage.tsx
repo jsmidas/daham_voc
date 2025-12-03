@@ -155,7 +155,7 @@ export default function DeliveryRouteDetailPage() {
     enabled: !!route?.division,
   });
 
-  const allSites = allSitesData?.data?.sites;
+  const allSites = allSitesData?.sites;
 
   // 배송기사 목록 조회
   const { data: driversData } = useQuery({
