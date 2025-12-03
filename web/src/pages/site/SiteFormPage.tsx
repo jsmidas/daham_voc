@@ -140,10 +140,39 @@ export default function SiteFormPage() {
     onError: (error: any) => {
       console.error('=== Update Error ===');
       console.error('Error object:', error);
-      console.error('Error message:', error.message);
-      console.error('Error status:', error.status);
-      console.error('Error data:', error.data);
-      message.error(error.message || '수정 실패');
+      console.error('Error response:', error.response);
+      console.error('Error response data:', error.response?.data);
+
+      // 서버에서 반환한 자세한 에러 메시지 표시
+      const errorMessage = error.response?.data?.error?.message || error.message || '수정 실패';
+      const errorDetails = error.response?.data?.error?.details;
+
+      if (errorDetails && Array.isArray(errorDetails)) {
+        // Validation 에러인 경우 사용자 친화적인 메시지로 변환
+        const fieldMessages: Record<string, string> = {
+          contactPhone1: '연락처 1',
+          contactPhone2: '연락처 2',
+          name: '사업장명',
+          address: '주소',
+          latitude: '위도',
+          longitude: '경도',
+        };
+
+        const detailMessages = errorDetails.map((d: any) => {
+          const fieldName = fieldMessages[d.field] || d.field;
+          if (d.field === 'contactPhone1' || d.field === 'contactPhone2') {
+            return `${fieldName}: 전화번호 형식이 올바르지 않습니다 (예: 010-1234-5678, 053-123-4567)`;
+          }
+          return `${fieldName}: ${d.message}`;
+        }).join('\n');
+
+        message.error({
+          content: `입력값을 확인해주세요\n${detailMessages}`,
+          duration: 8,
+        });
+      } else {
+        message.error(errorMessage);
+      }
     },
   });
 
