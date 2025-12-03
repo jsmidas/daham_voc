@@ -1109,7 +1109,7 @@ export class SiteService {
   }
   /**
    * Get sites not assigned to any delivery route
-   * @description 배송 코스에 배정되지 않은 사업장 목록 반환 (거래중인 사업장만)
+   * @description 배송 코스에 배정되지 않은 사업장 목록 반환 (거래중인 사업장만, 위탁 제외)
    */
   async getUnassignedSites(user?: any) {
     const cacheKey = `sites-unassigned:${user?.role || 'all'}`;
@@ -1124,6 +1124,8 @@ export class SiteService {
     const where: any = {
       isActive: true,
       deletedAt: null,
+      // 위탁(CONSIGNMENT) 유형은 배송이 필요 없으므로 제외
+      type: { not: 'CONSIGNMENT' },
       // 배송 코스에 배정되지 않은 사업장 (활성 배정만 확인)
       routeStops: {
         none: {
@@ -1132,9 +1134,9 @@ export class SiteService {
       },
     };
 
-    // Division 필터링
+    // Division 필터링 (위탁은 이미 type으로 제외됨)
     if (user && user.role === 'HQ_ADMIN') {
-      where.division = { in: ['HQ', 'CONSIGNMENT'] };
+      where.division = 'HQ';
     } else if (user && user.role === 'YEONGNAM_ADMIN') {
       where.division = 'YEONGNAM';
     }

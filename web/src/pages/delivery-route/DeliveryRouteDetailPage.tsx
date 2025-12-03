@@ -258,9 +258,11 @@ export default function DeliveryRouteDetailPage() {
     setDriverModalOpen(true);
   };
 
-  // 코스에 포함되지 않은 사업장 필터링
+  // 코스에 포함되지 않은 사업장 필터링 (위탁 사업장 제외 - 배송 필요 없음)
   const availableSites = allSites?.filter(
-    (site: any) => !route?.stops.some((stop: any) => stop.site.id === site.id)
+    (site: any) =>
+      !route?.stops.some((stop: any) => stop.site.id === site.id) &&
+      site.type !== 'CONSIGNMENT'
   );
 
   // 사업장 추가 핸들러
