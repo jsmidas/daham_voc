@@ -335,7 +335,7 @@ export class DeliveryRouteService {
   /**
    * 코스 사업장 순서 일괄 업데이트
    */
-  async updateRouteStops(routeId: string, data: UpdateRouteStopsDto): Promise<void> {
+  async updateRouteStops(_routeId: string, data: UpdateRouteStopsDto): Promise<void> {
     // 순서 변경 시 unique constraint 충돌을 피하기 위해
     // 먼저 모든 stopNumber를 음수로 설정한 후 새 순서로 업데이트
     await prisma.$transaction(async (tx) => {
