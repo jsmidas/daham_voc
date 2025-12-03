@@ -147,6 +147,11 @@ export default function SiteListPage() {
       title: '사업장명',
       dataIndex: 'name',
       key: 'name',
+      render: (name: string, record: any) => (
+        <span style={{ color: record.isActive ? 'inherit' : '#999' }}>
+          {name}
+        </span>
+      ),
     },
     {
       title: '유형',
@@ -304,6 +309,7 @@ export default function SiteListPage() {
         dataSource={sites?.data?.sites || []}
         loading={isLoading}
         rowKey="id"
+        rowClassName={(record: any) => record.isActive ? '' : 'inactive-row'}
         pagination={{
           current: page,
           pageSize: pageSize,

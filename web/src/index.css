@@ -42,3 +42,14 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* 거래중단 사업장 행 스타일 */
+.inactive-row {
+  background-color: #f5f5f5 !important;
+}
+.inactive-row td {
+  color: #999 !important;
+}
+.inactive-row:hover > td {
+  background-color: #e8e8e8 !important;
+}
