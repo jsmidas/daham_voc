@@ -32,41 +32,29 @@ export async function uploadImage(
   folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks'
 ): Promise<UploadedImage> {
   try {
-    console.log(`📸 이미지 업로드 시작: ${file.originalname} (${file.size} bytes)`);
-
     // 이미지 처리
     const [compressed, thumbnail] = await Promise.all([
       compressImage(file.buffer),
       generateThumbnail(file.buffer),
     ]);
 
-    console.log(`📐 이미지 압축 완료: ${compressed.size} bytes, ${compressed.width}x${compressed.height}`);
-
     // 파일 경로 생성
     const originalPath = generateImagePath(folder, file.originalname);
     const thumbnailPath = originalPath.replace(/(\.[^.]+)$/, '-thumb$1');
 
-    console.log(`📁 파일 경로 생성: ${originalPath}`);
-
     // GCP Storage 업로드
     const bucket = getBucket();
     if (bucket) {
-      console.log(`☁️  GCP Storage에 업로드 중...`);
-      // 실제 GCP 업로드
       await Promise.all([
         uploadToGCP(bucket, originalPath, compressed.buffer, file.mimetype),
         uploadToGCP(bucket, thumbnailPath, thumbnail.buffer, file.mimetype),
       ]);
-      console.log(`✅ GCP 업로드 완료: ${originalPath}`);
     } else {
       // Mock storage (개발 환경) - 로컬에 실제 파일 저장
-      console.log(`⚠️  GCP bucket이 null - Mock storage 사용`);
       await Promise.all([
         uploadToLocal(originalPath, compressed.buffer),
         uploadToLocal(thumbnailPath, thumbnail.buffer),
       ]);
-      console.log(`Mock upload: ${originalPath} (${compressed.size} bytes)`);
-      console.log(`Mock upload: ${thumbnailPath} (${thumbnail.size} bytes)`);
     }
 
     const result = {
@@ -79,11 +67,9 @@ export async function uploadImage(
       height: compressed.height,
     };
 
-    console.log(`📷 이미지 업로드 결과: ${result.originalUrl}`);
     return result;
   } catch (error: any) {
-    console.error(`❌ 이미지 업로드 실패: ${error.message}`);
-    console.error(`   Full error:`, error);
+    console.error(`Image upload failed: ${error.message}`);
     throw new Error(`Image upload failed: ${error.message}`);
   }
 }
@@ -109,9 +95,7 @@ async function uploadToGCP(
       resumable: false, // 작은 파일은 단일 요청으로 업로드
     });
   } catch (error: any) {
-    console.error(`❌ GCP 파일 업로드 실패: ${path}`);
-    console.error(`   Error code: ${error.code}`);
-    console.error(`   Error message: ${error.message}`);
+    console.error(`GCP upload failed for ${path}: ${error.message}`);
     throw error;
   }
 }
@@ -197,8 +181,6 @@ export async function deleteImage(
       // Mock storage (개발 환경) - 로컬 파일 삭제
       deleteFromLocal(originalPath);
       deleteFromLocal(thumbnailPath);
-      console.log(`Mock delete: ${originalPath}`);
-      console.log(`Mock delete: ${thumbnailPath}`);
     }
   } catch (error) {
     console.error('Image deletion failed:', error);

@@ -1,15 +1,30 @@
 import { prisma } from '../config/database';
+import crypto from 'crypto';
 import { hashPassword, comparePassword } from '../utils/bcrypt.util';
 import { generateToken } from '../utils/jwt.util';
-import { User } from '@prisma/client';
+import { User, Role, Division } from '@prisma/client';
+
+
+/**
+ * Generate a secure random password
+ */
+function generateSecurePassword(length: number = 12): string {
+  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%';
+  const randomBytes = crypto.randomBytes(length);
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += charset[randomBytes[i] % charset.length];
+  }
+  return password;
+}
 
 export interface RegisterDto {
   phone: string;
   name: string;
-  password?: string;  // Optional - defaults to '1234'
+  password?: string;  // Optional - generates secure random password if not provided
   email?: string;
-  role?: string;
-  division?: string;
+  role?: Role;
+  division?: Division;
 }
 
 export interface LoginResponse {
@@ -31,8 +46,14 @@ export class AuthService {
       throw new Error('이미 등록된 전화번호입니다');
     }
 
-    // Use default password '1234' if not provided
-    const password = data.password || '1234';
+    // Generate secure random password if not provided
+    const password = data.password || generateSecurePassword();
+    const isGeneratedPassword = !data.password;
+
+    if (isGeneratedPassword) {
+      console.log(`[Auth] Generated password for user ${data.phone}: ${password}`);
+      // In production, this should be sent via SMS or email instead of logging
+    }
 
     // Hash password
     const hashedPassword = await hashPassword(password);
@@ -44,8 +65,8 @@ export class AuthService {
         password: hashedPassword,
         name: data.name,
         email: data.email,
-        role: (data.role as any) || 'STAFF',
-        division: data.division as any,
+        role: data.role || Role.SITE_STAFF,
+        division: data.division,
       },
     });
 
@@ -156,7 +177,7 @@ export class AuthService {
     const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
 
     // Expand site groups: fetch all sites belonging to assigned groups
-    let groupSites: any[] = [];
+    let groupSites: typeof individualSites = [];
     if (assignedSiteGroups.length > 0) {
       const groupIds = assignedSiteGroups.map(g => g.id);
       groupSites = await prisma.site.findMany({

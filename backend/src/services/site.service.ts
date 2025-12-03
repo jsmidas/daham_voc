@@ -64,7 +64,11 @@ export class SiteService {
    * Convert address to coordinates using Kakao API
    */
   private async geocodeAddress(address: string): Promise<{ latitude: number; longitude: number }> {
-    const KAKAO_API_KEY = process.env.KAKAO_API_KEY || '2ec48bfd86a549a69da630e18d685008';
+    const KAKAO_API_KEY = process.env.KAKAO_API_KEY;
+    if (!KAKAO_API_KEY) {
+      console.warn('KAKAO_API_KEY not configured - geocoding will fail');
+      throw new Error('Kakao API key not configured');
+    }
 
     try {
       // Add timeout to prevent hanging
@@ -708,20 +712,10 @@ export class SiteService {
     ];
     let colorIndex = 0;
 
-    // Process each row with batch processing (5 rows at a time)
-    const BATCH_SIZE = 5;
-    const totalRows = data.length;
-
-    console.log(`📊 Starting bulk creation: ${totalRows} rows total`);
-
+    // Process each row
     for (let i = 0; i < data.length; i++) {
       const row: any = data[i];
       const rowNumber = i + 2; // Excel row number (1-indexed + header)
-
-      // Log progress every BATCH_SIZE rows
-      if (i % BATCH_SIZE === 0) {
-        console.log(`📍 Processing batch: ${i + 1}-${Math.min(i + BATCH_SIZE, totalRows)} of ${totalRows}`);
-      }
 
       try {
         // Validate required fields
@@ -878,13 +872,11 @@ export class SiteService {
             where: { id: existingSite.id },
             data: siteData,
           });
-          console.log(`✏️  Updated existing site: ${row['사업장명']} (row ${rowNumber})`);
         } else {
           // Create new site
           createdOrUpdatedSite = await prisma.site.create({
             data: siteData,
           });
-          console.log(`✨ Created new site: ${row['사업장명']} (row ${rowNumber})`);
         }
 
         // 배송코스 처리 (배송코스가 입력된 경우)
@@ -928,7 +920,6 @@ export class SiteService {
               });
 
               colorIndex++;
-              console.log(`📦 Created new delivery route: ${routeName} (${routeCode})`);
             }
 
             deliveryRouteId = deliveryRoute.id;
@@ -968,8 +959,6 @@ export class SiteService {
                 isActive: true,
               },
             });
-
-            console.log(`🚚 Added site to delivery route: ${routeName} (stop #${nextStopNumber})`);
           }
         }
 
@@ -988,14 +977,8 @@ export class SiteService {
     await this.invalidateCache();
 
     // Log final summary
-    console.log('='.repeat(50));
-    console.log(`✅ Bulk creation completed`);
-    console.log(`   Success: ${results.success}/${totalRows}`);
-    console.log(`   Failed: ${results.failed.length}/${totalRows}`);
     if (results.failed.length > 0) {
-      console.log(`   Failed rows: ${results.failed.map(f => f.row).join(', ')}`);
     }
-    console.log('='.repeat(50));
 
     return results;
   }

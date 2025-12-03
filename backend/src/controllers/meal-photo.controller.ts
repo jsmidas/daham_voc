@@ -49,23 +49,16 @@ export async function createMealPhoto(req: Request, res: Response): Promise<void
  */
 export async function bulkCreateMealPhotos(req: Request, res: Response): Promise<void> {
   try {
-    console.log('=== Bulk upload request received ===');
-    console.log('Body:', JSON.stringify(req.body, null, 2));
-    console.log('Files count:', (req.files as Express.Multer.File[])?.length || 0);
-    console.log('User:', req.user?.userId, req.user?.role);
-
     const { siteId, mealType, photoType, capturedAt, latitude, longitude } = req.body;
     const userId = req.user!.userId;
     const images = req.files as Express.Multer.File[];
 
     if (!images || images.length === 0) {
-      console.log('Error: No images received');
       res.status(400).json(errorResponse('이미지 파일이 필요합니다'));
       return;
     }
 
     if (images.length > 6) {
-      console.log('Error: Too many images:', images.length);
       res.status(400).json(errorResponse('최대 6개의 이미지만 업로드할 수 있습니다'));
       return;
     }

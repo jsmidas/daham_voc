@@ -213,11 +213,6 @@ export class SiteController {
    */
   uploadExcelFile = async (req: Request, res: Response): Promise<void> => {
     try {
-      console.log('=== Excel Upload Request ===');
-      console.log('Content-Type:', req.headers['content-type']);
-      console.log('req.file:', req.file);
-      console.log('req.files:', req.files);
-
       const userId = req.user?.userId;
 
       if (!userId) {
@@ -226,16 +221,9 @@ export class SiteController {
       }
 
       if (!req.file) {
-        console.error('❌ File not found in request');
         res.status(400).json(errorResponse('엑셀 파일이 필요합니다', 'FILE_REQUIRED'));
         return;
       }
-
-      console.log('✅ File received:', {
-        filename: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size,
-      });
 
       const result = await this.siteService.bulkCreateFromExcel(req.file.buffer, userId);
 
