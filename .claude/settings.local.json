@@ -76,7 +76,15 @@
       "Bash(powershell.exe -Command \"gh run list --repo jsmidas/daham_voc --limit 3\")",
       "Bash(\"/cygdrive/c/Program Files/GitHub CLI/gh.exe\" run list --repo jsmidas/daham_voc --limit 3)",
       "WebFetch(domain:api.github.com)",
-      "Bash(powershell.exe -Command \"gh workflow run deploy.yml --repo jsmidas/daham_voc\")"
+      "Bash(powershell.exe -Command \"gh workflow run deploy.yml --repo jsmidas/daham_voc\")",
+      "Bash(md5sum:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./node_modules/.bin/tsc:*)",
+      "Bash(powershell.exe -Command \"Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }\")",
+      "Bash(powershell.exe -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell.exe:*)",
+      "Bash(pkill -f \"taskkill\")",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []

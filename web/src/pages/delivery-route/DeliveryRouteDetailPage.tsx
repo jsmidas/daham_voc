@@ -119,7 +119,9 @@ const DraggableRow: React.FC<DraggableRowProps> = ({ index, moveRow, record, cla
 // 사업장 목록 조회 함수
 async function getSites(params?: { division?: string }) {
   const response: any = await apiClient.get('/sites', { params });
-  return response.data;
+  // axios interceptor가 이미 response.data를 반환하므로
+  // response는 { success: true, data: { sites: [...] } } 형태임
+  return response;
 }
 
 export default function DeliveryRouteDetailPage() {
@@ -155,7 +157,7 @@ export default function DeliveryRouteDetailPage() {
     enabled: !!route?.division,
   });
 
-  const allSites = allSitesData?.sites;
+  const allSites = allSitesData?.data?.sites;
 
   // 배송기사 목록 조회
   const { data: driversData } = useQuery({
