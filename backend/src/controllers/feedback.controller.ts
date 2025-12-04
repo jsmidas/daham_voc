@@ -21,6 +21,13 @@ export async function createFeedback(req: Request, res: Response): Promise<void>
     // 업로드된 파일들 (multer가 req.files에 저장)
     const imageFiles = req.files as Express.Multer.File[];
 
+    // 디버깅 로그
+    console.log('[VOC Create] Request body:', { siteId, authorType, content, rating, feedbackDate, mealType });
+    console.log('[VOC Create] Files received:', imageFiles?.length || 0);
+    if (imageFiles && imageFiles.length > 0) {
+      imageFiles.forEach((f, i) => console.log(`  File ${i + 1}:`, f.originalname, f.mimetype, f.size));
+    }
+
     const feedback = await feedbackService.createFeedback(
       {
         siteId,
