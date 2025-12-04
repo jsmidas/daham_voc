@@ -267,7 +267,7 @@ export class DeliveryRouteService {
       throw new Error('사업장을 찾을 수 없습니다');
     }
 
-    // 중복 확인
+    // 기존 등록 확인 (활성/비활성 모두)
     const existing = await prisma.deliveryRouteStop.findUnique({
       where: {
         routeId_siteId: {
@@ -277,7 +277,8 @@ export class DeliveryRouteService {
       },
     });
 
-    if (existing) {
+    // 이미 활성 상태로 등록되어 있으면 에러
+    if (existing && existing.isActive) {
       throw new Error('이미 해당 코스에 등록된 사업장입니다');
     }
 
@@ -301,17 +302,30 @@ export class DeliveryRouteService {
         });
       }
 
-      // 새 항목 생성
-      await tx.deliveryRouteStop.create({
-        data: {
-          routeId,
-          siteId: data.siteId,
-          stopNumber: data.stopNumber,
-          estimatedArrival: data.estimatedArrival,
-          estimatedDuration: data.estimatedDuration,
-          notes: data.notes,
-        },
-      });
+      // 비활성화된 기존 항목이 있으면 재활성화, 없으면 새로 생성
+      if (existing) {
+        await tx.deliveryRouteStop.update({
+          where: { id: existing.id },
+          data: {
+            isActive: true,
+            stopNumber: data.stopNumber,
+            estimatedArrival: data.estimatedArrival,
+            estimatedDuration: data.estimatedDuration,
+            notes: data.notes,
+          },
+        });
+      } else {
+        await tx.deliveryRouteStop.create({
+          data: {
+            routeId,
+            siteId: data.siteId,
+            stopNumber: data.stopNumber,
+            estimatedArrival: data.estimatedArrival,
+            estimatedDuration: data.estimatedDuration,
+            notes: data.notes,
+          },
+        });
+      }
     });
   }
 
