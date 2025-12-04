@@ -282,38 +282,81 @@ export class DeliveryRouteService {
       throw new Error('이미 해당 코스에 등록된 사업장입니다');
     }
 
-    // 트랜잭션으로 처리: 순서 번호 중복 시 기존 항목들의 번호를 밀어냄
+    // 트랜잭션으로 처리: 순서 번호 중복 방지
     await prisma.$transaction(async (tx) => {
-      // 0단계: 해당 코스의 모든 사업장 stopNumber를 임시값으로 변경 (충돌 방지)
+      // 1단계: 모든 stops 조회 및 새로운 순서 계산 (메모리에서 처리)
       const allStops = await tx.deliveryRouteStop.findMany({
         where: { routeId },
+        orderBy: { stopNumber: 'asc' },
       });
+
+      // 2단계: 새로운 순서 맵 생성 (id -> newStopNumber)
+      const newStopNumbers = new Map<string, number>();
+      let nextNumber = 1;
+
+      // 활성 사업장들만 추출하고, 새 사업장 위치 고려하여 순서 재계산
+      const activeStops = allStops
+        .filter((s) => s.isActive)
+        .sort((a, b) => a.stopNumber - b.stopNumber);
+
+      // existing이 있으면 activeStops에서 제외 (재활성화될 것이므로)
+      const stopsToReorder = existing
+        ? activeStops.filter((s) => s.id !== existing.id)
+        : activeStops;
+
+      // 새 사업장/재활성화 사업장이 들어갈 위치 기준으로 순서 재배치
+      const insertAt = data.stopNumber;
+      let inserted = false;
+
+      for (const stop of stopsToReorder) {
+        // 새 사업장 삽입 위치에 도달하면 먼저 삽입 위치 확보
+        if (!inserted && nextNumber >= insertAt) {
+          nextNumber++; // 새 사업장 자리 확보
+          inserted = true;
+        }
+        newStopNumbers.set(stop.id, nextNumber);
+        nextNumber++;
+      }
+
+      // 삽입 위치가 맨 뒤인 경우
+      if (!inserted) {
+        // 아직 삽입되지 않았으면 마지막에 넣을 예정
+      }
+
+      // 비활성 사업장들은 높은 음수값 부여 (충돌 방지)
+      const inactiveStops = allStops.filter(
+        (s) => !s.isActive && (!existing || s.id !== existing.id)
+      );
+      let negativeNumber = -10000;
+      for (const stop of inactiveStops) {
+        newStopNumbers.set(stop.id, negativeNumber);
+        negativeNumber--;
+      }
+
+      // 3단계: 모든 기존 stops를 임시 음수값으로 변경 (unique constraint 회피)
+      const timestamp = Date.now();
       for (let i = 0; i < allStops.length; i++) {
         await tx.deliveryRouteStop.update({
           where: { id: allStops[i].id },
-          data: { stopNumber: -(i + 1000) },
+          data: { stopNumber: -(timestamp % 100000) - (i + 1) },
         });
       }
 
-      // 1단계: 활성 사업장들 중 새 순서 이상인 것들을 +1씩 밀어냄
-      const activeStops = allStops.filter(s => s.isActive);
-      for (const stop of activeStops) {
-        const newStopNumber = stop.stopNumber >= data.stopNumber
-          ? stop.stopNumber + 1
-          : stop.stopNumber;
+      // 4단계: 계산된 새 순서로 업데이트
+      for (const [stopId, newNumber] of newStopNumbers) {
         await tx.deliveryRouteStop.update({
-          where: { id: stop.id },
-          data: { stopNumber: newStopNumber },
+          where: { id: stopId },
+          data: { stopNumber: newNumber },
         });
       }
 
-      // 2단계: 비활성화된 기존 항목이 있으면 재활성화, 없으면 새로 생성
+      // 5단계: 비활성화된 기존 항목이 있으면 재활성화, 없으면 새로 생성
       if (existing) {
         await tx.deliveryRouteStop.update({
           where: { id: existing.id },
           data: {
             isActive: true,
-            stopNumber: data.stopNumber,
+            stopNumber: insertAt,
             estimatedArrival: data.estimatedArrival,
             estimatedDuration: data.estimatedDuration,
             notes: data.notes,
@@ -324,7 +367,7 @@ export class DeliveryRouteService {
           data: {
             routeId,
             siteId: data.siteId,
-            stopNumber: data.stopNumber,
+            stopNumber: insertAt,
             estimatedArrival: data.estimatedArrival,
             estimatedDuration: data.estimatedDuration,
             notes: data.notes,
@@ -358,30 +401,35 @@ export class DeliveryRouteService {
     // 순서 변경 시 unique constraint 충돌을 피하기 위해
     // 먼저 모든 stopNumber를 음수로 설정한 후 새 순서로 업데이트
     await prisma.$transaction(async (tx) => {
-      // 0단계: 해당 코스의 모든 비활성 사업장도 임시값으로 변경 (충돌 방지)
-      const inactiveStops = await tx.deliveryRouteStop.findMany({
-        where: { routeId, isActive: false },
+      // 1단계: 해당 코스의 모든 사업장 조회
+      const allStops = await tx.deliveryRouteStop.findMany({
+        where: { routeId },
       });
-      for (let i = 0; i < inactiveStops.length; i++) {
+
+      // 2단계: 모든 stops를 고유한 임시 음수값으로 변경 (충돌 방지)
+      const timestamp = Date.now();
+      for (let i = 0; i < allStops.length; i++) {
         await tx.deliveryRouteStop.update({
-          where: { id: inactiveStops[i].id },
-          data: { stopNumber: -(i + 2000) }, // 비활성용 음수 임시값
+          where: { id: allStops[i].id },
+          data: { stopNumber: -(timestamp % 100000) - (i + 1) },
         });
       }
 
-      // 1단계: 활성 사업장들의 stopNumber를 임시값(음수)으로 변경
-      for (let i = 0; i < data.stops.length; i++) {
-        await tx.deliveryRouteStop.update({
-          where: { id: data.stops[i].id },
-          data: { stopNumber: -(i + 1000) }, // 음수 임시값
-        });
-      }
-
-      // 2단계: 새로운 순서로 업데이트
+      // 3단계: 요청된 활성 사업장들을 새 순서로 업데이트
       for (const stop of data.stops) {
         await tx.deliveryRouteStop.update({
           where: { id: stop.id },
           data: { stopNumber: stop.stopNumber },
+        });
+      }
+
+      // 4단계: 비활성 사업장들은 높은 음수값 유지
+      const requestedIds = new Set(data.stops.map((s) => s.id));
+      const inactiveStops = allStops.filter((s) => !requestedIds.has(s.id));
+      for (let i = 0; i < inactiveStops.length; i++) {
+        await tx.deliveryRouteStop.update({
+          where: { id: inactiveStops[i].id },
+          data: { stopNumber: -(10000 + i) },
         });
       }
     });
