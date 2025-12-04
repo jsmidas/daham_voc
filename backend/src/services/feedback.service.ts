@@ -191,7 +191,7 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any[]> {
     where,
     include: {
       site: {
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, division: true },
       },
       author: {
         select: { id: true, name: true, email: true, role: true },
