@@ -284,6 +284,17 @@ export class DeliveryRouteService {
 
     // 트랜잭션으로 처리: 순서 번호 중복 시 기존 항목들의 번호를 밀어냄
     await prisma.$transaction(async (tx) => {
+      // 0단계: 비활성 사업장들의 stopNumber를 임시값으로 변경 (충돌 방지)
+      const inactiveStops = await tx.deliveryRouteStop.findMany({
+        where: { routeId, isActive: false },
+      });
+      for (let i = 0; i < inactiveStops.length; i++) {
+        await tx.deliveryRouteStop.update({
+          where: { id: inactiveStops[i].id },
+          data: { stopNumber: -(i + 2000) },
+        });
+      }
+
       // 해당 순서 번호 이상의 기존 항목들 조회
       const existingStops = await tx.deliveryRouteStop.findMany({
         where: {
