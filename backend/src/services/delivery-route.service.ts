@@ -284,36 +284,30 @@ export class DeliveryRouteService {
 
     // 트랜잭션으로 처리: 순서 번호 중복 시 기존 항목들의 번호를 밀어냄
     await prisma.$transaction(async (tx) => {
-      // 0단계: 비활성 사업장들의 stopNumber를 임시값으로 변경 (충돌 방지)
-      const inactiveStops = await tx.deliveryRouteStop.findMany({
-        where: { routeId, isActive: false },
+      // 0단계: 해당 코스의 모든 사업장 stopNumber를 임시값으로 변경 (충돌 방지)
+      const allStops = await tx.deliveryRouteStop.findMany({
+        where: { routeId },
       });
-      for (let i = 0; i < inactiveStops.length; i++) {
+      for (let i = 0; i < allStops.length; i++) {
         await tx.deliveryRouteStop.update({
-          where: { id: inactiveStops[i].id },
-          data: { stopNumber: -(i + 2000) },
+          where: { id: allStops[i].id },
+          data: { stopNumber: -(i + 1000) },
         });
       }
 
-      // 해당 순서 번호 이상의 기존 항목들 조회
-      const existingStops = await tx.deliveryRouteStop.findMany({
-        where: {
-          routeId,
-          stopNumber: { gte: data.stopNumber },
-          isActive: true,
-        },
-        orderBy: { stopNumber: 'desc' }, // 큰 번호부터 처리해야 충돌 방지
-      });
-
-      // 기존 항목들의 순서 번호를 +1씩 밀어냄 (큰 번호부터)
-      for (const stop of existingStops) {
+      // 1단계: 활성 사업장들 중 새 순서 이상인 것들을 +1씩 밀어냄
+      const activeStops = allStops.filter(s => s.isActive);
+      for (const stop of activeStops) {
+        const newStopNumber = stop.stopNumber >= data.stopNumber
+          ? stop.stopNumber + 1
+          : stop.stopNumber;
         await tx.deliveryRouteStop.update({
           where: { id: stop.id },
-          data: { stopNumber: stop.stopNumber + 1 },
+          data: { stopNumber: newStopNumber },
         });
       }
 
-      // 비활성화된 기존 항목이 있으면 재활성화, 없으면 새로 생성
+      // 2단계: 비활성화된 기존 항목이 있으면 재활성화, 없으면 새로 생성
       if (existing) {
         await tx.deliveryRouteStop.update({
           where: { id: existing.id },
