@@ -349,11 +349,22 @@ export class DeliveryRouteService {
   /**
    * 코스 사업장 순서 일괄 업데이트
    */
-  async updateRouteStops(_routeId: string, data: UpdateRouteStopsDto): Promise<void> {
+  async updateRouteStops(routeId: string, data: UpdateRouteStopsDto): Promise<void> {
     // 순서 변경 시 unique constraint 충돌을 피하기 위해
     // 먼저 모든 stopNumber를 음수로 설정한 후 새 순서로 업데이트
     await prisma.$transaction(async (tx) => {
-      // 1단계: 모든 stopNumber를 임시값(음수)으로 변경
+      // 0단계: 해당 코스의 모든 비활성 사업장도 임시값으로 변경 (충돌 방지)
+      const inactiveStops = await tx.deliveryRouteStop.findMany({
+        where: { routeId, isActive: false },
+      });
+      for (let i = 0; i < inactiveStops.length; i++) {
+        await tx.deliveryRouteStop.update({
+          where: { id: inactiveStops[i].id },
+          data: { stopNumber: -(i + 2000) }, // 비활성용 음수 임시값
+        });
+      }
+
+      // 1단계: 활성 사업장들의 stopNumber를 임시값(음수)으로 변경
       for (let i = 0; i < data.stops.length; i++) {
         await tx.deliveryRouteStop.update({
           where: { id: data.stops[i].id },
