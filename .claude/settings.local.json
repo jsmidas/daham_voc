@@ -84,7 +84,8 @@
       "Bash(powershell.exe -Command \"Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force\")",
       "Bash(powershell.exe:*)",
       "Bash(pkill -f \"taskkill\")",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "WebFetch(domain:admin.dahamvoc.co.kr)"
     ],
     "deny": [],
     "ask": []
