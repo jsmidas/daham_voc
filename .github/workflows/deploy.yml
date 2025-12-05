@@ -46,7 +46,8 @@ jobs:
             npm run build
 
             echo "🔧 Updating nginx config..."
-            sudo cp ~/daham_voc/nginx-dahamvoc.conf /etc/nginx/sites-available/dahamvoc.conf
+            sudo cp ~/daham_voc/nginx-dahamvoc.conf /etc/nginx/sites-available/dahamvoc
+            sudo ln -sf /etc/nginx/sites-available/dahamvoc /etc/nginx/sites-enabled/dahamvoc
             # nginx.conf의 http 블록에 client_max_body_size 추가 (없으면)
             if ! grep -q "client_max_body_size" /etc/nginx/nginx.conf; then
               sudo sed -i '/http {/a\    client_max_body_size 50M;' /etc/nginx/nginx.conf
