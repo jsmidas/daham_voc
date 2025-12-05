@@ -246,7 +246,12 @@ export async function getMealPhotos(filter: MealPhotoFilter): Promise<any[]> {
   if (filter.dateFrom || filter.dateTo) {
     where.capturedAt = {};
     if (filter.dateFrom) where.capturedAt.gte = filter.dateFrom;
-    if (filter.dateTo) where.capturedAt.lte = filter.dateTo;
+    if (filter.dateTo) {
+      // dateTo를 해당 날짜의 23:59:59.999로 설정하여 하루 전체를 포함
+      const endOfDay = new Date(filter.dateTo);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.capturedAt.lte = endOfDay;
+    }
   }
 
   // 조회
