@@ -6,12 +6,32 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Role 타입 정의
+export type Role =
+  | 'SUPER_ADMIN'
+  | 'HQ_ADMIN'
+  | 'YEONGNAM_ADMIN'
+  | 'GROUP_MANAGER'
+  | 'SITE_MANAGER'
+  | 'SITE_STAFF'
+  | 'DELIVERY_DRIVER'
+  | 'CLIENT';
+
+// 웹 접속 허용 역할 (관리자 및 일반 직원만)
+export const WEB_ALLOWED_ROLES: Role[] = [
+  'SUPER_ADMIN',
+  'HQ_ADMIN',
+  'YEONGNAM_ADMIN',
+  'GROUP_MANAGER',
+  'SITE_STAFF',
+];
+
 // 사용자 타입 정의
 interface User {
   id: string;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'YEONGNAM_ADMIN' | 'STAFF' | 'CLIENT';
+  role: Role;
   division?: 'HQ' | 'YEONGNAM';
 }
 

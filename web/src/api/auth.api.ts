@@ -4,6 +4,7 @@
  */
 
 import { apiClient } from '@/utils/axios';
+import type { Role } from '@/store/authStore';
 
 // 로그인 요청 타입
 export interface LoginRequest {
@@ -26,7 +27,7 @@ export interface LoginResponse {
       id: string;
       email: string;
       name: string;
-      role: 'SUPER_ADMIN' | 'HQ_ADMIN' | 'YEONGNAM_ADMIN' | 'STAFF' | 'CLIENT';
+      role: Role;
       division?: 'HQ' | 'YEONGNAM';
     };
   };

@@ -8,7 +8,7 @@ import { PhoneOutlined, LockOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { login } from '@/api/auth.api';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, WEB_ALLOWED_ROLES, type Role } from '@/store/authStore';
 import logoImage from '@/assets/logo.png';
 import { useEffect } from 'react';
 
@@ -39,6 +39,14 @@ export default function LoginPage() {
   const loginMutation = useMutation({
     mutationFn: login,
     onSuccess: (response) => {
+      const userRole = response.data.user.role as Role;
+
+      // 웹 접속 불가 역할 체크 (SITE_MANAGER, DELIVERY_DRIVER, CLIENT)
+      if (!WEB_ALLOWED_ROLES.includes(userRole)) {
+        message.error('웹 관리자 페이지 접속 권한이 없습니다. 모바일 앱을 이용해 주세요.');
+        return;
+      }
+
       setAuth(response.data.token, response.data.user);
       message.success('로그인 성공');
       navigate('/dashboard');

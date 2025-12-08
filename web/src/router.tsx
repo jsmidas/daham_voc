@@ -4,7 +4,7 @@
  */
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, WEB_ALLOWED_ROLES, type Role } from '@/store/authStore';
 
 // Layouts
 import MainLayout from '@/components/Layout/MainLayout';
@@ -36,9 +36,16 @@ import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user, logout } = useAuthStore();
 
   if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // 웹 접속 불가 역할 체크 (SITE_MANAGER, DELIVERY_DRIVER, CLIENT)
+  if (user && !WEB_ALLOWED_ROLES.includes(user.role as Role)) {
+    // 권한 없는 역할은 로그아웃 처리 후 로그인 페이지로 이동
+    logout();
     return <Navigate to="/login" replace />;
   }
 
