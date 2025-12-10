@@ -89,10 +89,10 @@ export default function SiteMapPage() {
     return R * c; // 미터 단위
   };
 
-  // 주소 검색 함수
+  // 주소/키워드 검색 함수
   const handleAddressSearch = async () => {
     if (!searchAddress.trim()) {
-      message.warning('검색할 주소를 입력해주세요.');
+      message.warning('검색할 주소 또는 장소명을 입력해주세요.');
       return;
     }
 
@@ -109,9 +109,10 @@ export default function SiteMapPage() {
     setIsSearching(true);
 
     try {
-      const geocoder = new window.kakao.maps.services.Geocoder();
+      const places = new window.kakao.maps.services.Places();
 
-      geocoder.addressSearch(searchAddress, (result: any, status: any) => {
+      // 키워드 검색 (장소명, 주소 모두 검색 가능)
+      places.keywordSearch(searchAddress, (result: any, status: any) => {
         setIsSearching(false);
 
         if (status === window.kakao.maps.services.Status.OK) {
@@ -225,7 +226,8 @@ export default function SiteMapPage() {
                 🔍 검색된 위치
               </div>
               <div style="font-size: 12px; line-height: 1.5; margin-bottom: 8px;">
-                ${result[0].address_name || result[0].road_address?.address_name || searchAddress}
+                ${result[0].place_name}<br/>
+                <span style="font-size: 11px; opacity: 0.8;">${result[0].road_address_name || result[0].address_name}</span>
               </div>
               <div style="
                 border-top: 1px solid rgba(255,255,255,0.3);
@@ -292,11 +294,11 @@ export default function SiteMapPage() {
             nearestSitesOverlaysRef.current.push(nearestOverlay);
           });
 
-          message.success(`주소를 찾았습니다! 가장 가까운 사업장: ${cleanSiteName(nearestSites[0].name)} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
+          message.success(`'${result[0].place_name}'을(를) 찾았습니다! 가장 가까운 사업장: ${cleanSiteName(nearestSites[0].name)} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
         } else {
-          message.error('주소를 찾을 수 없습니다. 다시 시도해주세요.');
+          message.error('검색 결과가 없습니다. 다른 키워드로 시도해주세요.');
         }
-      });
+      }, { location: mapRef.current.getCenter(), radius: 20000 }); // 현재 지도 중심 기준 20km 반경 우선 검색
     } catch (error) {
       console.error('Address search error:', error);
       setIsSearching(false);
@@ -730,7 +732,7 @@ export default function SiteMapPage() {
         <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
           <Space.Compact style={{ width: '100%', maxWidth: '600px' }}>
             <Input
-              placeholder="신규 거래처 주소를 검색하세요 (예: 대구 중구 동성로2가 119)"
+              placeholder="장소명 또는 주소를 검색하세요 (예: 대구역, 동성로, 이마트 동대구점)"
               value={searchAddress}
               onChange={(e) => setSearchAddress(e.target.value)}
               onPressEnter={handleAddressSearch}
@@ -749,7 +751,7 @@ export default function SiteMapPage() {
             </Button>
           </Space.Compact>
           <div style={{ marginTop: 8, fontSize: '12px', color: '#666' }}>
-            💡 신규 거래처의 주소를 검색하면 지도에 ⭐ 별 모양으로 표시되어 어느 배송코스에 넣을지 판단할 수 있습니다.
+            💡 장소명(대구역, 동성로, 이마트 등) 또는 주소로 검색하면 ⭐ 별 모양으로 표시되어 가까운 배송코스를 확인할 수 있습니다.
           </div>
         </div>
       </Card>
