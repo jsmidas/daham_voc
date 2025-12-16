@@ -162,27 +162,55 @@ export class WeeklyMenuTemplateService {
       throw new Error('이미 해당 주차의 식단표가 존재합니다');
     }
 
-    const template = await prisma.weeklyMenuTemplate.create({
-      data: {
-        menuTypeId: data.menuTypeId,
-        year: data.year,
-        weekNumber: data.weekNumber,
-        imageUrl: data.imageUrl,
-        thumbnailUrl: data.thumbnailUrl,
-        description: data.description,
-        createdBy: userId,
-      },
-      include: {
-        menuType: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
+    let template;
+
+    if (existing && existing.deletedAt) {
+      // Soft delete된 레코드가 존재하면 복원 및 업데이트
+      template = await prisma.weeklyMenuTemplate.update({
+        where: { id: existing.id },
+        data: {
+          imageUrl: data.imageUrl,
+          thumbnailUrl: data.thumbnailUrl,
+          description: data.description,
+          createdBy: userId,
+          deletedAt: null, // 복원
+          updatedAt: new Date(),
+        },
+        include: {
+          menuType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // 새로운 레코드 생성
+      template = await prisma.weeklyMenuTemplate.create({
+        data: {
+          menuTypeId: data.menuTypeId,
+          year: data.year,
+          weekNumber: data.weekNumber,
+          imageUrl: data.imageUrl,
+          thumbnailUrl: data.thumbnailUrl,
+          description: data.description,
+          createdBy: userId,
+        },
+        include: {
+          menuType: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true,
+            },
+          },
+        },
+      });
+    }
 
     await this.invalidateCache();
 
