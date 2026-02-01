@@ -81,32 +81,32 @@ export default function StaffListPage() {
       title: '사번',
       dataIndex: 'employeeNo',
       key: 'employeeNo',
-      width: 120,
+      width: 80,
     },
     {
       title: '이름',
       dataIndex: ['user', 'name'],
       key: 'name',
-      width: 120,
+      width: 80,
     },
     {
       title: '전화번호',
       dataIndex: ['user', 'phone'],
       key: 'phone',
-      width: 140,
+      width: 120,
     },
     {
       title: '이메일',
       dataIndex: ['user', 'email'],
       key: 'email',
-      width: 200,
+      width: 140,
       render: (email) => email || '-',
     },
     {
       title: '권한',
       dataIndex: ['user', 'role'],
       key: 'role',
-      width: 140,
+      width: 100,
       render: (role: Role) => (
         <Tag color={role === 'SUPER_ADMIN' ? 'red' : role.includes('ADMIN') ? 'blue' : 'green'}>
           {RoleLabels[role]}
@@ -117,35 +117,35 @@ export default function StaffListPage() {
       title: '부문',
       dataIndex: ['user', 'division'],
       key: 'division',
-      width: 100,
+      width: 80,
       render: (div?: Division) => (div ? DivisionLabels[div] : '-'),
     },
     {
       title: '부서',
       dataIndex: 'department',
       key: 'department',
-      width: 120,
+      width: 80,
       render: (dept) => dept || '-',
     },
     {
       title: '직책',
       dataIndex: 'position',
       key: 'position',
-      width: 100,
+      width: 80,
       render: (pos) => pos || '-',
     },
     {
-      title: '배정된 사업장',
+      title: '배정 사업장',
       dataIndex: 'staffSites',
       key: 'sites',
-      width: 120,
+      width: 90,
       render: (sites: any[]) => sites?.length || 0,
     },
     {
       title: '상태',
       dataIndex: ['user', 'isActive'],
       key: 'isActive',
-      width: 80,
+      width: 70,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>{isActive ? '활성' : '비활성'}</Tag>
       ),
@@ -153,7 +153,7 @@ export default function StaffListPage() {
     {
       title: '작업',
       key: 'actions',
-      width: 200,
+      width: 180,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -261,7 +261,7 @@ export default function StaffListPage() {
           dataSource={data?.items || []}
           rowKey="id"
           loading={isLoading}
-          scroll={{ x: 1600 }}
+          scroll={{ x: 1200 }}
           pagination={{
             current: page,
             pageSize: limit,
