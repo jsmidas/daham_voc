@@ -10,14 +10,14 @@ async function startServer() {
     // Validate environment variables
     validateEnv();
 
-    // Connect to database
+    // Connect to database (필수)
     await connectDatabase();
 
-    // Connect to Redis (optional)
-    await connectRedis();
-
-    // Initialize GCP Storage (optional)
-    await initializeGCPStorage();
+    // Redis와 GCP Storage는 병렬로 초기화 (선택적, 실패해도 서버 시작)
+    await Promise.allSettled([
+      connectRedis(),
+      initializeGCPStorage(),
+    ]);
 
     // Start server
     const PORT = env.PORT;

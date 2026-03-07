@@ -43,6 +43,14 @@ export async function initializeGCPStorage(): Promise<void> {
       } else {
         console.log('📁 GCP key file not found at:', keyFilePath);
         console.log('📁 Using Application Default Credentials (GCP VM/Cloud Run)');
+        // 키 파일 없고 로컬 환경이면 버킷 접근 테스트 건너뛰기
+        if (env.NODE_ENV === 'development') {
+          console.log('⚠️  GCP Storage skipping access test in development (no key file)');
+          storage = new Storage(storageOptions);
+          bucket = storage.bucket(env.GCP_BUCKET_NAME);
+          storageInitialized = true;
+          return;
+        }
       }
     } else {
       console.log('📁 No key file configured, using Application Default Credentials');

@@ -24,12 +24,13 @@ export async function connectRedis(): Promise<void> {
     redisClient = createClient({
       url: env.REDIS_URL,
       socket: {
+        connectTimeout: 1000,
         reconnectStrategy: (retries) => {
-          if (retries > 3) {
+          if (retries > 0) {
             console.log('⚠️  Redis reconnection failed - Caching disabled');
             return new Error('Redis reconnection limit exceeded');
           }
-          return retries * 100;
+          return 500;
         },
       },
     });
