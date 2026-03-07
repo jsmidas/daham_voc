@@ -121,5 +121,37 @@ DIRECT_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-
 
 **데이터 손실 사고를 절대 방지하기 위한 필수 규칙입니다.**
 
-**마지막 업데이트**: 2025-10-22 20:57  
+**마지막 업데이트**: 2025-10-22 20:57
 **확정 설정**: DATABASE_CONFIRMED.md 참조
+
+---
+
+## 🚀 배포 구조
+
+### 백엔드 / 웹 (자동 배포)
+- `main` 브랜치 push → GitHub Actions → GCP VM 자동 배포
+- GCP VM: `34.47.75.181` (사용자: `sos1253`)
+- PM2로 프로세스 관리, Nginx 리버스 프록시
+- 백엔드: `https://api.dahamvoc.co.kr`
+- 웹 관리자: `https://admin.dahamvoc.co.kr`
+
+### 모바일 앱 (수동 빌드)
+```bash
+cd mobile
+
+# 테스트용 APK 빌드
+eas build --platform android --profile preview
+
+# 운영 빌드 (Google Play AAB)
+eas build --platform android --profile production
+
+# 운영 빌드 + Google Play 자동 제출
+eas build --platform android --profile production --auto-submit
+```
+- 빌드 프로필: `preview`(APK 테스트), `production`(Google Play), `production-apk`(운영 APK)
+- 앱 재빌드 시 Google Play 재제출 필요 → 백엔드만 변경 시 앱 빌드 불필요
+- API 응답 구조 변경 시 **기존 앱 하위 호환** 필수
+
+### 사용자 선호사항
+- 모바일 테스트 시 **QR 코드 설치 방식** 선호
+- CLAUDE.md는 **항상 최신 상태로 유지**할 것
