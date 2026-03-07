@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import * as feedbackService from '../services/feedback.service';
-import { successResponse, errorResponse } from '../utils/api-response.util';
+import { successResponse, errorResponse, createPaginationMeta } from '../utils/api-response.util';
 import { FeedbackAuthorType, FeedbackStatus } from '@prisma/client';
 
 /**
@@ -85,8 +85,11 @@ export async function getFeedbacks(req: Request, res: Response): Promise<void> {
     if (offset) filter.offset = parseInt(offset as string);
 
     const result = await feedbackService.getFeedbacks(filter);
+    const page = Math.floor(result.offset / result.limit) + 1;
+    const meta = createPaginationMeta(page, result.limit, result.total);
 
-    res.json(successResponse(result));
+    // data는 배열로 반환 (기존 앱 하위 호환), meta에 페이지네이션 정보
+    res.json(successResponse(result.feedbacks, undefined, meta));
   } catch (error: any) {
     console.error('Get feedbacks error:', error);
     res.status(400).json(errorResponse(error.message));

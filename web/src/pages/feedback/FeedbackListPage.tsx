@@ -245,7 +245,7 @@ export default function FeedbackListPage() {
 
       <Table
         columns={columns}
-        dataSource={feedbacks?.data?.feedbacks || []}
+        dataSource={feedbacks?.data || []}
         loading={isLoading}
         rowKey="id"
         pagination={{ pageSize: 10 }}

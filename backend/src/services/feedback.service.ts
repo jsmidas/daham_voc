@@ -220,12 +220,10 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any> {
     prisma.customerFeedback.count({ where }),
   ]);
 
-  const result = { feedbacks, total, limit: take, offset: skip };
-
   // 캐시 저장 (10분)
-  await cache.set(cacheKey, JSON.stringify(result), 600);
+  await cache.set(cacheKey, JSON.stringify({ feedbacks, total, limit: take, offset: skip }), 600);
 
-  return result;
+  return { feedbacks, total, limit: take, offset: skip };
 }
 
 /**
