@@ -110,195 +110,231 @@ export default function SiteMapPage() {
 
     try {
       const places = new window.kakao.maps.services.Places();
+      const geocoder = new window.kakao.maps.services.Geocoder();
 
-      // 키워드 검색 (장소명, 주소 모두 검색 가능)
-      places.keywordSearch(searchAddress, (result: any, status: any) => {
-        setIsSearching(false);
+      // 검색 결과를 처리하는 공통 함수
+      const processSearchResult = (lat: number, lng: number, placeName: string, addressName: string) => {
+        const coords = new window.kakao.maps.LatLng(lat, lng);
 
-        if (status === window.kakao.maps.services.Status.OK) {
-          const coords = new window.kakao.maps.LatLng(result[0].y, result[0].x);
+        // 기존 검색 마커 및 가까운 사업장 표시 제거
+        if (searchMarkerRef.current) {
+          searchMarkerRef.current.setMap(null);
+        }
+        if (searchOverlayRef.current) {
+          searchOverlayRef.current.setMap(null);
+        }
+        nearestSitesOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
+        nearestSitesOverlaysRef.current = [];
 
-          // 기존 검색 마커 및 가까운 사업장 표시 제거
-          if (searchMarkerRef.current) {
-            searchMarkerRef.current.setMap(null);
-          }
-          if (searchOverlayRef.current) {
-            searchOverlayRef.current.setMap(null);
-          }
-          nearestSitesOverlaysRef.current.forEach((overlay) => overlay.setMap(null));
-          nearestSitesOverlaysRef.current = [];
+        // 모든 사업장과의 거리 계산
+        const sitesWithDistance = sites.data.sites.map((site: any) => {
+          const distance = Math.round(
+            calculateDistance(lat, lng, site.latitude, site.longitude)
+          );
+          return { ...site, distance };
+        });
 
-          // 모든 사업장과의 거리 계산
-          const sitesWithDistance = sites.data.sites.map((site: any) => {
-            const distance = Math.round(
-              calculateDistance(result[0].y, result[0].x, site.latitude, site.longitude)
-            );
-            return { ...site, distance };
-          });
+        // 거리순 정렬 후 가장 가까운 3곳 선택
+        const nearestSites = sitesWithDistance
+          .sort((a: any, b: any) => a.distance - b.distance)
+          .slice(0, 3);
 
-          // 거리순 정렬 후 가장 가까운 3곳 선택
-          const nearestSites = sitesWithDistance
-            .sort((a: any, b: any) => a.distance - b.distance)
-            .slice(0, 3);
-
-          // 특별한 별 모양 마커 생성 (애니메이션 포함)
-          const markerContent = `
-            <div style="position: relative;">
-              <div style="
-                font-size: 40px;
-                animation: pulse 1.5s ease-in-out infinite;
-                transform-origin: center;
-                filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
-              ">⭐</div>
-              <style>
-                @keyframes pulse {
-                  0%, 100% {
-                    transform: scale(1);
-                    opacity: 1;
-                  }
-                  50% {
-                    transform: scale(1.3);
-                    opacity: 0.8;
-                  }
-                }
-              </style>
-            </div>
-          `;
-
-          const customOverlay = new window.kakao.maps.CustomOverlay({
-            position: coords,
-            content: markerContent,
-            yAnchor: 1,
-            zIndex: 999,
-          });
-
-          customOverlay.setMap(mapRef.current);
-          searchOverlayRef.current = customOverlay;
-
-          // 지도 중심을 검색 위치로 이동
-          mapRef.current.setCenter(coords);
-          mapRef.current.setLevel(5); // 적절한 줌 레벨
-
-          // 가까운 사업장 정보 생성
-          const nearestSitesInfo = nearestSites.map((site: any, index: number) => {
-            const distanceKm = (site.distance / 1000).toFixed(2);
-            const routeInfo = site.routeStops && site.routeStops.length > 0
-              ? site.routeStops.map((stop: any) => stop.route.code).join(', ')
-              : '미등록';
-
-            return `
-              <div style="
-                margin-top: ${index === 0 ? '12px' : '8px'};
-                padding: 8px;
-                background: rgba(255,255,255,0.15);
-                border-radius: 6px;
-                border-left: 3px solid ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'};
-              ">
-                <div style="display: flex; align-items: center; margin-bottom: 4px;">
-                  <span style="font-size: 16px; margin-right: 6px;">
-                    ${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                  </span>
-                  <span style="font-weight: bold; font-size: 13px;">
-                    ${site.name}
-                  </span>
-                </div>
-                <div style="font-size: 11px; opacity: 0.9; line-height: 1.4;">
-                  📏 직선거리: <strong>${distanceKm}km</strong><br/>
-                  🚚 배송코스: ${routeInfo}
-                </div>
-              </div>
-            `;
-          }).join('');
-
-          // 정보창 표시
-          const infoContent = `
+        // 특별한 별 모양 마커 생성 (애니메이션 포함)
+        const markerContent = `
+          <div style="position: relative;">
             <div style="
-              padding: 15px;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              border-radius: 8px;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-              min-width: 280px;
-              max-width: 350px;
-              font-family: sans-serif;
+              font-size: 40px;
+              animation: pulse 1.5s ease-in-out infinite;
+              transform-origin: center;
+              filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.8));
+            ">⭐</div>
+            <style>
+              @keyframes pulse {
+                0%, 100% {
+                  transform: scale(1);
+                  opacity: 1;
+                }
+                50% {
+                  transform: scale(1.3);
+                  opacity: 0.8;
+                }
+              }
+            </style>
+          </div>
+        `;
+
+        const customOverlay = new window.kakao.maps.CustomOverlay({
+          position: coords,
+          content: markerContent,
+          yAnchor: 1,
+          zIndex: 999,
+        });
+
+        customOverlay.setMap(mapRef.current);
+        searchOverlayRef.current = customOverlay;
+
+        // 지도 중심을 검색 위치로 이동
+        mapRef.current.setCenter(coords);
+        mapRef.current.setLevel(5);
+
+        // 가까운 사업장 정보 생성
+        const nearestSitesInfo = nearestSites.map((site: any, index: number) => {
+          const distanceKm = (site.distance / 1000).toFixed(2);
+          const routeInfo = site.routeStops && site.routeStops.length > 0
+            ? site.routeStops.map((stop: any) => stop.route.code).join(', ')
+            : '미등록';
+
+          return `
+            <div style="
+              margin-top: ${index === 0 ? '12px' : '8px'};
+              padding: 8px;
+              background: rgba(255,255,255,0.15);
+              border-radius: 6px;
+              border-left: 3px solid ${index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32'};
             ">
-              <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">
-                🔍 검색된 위치
+              <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 16px; margin-right: 6px;">
+                  ${index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
+                </span>
+                <span style="font-weight: bold; font-size: 13px;">
+                  ${site.name}
+                </span>
               </div>
-              <div style="font-size: 12px; line-height: 1.5; margin-bottom: 8px;">
-                ${result[0].place_name}<br/>
-                <span style="font-size: 11px; opacity: 0.8;">${result[0].road_address_name || result[0].address_name}</span>
-              </div>
-              <div style="
-                border-top: 1px solid rgba(255,255,255,0.3);
-                padding-top: 8px;
-                margin-top: 8px;
-              ">
-                <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">
-                  📍 가까운 사업장 TOP 3
-                </div>
-                ${nearestSitesInfo}
+              <div style="font-size: 11px; opacity: 0.9; line-height: 1.4;">
+                📏 직선거리: <strong>${distanceKm}km</strong><br/>
+                🚚 배송코스: ${routeInfo}
               </div>
             </div>
           `;
+        }).join('');
 
-          const infoOverlay = new window.kakao.maps.CustomOverlay({
-            position: coords,
-            content: infoContent,
-            yAnchor: 2.3,
-            zIndex: 998,
-          });
-
-          infoOverlay.setMap(mapRef.current);
-          searchMarkerRef.current = infoOverlay;
-
-          // 가까운 사업장에 번호 표시
-          nearestSites.forEach((site: any, index: number) => {
-            const siteCoords = new window.kakao.maps.LatLng(site.latitude, site.longitude);
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
-            const color = index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32';
-
-            const nearestMarkerContent = `
-              <div style="
-                position: relative;
-                width: 36px;
-                height: 36px;
-                background: ${color};
-                border-radius: 50%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 20px;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                border: 3px solid white;
-                animation: bounce 2s ease-in-out infinite;
-              ">
-                ${medal}
+        // 정보창 표시
+        const infoContent = `
+          <div style="
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            min-width: 280px;
+            max-width: 350px;
+            font-family: sans-serif;
+          ">
+            <div style="font-weight: bold; font-size: 14px; margin-bottom: 8px;">
+              🔍 검색된 위치
+            </div>
+            <div style="font-size: 12px; line-height: 1.5; margin-bottom: 8px;">
+              ${placeName}<br/>
+              <span style="font-size: 11px; opacity: 0.8;">${addressName}</span>
+            </div>
+            <div style="
+              border-top: 1px solid rgba(255,255,255,0.3);
+              padding-top: 8px;
+              margin-top: 8px;
+            ">
+              <div style="font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+                📍 가까운 사업장 TOP 3
               </div>
-              <style>
-                @keyframes bounce {
-                  0%, 100% { transform: translateY(0); }
-                  50% { transform: translateY(-5px); }
-                }
-              </style>
-            `;
+              ${nearestSitesInfo}
+            </div>
+          </div>
+        `;
 
-            const nearestOverlay = new window.kakao.maps.CustomOverlay({
-              position: siteCoords,
-              content: nearestMarkerContent,
-              yAnchor: 1.5,
-              zIndex: 997,
-            });
+        const infoOverlay = new window.kakao.maps.CustomOverlay({
+          position: coords,
+          content: infoContent,
+          yAnchor: 2.3,
+          zIndex: 998,
+        });
 
-            nearestOverlay.setMap(mapRef.current);
-            nearestSitesOverlaysRef.current.push(nearestOverlay);
+        infoOverlay.setMap(mapRef.current);
+        searchMarkerRef.current = infoOverlay;
+
+        // 가까운 사업장에 번호 표시
+        nearestSites.forEach((site: any, index: number) => {
+          const siteCoords = new window.kakao.maps.LatLng(site.latitude, site.longitude);
+          const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉';
+          const color = index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32';
+
+          const nearestMarkerContent = `
+            <div style="
+              position: relative;
+              width: 36px;
+              height: 36px;
+              background: ${color};
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 20px;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+              border: 3px solid white;
+              animation: bounce 2s ease-in-out infinite;
+            ">
+              ${medal}
+            </div>
+            <style>
+              @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-5px); }
+              }
+            </style>
+          `;
+
+          const nearestOverlay = new window.kakao.maps.CustomOverlay({
+            position: siteCoords,
+            content: nearestMarkerContent,
+            yAnchor: 1.5,
+            zIndex: 997,
           });
 
-          message.success(`'${result[0].place_name}'을(를) 찾았습니다! 가장 가까운 사업장: ${cleanSiteName(nearestSites[0].name)} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
-        } else {
+          nearestOverlay.setMap(mapRef.current);
+          nearestSitesOverlaysRef.current.push(nearestOverlay);
+        });
+
+        message.success(`'${placeName}'을(를) 찾았습니다! 가장 가까운 사업장: ${cleanSiteName(nearestSites[0].name)} (${(nearestSites[0].distance / 1000).toFixed(2)}km)`);
+      };
+
+      // 키워드 검색과 주소 검색을 동시에 실행
+      let resolved = false;
+
+      // 1) 키워드 검색
+      places.keywordSearch(searchAddress, (result: any, status: any) => {
+        if (resolved) return;
+        if (status === window.kakao.maps.services.Status.OK) {
+          resolved = true;
+          setIsSearching(false);
+          processSearchResult(
+            result[0].y,
+            result[0].x,
+            result[0].place_name,
+            result[0].road_address_name || result[0].address_name
+          );
+        }
+      });
+
+      // 2) 주소 검색
+      geocoder.addressSearch(searchAddress, (result: any, status: any) => {
+        if (resolved) return;
+        if (status === window.kakao.maps.services.Status.OK) {
+          resolved = true;
+          setIsSearching(false);
+          processSearchResult(
+            result[0].y,
+            result[0].x,
+            result[0].address_name,
+            result[0].road_address?.address_name || result[0].address_name
+          );
+        }
+      });
+
+      // 두 검색 모두 실패 시 처리 (300ms 대기)
+      setTimeout(() => {
+        if (!resolved) {
+          setIsSearching(false);
           message.error('검색 결과가 없습니다. 다른 키워드로 시도해주세요.');
         }
-      }, { location: mapRef.current.getCenter(), radius: 20000 }); // 현재 지도 중심 기준 20km 반경 우선 검색
+      }, 3000);
     } catch (error) {
       console.error('Address search error:', error);
       setIsSearching(false);
