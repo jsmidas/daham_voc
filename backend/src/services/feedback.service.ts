@@ -38,6 +38,8 @@ export interface FeedbackFilter {
   dateTo?: Date;
   minRating?: number;
   maxRating?: number;
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -139,7 +141,7 @@ export async function createFeedback(
 /**
  * 피드백 목록 조회
  */
-export async function getFeedbacks(filter: FeedbackFilter): Promise<any[]> {
+export async function getFeedbacks(filter: FeedbackFilter): Promise<any> {
   // 캐시 키 생성
   const cacheKey = `feedbacks:${JSON.stringify(filter)}`;
 
@@ -186,33 +188,44 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any[]> {
     if (filter.maxRating !== undefined) where.rating.lte = filter.maxRating;
   }
 
+  // 페이지네이션 (기본 30건)
+  const take = filter.limit || 30;
+  const skip = filter.offset || 0;
+
   // 조회
-  const feedbacks = await prisma.customerFeedback.findMany({
-    where,
-    include: {
-      site: {
-        select: { id: true, name: true, type: true, division: true },
-      },
-      author: {
-        select: { id: true, name: true, email: true, role: true },
-      },
-      images: {
-        orderBy: { sortOrder: 'asc' },
-        select: {
-          id: true,
-          imageUrl: true,
-          thumbnailUrl: true,
-          sortOrder: true,
+  const [feedbacks, total] = await Promise.all([
+    prisma.customerFeedback.findMany({
+      where,
+      include: {
+        site: {
+          select: { id: true, name: true, type: true, division: true },
+        },
+        author: {
+          select: { id: true, name: true, email: true, role: true },
+        },
+        images: {
+          orderBy: { sortOrder: 'asc' },
+          select: {
+            id: true,
+            imageUrl: true,
+            thumbnailUrl: true,
+            sortOrder: true,
+          },
         },
       },
-    },
-    orderBy: [{ createdAt: 'desc' }],
-  });
+      orderBy: [{ createdAt: 'desc' }],
+      take,
+      skip,
+    }),
+    prisma.customerFeedback.count({ where }),
+  ]);
+
+  const result = { feedbacks, total, limit: take, offset: skip };
 
   // 캐시 저장 (10분)
-  await cache.set(cacheKey, JSON.stringify(feedbacks), 600);
+  await cache.set(cacheKey, JSON.stringify(result), 600);
 
-  return feedbacks;
+  return result;
 }
 
 /**

@@ -64,6 +64,8 @@ export async function getFeedbacks(req: Request, res: Response): Promise<void> {
       dateTo,
       minRating,
       maxRating,
+      limit,
+      offset,
     } = req.query;
 
     const filter: feedbackService.FeedbackFilter = {};
@@ -79,10 +81,12 @@ export async function getFeedbacks(req: Request, res: Response): Promise<void> {
     if (dateTo) filter.dateTo = new Date(dateTo as string);
     if (minRating) filter.minRating = parseInt(minRating as string);
     if (maxRating) filter.maxRating = parseInt(maxRating as string);
+    if (limit) filter.limit = parseInt(limit as string);
+    if (offset) filter.offset = parseInt(offset as string);
 
-    const feedbacks = await feedbackService.getFeedbacks(filter);
+    const result = await feedbackService.getFeedbacks(filter);
 
-    res.json(successResponse(feedbacks));
+    res.json(successResponse(result));
   } catch (error: any) {
     console.error('Get feedbacks error:', error);
     res.status(400).json(errorResponse(error.message));
