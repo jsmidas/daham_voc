@@ -72,6 +72,7 @@ export default function StaffFormPage() {
         division: staffData.user.division,
         isActive: staffData.user.isActive,
         canUseAttendance: (staffData.user as any).canUseAttendance || false,
+        isContractTarget: (staffData.user as any).isContractTarget || false,
         // Staff 정보
         employeeNo: staffData.employeeNo,
         department: staffData.department,
@@ -415,6 +416,7 @@ export default function StaffFormPage() {
           initialValues={{
             isActive: true,
             canUseAttendance: false,
+            isContractTarget: false,
           }}
         >
           {/* 기본 정보 */}
@@ -551,6 +553,18 @@ export default function StaffFormPage() {
                 tooltip="출퇴근 기능을 사용할 수 있는 권한을 부여합니다. 앱 메인 화면에 출퇴근 현황이 표시됩니다."
               >
                 <Switch checkedChildren="사용" unCheckedChildren="미사용" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="전자계약서 대상"
+                name="isContractTarget"
+                valuePropName="checked"
+                tooltip="전자계약서 배정 시 자동으로 대상자 목록에 포함됩니다."
+              >
+                <Switch checkedChildren="대상" unCheckedChildren="비대상" />
               </Form.Item>
             </Col>
           </Row>

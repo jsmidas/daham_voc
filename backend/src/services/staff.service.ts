@@ -310,6 +310,7 @@ export async function updateStaff(
     division?: Division;
     isActive?: boolean;
     canUseAttendance?: boolean;
+    isContractTarget?: boolean;
     // Staff 정보
     department?: string;
     position?: string;
@@ -345,6 +346,7 @@ export async function updateStaff(
     if (data.division !== undefined) userUpdateData.division = data.division;
     if (data.isActive !== undefined) userUpdateData.isActive = data.isActive;
     if (data.canUseAttendance !== undefined) userUpdateData.canUseAttendance = data.canUseAttendance;
+    if (data.isContractTarget !== undefined) userUpdateData.isContractTarget = data.isContractTarget;
 
     if (Object.keys(userUpdateData).length > 0) {
       await tx.user.update({
