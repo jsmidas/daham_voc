@@ -3,10 +3,10 @@
  * @description 전자 근로계약서 관리 페이지
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Upload, Select,
-  message, Popconfirm, Card, Typography, Progress, Descriptions,
+  message, Popconfirm, Typography, Progress, Descriptions,
   Image as AntImage,
 } from 'antd';
 import {
@@ -17,7 +17,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getContracts, createContract, assignContract,
-  getContractStatus, deleteContract, removeAssignment,
+  getContractStatus, deleteContract,
 } from '@/api/contract.api';
 import { apiClient } from '@/utils/axios';
 import dayjs from 'dayjs';
