@@ -116,25 +116,44 @@ export async function getMyContracts(req: Request, res: Response) {
 }
 
 /**
- * POST /contracts/:id/sign - 서명 제출
+ * POST /contracts/:id/sign - 서명 제출 (파일 업로드 또는 base64)
  */
 export async function signContract(req: Request, res: Response) {
   try {
     const userId = (req as any).user.userId;
     const assignmentId = req.params.id;
     const file = req.file as Express.Multer.File;
+    const { signatureBase64 } = req.body;
 
-    if (!file) {
-      return res.status(400).json({ success: false, message: '서명 이미지를 업로드해주세요.' });
+    let signatureImageUrl: string;
+
+    if (file) {
+      // 파일 업로드 방식
+      const uploaded = await uploadImage(file, 'contracts' as any);
+      signatureImageUrl = uploaded.originalUrl;
+    } else if (signatureBase64) {
+      // base64 방식: data URL에서 Buffer로 변환 후 업로드
+      const base64Data = signatureBase64.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+
+      // 임시 Multer file 객체 생성
+      const tempFile = {
+        buffer,
+        originalname: `signature_${Date.now()}.png`,
+        mimetype: 'image/png',
+        size: buffer.length,
+      } as Express.Multer.File;
+
+      const uploaded = await uploadImage(tempFile, 'contracts' as any);
+      signatureImageUrl = uploaded.originalUrl;
+    } else {
+      return res.status(400).json({ success: false, message: '서명 이미지를 제출해주세요.' });
     }
-
-    // 서명 이미지 업로드
-    const uploaded = await uploadImage(file, 'contracts' as any);
 
     const result = await contractService.signContract({
       assignmentId,
       userId,
-      signatureImageUrl: uploaded.originalUrl,
+      signatureImageUrl,
     });
 
     return res.json({ success: true, data: result });
