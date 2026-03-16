@@ -155,3 +155,16 @@ eas build --platform android --profile production --auto-submit
 ### 사용자 선호사항
 - 모바일 테스트 시 **QR 코드 설치 방식** 선호
 - CLAUDE.md는 **항상 최신 상태로 유지**할 것
+
+## GCP 예상 월 과금 내역
+
+GCP 프로젝트 ID: `daham-food` (표시 이름: 다함 VOC)
+
+| 항목 | 대략적 비용 |
+|------|------------|
+| e2-small VM (24시간) | ~$15-20/월 |
+| 30GB 디스크 | ~$1-2/월 |
+| Cloud Storage | 용량에 따라 소액 |
+| 네트워크 트래픽 | 사용량에 따라 |
+
+**마지막 업데이트**: 2026-03-09
