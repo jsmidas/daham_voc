@@ -10,3 +10,4 @@ GoogleService-Info.plist
 coverage/
 .npm
 .eslintcache
+*.tsbuildinfo
