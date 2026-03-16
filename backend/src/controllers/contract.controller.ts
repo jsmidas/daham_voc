@@ -13,7 +13,7 @@ import { uploadImage } from '../services/storage.service';
 export async function createContract(req: Request, res: Response) {
   try {
     const { title, description } = req.body;
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
     const files = req.files as Express.Multer.File[];
 
     if (!title) {
@@ -107,7 +107,7 @@ export async function assignContract(req: Request, res: Response) {
  */
 export async function getMyContracts(req: Request, res: Response) {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
     const assignments = await contractService.getMyContracts(userId);
     return res.json({ success: true, data: assignments });
   } catch (error: any) {
@@ -120,7 +120,7 @@ export async function getMyContracts(req: Request, res: Response) {
  */
 export async function signContract(req: Request, res: Response) {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user.userId;
     const assignmentId = req.params.id;
     const file = req.file as Express.Multer.File;
 
