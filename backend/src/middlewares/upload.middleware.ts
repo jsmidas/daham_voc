@@ -73,6 +73,29 @@ export const uploadMealPhotos = multer({
 }).array('photos', 6);
 
 /**
+ * 계약서 페이지 이미지 업로드 (필드명: pages, 최대 20개)
+ */
+export const uploadContractPages = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
+    files: 20,
+  },
+}).array('pages', 20);
+
+/**
+ * 서명 이미지 업로드 (필드명: signature)
+ */
+export const uploadSignature = multer({
+  storage,
+  fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+}).single('signature');
+
+/**
  * 엑셀 파일 필터
  */
 const excelFileFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {

@@ -17,6 +17,7 @@ import {
   AppstoreOutlined,
   UserOutlined,
   CarOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -94,6 +95,11 @@ export default function Sidebar() {
       label: <span>VOC 관리</span>,
     },
     {
+      key: '/contracts',
+      icon: <FileTextOutlined />,
+      label: <span>전자계약서</span>,
+    },
+    {
       key: '/staff',
       icon: <TeamOutlined />,
       label: <span>담당자 관리</span>,
@@ -121,6 +127,7 @@ export default function Sidebar() {
     if (path.startsWith('/sites')) return '/sites';
     if (path.startsWith('/delivery-routes')) return '/delivery-routes';
     if (path.startsWith('/delivery-logs')) return '/delivery-logs';
+    if (path.startsWith('/contracts')) return '/contracts';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
     if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';

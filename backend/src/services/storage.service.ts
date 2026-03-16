@@ -29,7 +29,7 @@ export interface BulkUploadResult {
  */
 export async function uploadImage(
   file: Express.Multer.File,
-  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks'
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks' | 'contracts'
 ): Promise<UploadedImage> {
   try {
     // 이미지 처리
@@ -122,7 +122,7 @@ async function uploadToLocal(filePath: string, buffer: Buffer): Promise<void> {
  */
 export async function uploadMultipleImages(
   files: Express.Multer.File[],
-  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks'
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks' | 'contracts'
 ): Promise<BulkUploadResult> {
   const uploaded: UploadedImage[] = [];
   const failed: Array<{ filename: string; error: string }> = [];

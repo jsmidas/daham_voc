@@ -33,6 +33,7 @@ import DeliveryRouteListPage from '@/pages/delivery-route/DeliveryRouteListPage'
 import DeliveryRouteDetailPage from '@/pages/delivery-route/DeliveryRouteDetailPage';
 import DeliveryLogPage from '@/pages/delivery-log/DeliveryLogPage';
 import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
+import ContractListPage from '@/pages/contract/ContractListPage';
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -164,6 +165,10 @@ export const router = createBrowserRouter([
       {
         path: 'delivery-logs',
         element: <DeliveryLogPage />,
+      },
+      {
+        path: 'contracts',
+        element: <ContractListPage />,
       },
     ],
   },

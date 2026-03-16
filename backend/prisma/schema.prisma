@@ -29,6 +29,7 @@ model User {
   staff               Staff?
   deliveryAssignments DeliveryAssignment[]
   deliveryLogs        DeliveryLog[]
+  contractAssignments ContractAssignment[]
 
   @@index([phone])
   @@index([email])
@@ -593,4 +594,64 @@ enum DeliveryStatus {
   COMPLETED
   DELAYED
   ISSUE
+}
+
+// ========================================
+// 전자 근로계약서
+// ========================================
+
+model Contract {
+  id          String               @id @default(uuid())
+  title       String               // 계약서 제목 (예: "2026년 3월 근로계약서")
+  description String?              // 설명
+  createdBy   String               // 생성한 관리자 userId
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  deletedAt   DateTime?
+  pages       ContractPage[]       // 계약서 페이지들
+  assignments ContractAssignment[] // 서명 대상자 배정
+
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model ContractPage {
+  id         String   @id @default(uuid())
+  contractId String
+  pageNumber Int      // 페이지 순서
+  imageUrl   String   // 페이지 이미지 URL (PDF → 이미지 변환 or 직접 이미지 업로드)
+  createdAt  DateTime @default(now())
+  contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, pageNumber])
+  @@index([contractId])
+}
+
+model ContractAssignment {
+  id                String          @id @default(uuid())
+  contractId        String
+  userId            String          // 서명 대상자
+  status            ContractStatus  @default(PENDING)
+  signedAt          DateTime?       // 서명 일시
+  signatureImageUrl String?         // 자필 서명 이미지 URL
+  signedDocumentUrl String?         // 서명 합성된 최종 문서 URL
+  expiresAt         DateTime?       // 서명 기한
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  contract          Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([contractId, userId])
+  @@index([contractId])
+  @@index([userId])
+  @@index([status])
+  @@index([signedAt])
+}
+
+enum ContractStatus {
+  PENDING   // 서명 대기
+  SIGNED    // 서명 완료
+  EXPIRED   // 기한 만료
 }
