@@ -74,6 +74,8 @@ export async function getFeedbacks(req: Request, res: Response): Promise<void> {
     if (siteIds) {
       filter.siteIds = (siteIds as string).split(',');
     }
+    const siteDivision = req.query.siteDivision;
+    if (siteDivision) filter.siteDivision = siteDivision as string;
     if (authorId) filter.authorId = authorId as string;
     if (authorType) filter.authorType = authorType as FeedbackAuthorType;
     if (status) filter.status = status as FeedbackStatus;

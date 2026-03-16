@@ -31,6 +31,7 @@ export interface ReplyFeedbackDto {
 export interface FeedbackFilter {
   siteId?: string;
   siteIds?: string[];
+  siteDivision?: string;
   authorId?: string;
   authorType?: FeedbackAuthorType;
   status?: FeedbackStatus;
@@ -162,6 +163,10 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any> {
 
   if (filter.siteIds && filter.siteIds.length > 0) {
     where.siteId = { in: filter.siteIds };
+  }
+
+  if (filter.siteDivision) {
+    where.site = { division: filter.siteDivision };
   }
 
   if (filter.authorId) {
