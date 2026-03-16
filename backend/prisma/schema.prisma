@@ -19,6 +19,10 @@ model User {
   isActive            Boolean              @default(true)
   canUseAttendance    Boolean              @default(false)
   isContractTarget    Boolean              @default(false)
+  viewScope           ViewScope            @default(NONE)
+  canViewFeedbacks    Boolean              @default(false)
+  canViewMealPhotos   Boolean              @default(false)
+  canViewMealCounts   Boolean              @default(false)
   lastLoginAt         DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -654,6 +658,13 @@ model ContractAssignment {
   @@index([userId])
   @@index([status])
   @@index([signedAt])
+}
+
+enum ViewScope {
+  NONE      // 열람 권한 없음 (기본값)
+  ALL       // 전체 사업장
+  HQ        // 본사 소속 사업장
+  YEONGNAM  // 영남 소속 사업장
 }
 
 enum ContractStatus {

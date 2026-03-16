@@ -71,6 +71,10 @@ export async function getStaffList(query: {
             isActive: true,
             canUseAttendance: true,
             isContractTarget: true,
+            viewScope: true,
+            canViewFeedbacks: true,
+            canViewMealPhotos: true,
+            canViewMealCounts: true,
             lastLoginAt: true,
           },
         },
@@ -311,6 +315,10 @@ export async function updateStaff(
     isActive?: boolean;
     canUseAttendance?: boolean;
     isContractTarget?: boolean;
+    viewScope?: string;
+    canViewFeedbacks?: boolean;
+    canViewMealPhotos?: boolean;
+    canViewMealCounts?: boolean;
     // Staff 정보
     department?: string;
     position?: string;
@@ -347,6 +355,10 @@ export async function updateStaff(
     if (data.isActive !== undefined) userUpdateData.isActive = data.isActive;
     if (data.canUseAttendance !== undefined) userUpdateData.canUseAttendance = data.canUseAttendance;
     if (data.isContractTarget !== undefined) userUpdateData.isContractTarget = data.isContractTarget;
+    if (data.viewScope !== undefined) userUpdateData.viewScope = data.viewScope;
+    if (data.canViewFeedbacks !== undefined) userUpdateData.canViewFeedbacks = data.canViewFeedbacks;
+    if (data.canViewMealPhotos !== undefined) userUpdateData.canViewMealPhotos = data.canViewMealPhotos;
+    if (data.canViewMealCounts !== undefined) userUpdateData.canViewMealCounts = data.canViewMealCounts;
 
     if (Object.keys(userUpdateData).length > 0) {
       await tx.user.update({

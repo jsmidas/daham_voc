@@ -1,0 +1,8 @@
+-- CreateEnum
+CREATE TYPE "ViewScope" AS ENUM ('NONE', 'ALL', 'HQ', 'YEONGNAM');
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN "viewScope" "ViewScope" NOT NULL DEFAULT 'NONE';
+ALTER TABLE "User" ADD COLUMN "canViewFeedbacks" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "canViewMealPhotos" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN "canViewMealCounts" BOOLEAN NOT NULL DEFAULT false;

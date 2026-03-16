@@ -73,6 +73,10 @@ export default function StaffFormPage() {
         isActive: staffData.user.isActive,
         canUseAttendance: (staffData.user as any).canUseAttendance || false,
         isContractTarget: (staffData.user as any).isContractTarget || false,
+        viewScope: (staffData.user as any).viewScope || 'NONE',
+        canViewFeedbacks: (staffData.user as any).canViewFeedbacks || false,
+        canViewMealPhotos: (staffData.user as any).canViewMealPhotos || false,
+        canViewMealCounts: (staffData.user as any).canViewMealCounts || false,
         // Staff 정보
         employeeNo: staffData.employeeNo,
         department: staffData.department,
@@ -417,6 +421,10 @@ export default function StaffFormPage() {
             isActive: true,
             canUseAttendance: false,
             isContractTarget: false,
+            viewScope: 'NONE',
+            canViewFeedbacks: false,
+            canViewMealPhotos: false,
+            canViewMealCounts: false,
           }}
         >
           {/* 기본 정보 */}
@@ -565,6 +573,57 @@ export default function StaffFormPage() {
                 tooltip="전자계약서 배정 시 자동으로 대상자 목록에 포함됩니다."
               >
                 <Switch checkedChildren="대상" unCheckedChildren="비대상" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          {/* 데이터 열람 권한 */}
+          <h3 style={{ marginTop: 24 }}>데이터 열람 권한</h3>
+          <div style={{ marginBottom: 12, color: '#666', fontSize: 13 }}>
+            사업장에 소속되지 않아도 범위 내 데이터를 모바일 앱에서 열람할 수 있습니다.
+          </div>
+          <Row gutter={16}>
+            <Col xs={24} sm={12}>
+              <Form.Item
+                label="열람 범위"
+                name="viewScope"
+                tooltip="선택한 범위 내 모든 사업장의 데이터를 열람할 수 있습니다."
+              >
+                <Select>
+                  <Select.Option value="NONE">없음</Select.Option>
+                  <Select.Option value="ALL">전체</Select.Option>
+                  <Select.Option value="HQ">본사</Select.Option>
+                  <Select.Option value="YEONGNAM">영남지사</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="VOC 열람"
+                name="canViewFeedbacks"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="허용" unCheckedChildren="불가" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="배식사진 열람"
+                name="canViewMealPhotos"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="허용" unCheckedChildren="불가" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="식수 열람"
+                name="canViewMealCounts"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="허용" unCheckedChildren="불가" />
               </Form.Item>
             </Col>
           </Row>
