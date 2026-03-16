@@ -594,6 +594,7 @@ export default function StaffFormPage() {
                   <Select.Option value="ALL">전체</Select.Option>
                   <Select.Option value="HQ">본사</Select.Option>
                   <Select.Option value="YEONGNAM">영남지사</Select.Option>
+                  <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
                 </Select>
               </Form.Item>
             </Col>

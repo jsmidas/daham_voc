@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "ViewScope" ADD VALUE 'CONSIGNMENT';

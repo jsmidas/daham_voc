@@ -661,10 +661,11 @@ model ContractAssignment {
 }
 
 enum ViewScope {
-  NONE      // 열람 권한 없음 (기본값)
-  ALL       // 전체 사업장
-  HQ        // 본사 소속 사업장
-  YEONGNAM  // 영남 소속 사업장
+  NONE        // 열람 권한 없음 (기본값)
+  ALL         // 전체 사업장
+  HQ          // 본사 소속 사업장
+  YEONGNAM    // 영남 소속 사업장
+  CONSIGNMENT // 위탁 사업장
 }
 
 enum ContractStatus {
