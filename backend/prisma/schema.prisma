@@ -602,16 +602,21 @@ enum DeliveryStatus {
 // ========================================
 
 model Contract {
-  id          String               @id @default(uuid())
-  title       String               // 계약서 제목 (예: "2026년 3월 근로계약서")
-  description String?              // 설명
-  createdBy   String               // 생성한 관리자 userId
-  isActive    Boolean              @default(true)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  deletedAt   DateTime?
-  pages       ContractPage[]       // 계약서 페이지들
-  assignments ContractAssignment[] // 서명 대상자 배정
+  id             String               @id @default(uuid())
+  title          String               // 계약서 제목 (예: "2026년 3월 근로계약서")
+  description    String?              // 설명
+  createdBy      String               // 생성한 관리자 userId
+  isActive       Boolean              @default(true)
+  signPageNumber Int?                 // 서명 영역이 있는 페이지 번호
+  signX          Float?               // 서명 영역 X 좌표 (% 단위, 0~100)
+  signY          Float?               // 서명 영역 Y 좌표 (% 단위, 0~100)
+  signWidth      Float?               // 서명 영역 너비 (% 단위)
+  signHeight     Float?               // 서명 영역 높이 (% 단위)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  deletedAt      DateTime?
+  pages          ContractPage[]       // 계약서 페이지들
+  assignments    ContractAssignment[] // 서명 대상자 배정
 
   @@index([createdBy])
   @@index([isActive])

@@ -156,6 +156,29 @@ export async function getContractStatus(req: Request, res: Response) {
 }
 
 /**
+ * PATCH /contracts/:id/sign-zone - 서명 영역 설정
+ */
+export async function updateSignZone(req: Request, res: Response) {
+  try {
+    const { signPageNumber, signX, signY, signWidth, signHeight } = req.body;
+    const contractId = req.params.id;
+
+    if (signPageNumber === undefined || signX === undefined || signY === undefined ||
+        signWidth === undefined || signHeight === undefined) {
+      return res.status(400).json({ success: false, message: '서명 영역 정보가 필요합니다.' });
+    }
+
+    const result = await contractService.updateSignZone(contractId, {
+      signPageNumber, signX, signY, signWidth, signHeight,
+    });
+
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
  * GET /contracts/targets - 계약 대상자 목록 조회
  */
 export async function getContractTargets(_req: Request, res: Response) {

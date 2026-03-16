@@ -35,6 +35,31 @@ export async function createContract(data: {
 }
 
 /**
+ * 서명 영역 설정
+ */
+export async function updateSignZone(contractId: string, data: {
+  signPageNumber: number;
+  signX: number;
+  signY: number;
+  signWidth: number;
+  signHeight: number;
+}) {
+  return prisma.contract.update({
+    where: { id: contractId },
+    data: {
+      signPageNumber: data.signPageNumber,
+      signX: data.signX,
+      signY: data.signY,
+      signWidth: data.signWidth,
+      signHeight: data.signHeight,
+    },
+    include: {
+      pages: { orderBy: { pageNumber: 'asc' } },
+    },
+  });
+}
+
+/**
  * 계약서 목록 조회 (관리자용)
  */
 export async function getContracts(filter: {

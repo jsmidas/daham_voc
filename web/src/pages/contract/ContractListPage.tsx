@@ -3,7 +3,7 @@
  * @description 전자 근로계약서 관리 페이지
  */
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   Table, Button, Space, Tag, Modal, Form, Input, Upload, Select,
   message, Popconfirm, Typography, Progress, Descriptions,
@@ -12,18 +12,167 @@ import {
 import {
   PlusOutlined, UploadOutlined, DeleteOutlined, TeamOutlined,
   EyeOutlined, CheckCircleOutlined, ClockCircleOutlined,
-  ExclamationCircleOutlined, SendOutlined,
+  ExclamationCircleOutlined, SendOutlined, EditOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getContracts, createContract, assignContract,
   getContractStatus, deleteContract, getContractTargets,
-  assignMultipleContracts,
+  assignMultipleContracts, updateSignZone,
 } from '@/api/contract.api';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+
+/** 서명 영역 드래그 배치 컴포넌트 */
+function SignZoneEditor({
+  pages,
+  initialZone,
+  onSave,
+  saving,
+}: {
+  pages: any[];
+  initialZone?: { signPageNumber: number; signX: number; signY: number; signWidth: number; signHeight: number };
+  onSave: (zone: { signPageNumber: number; signX: number; signY: number; signWidth: number; signHeight: number }) => void;
+  saving: boolean;
+}) {
+  const [selectedPage, setSelectedPage] = useState(initialZone?.signPageNumber || 1);
+  const [zone, setZone] = useState<{ x: number; y: number; w: number; h: number } | null>(
+    initialZone ? { x: initialZone.signX, y: initialZone.signY, w: initialZone.signWidth, h: initialZone.signHeight } : null
+  );
+  const [dragging, setDragging] = useState(false);
+  const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const getRelativePos = useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)),
+      y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100)),
+    };
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    const pos = getRelativePos(e);
+    setStartPos(pos);
+    setDragging(true);
+    setZone({ x: pos.x, y: pos.y, w: 0, h: 0 });
+  }, [getRelativePos]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!dragging || !startPos) return;
+    const pos = getRelativePos(e);
+    setZone({
+      x: Math.min(startPos.x, pos.x),
+      y: Math.min(startPos.y, pos.y),
+      w: Math.abs(pos.x - startPos.x),
+      h: Math.abs(pos.y - startPos.y),
+    });
+  }, [dragging, startPos, getRelativePos]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragging(false);
+    setStartPos(null);
+  }, []);
+
+  const currentPage = pages.find((p: any) => p.pageNumber === selectedPage);
+
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <Text strong>서명 영역을 지정할 페이지:</Text>
+        <Select
+          value={selectedPage}
+          onChange={(v) => { setSelectedPage(v); setZone(null); }}
+          style={{ width: 120, marginLeft: 8 }}
+        >
+          {pages.map((p: any) => (
+            <Select.Option key={p.pageNumber} value={p.pageNumber}>
+              {p.pageNumber}페이지
+            </Select.Option>
+          ))}
+        </Select>
+      </div>
+
+      <Alert
+        message="계약서 이미지 위에서 마우스를 드래그하여 서명 영역을 지정하세요."
+        type="info"
+        showIcon
+        style={{ marginBottom: 12 }}
+      />
+
+      {currentPage && (
+        <div
+          ref={containerRef}
+          style={{
+            position: 'relative',
+            cursor: 'crosshair',
+            userSelect: 'none',
+            border: '1px solid #d9d9d9',
+            borderRadius: 4,
+            overflow: 'hidden',
+          }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+        >
+          <img
+            src={currentPage.imageUrl}
+            alt={`${selectedPage}페이지`}
+            style={{ width: '100%', display: 'block', pointerEvents: 'none' }}
+            draggable={false}
+          />
+          {zone && zone.w > 0 && zone.h > 0 && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${zone.x}%`,
+                top: `${zone.y}%`,
+                width: `${zone.w}%`,
+                height: `${zone.h}%`,
+                border: '2px dashed #1890ff',
+                backgroundColor: 'rgba(24, 144, 255, 0.15)',
+                pointerEvents: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span style={{ color: '#1890ff', fontWeight: 'bold', fontSize: 12, textShadow: '0 0 3px white' }}>
+                서명 영역
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ marginTop: 16, textAlign: 'right' }}>
+        <Button
+          type="primary"
+          disabled={!zone || zone.w < 2 || zone.h < 2}
+          loading={saving}
+          onClick={() => {
+            if (zone) {
+              onSave({
+                signPageNumber: selectedPage,
+                signX: Math.round(zone.x * 100) / 100,
+                signY: Math.round(zone.y * 100) / 100,
+                signWidth: Math.round(zone.w * 100) / 100,
+                signHeight: Math.round(zone.h * 100) / 100,
+              });
+            }
+          }}
+        >
+          서명 영역 저장
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 export default function ContractListPage() {
   const queryClient = useQueryClient();
@@ -32,6 +181,7 @@ export default function ContractListPage() {
   const [bulkAssignModalOpen, setBulkAssignModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [viewerOpen, setViewerOpen] = useState(false);
+  const [signZoneModalOpen, setSignZoneModalOpen] = useState(false);
   const [selectedContract, setSelectedContract] = useState<any>(null);
   const [statusData, setStatusData] = useState<any>(null);
   const [form] = Form.useForm();
@@ -56,14 +206,32 @@ export default function ContractListPage() {
   // 계약서 생성
   const createMutation = useMutation({
     mutationFn: createContract,
-    onSuccess: () => {
-      message.success('계약서가 생성되었습니다.');
+    onSuccess: (res: any) => {
+      message.success('계약서가 생성되었습니다. 서명 영역을 지정해주세요.');
       setCreateModalOpen(false);
       form.resetFields();
       setFileList([]);
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      // 생성된 계약서로 서명 영역 설정 모달 열기
+      const contract = res?.data;
+      if (contract) {
+        setSelectedContract(contract);
+        setSignZoneModalOpen(true);
+      }
     },
     onError: (err: any) => message.error(err?.message || '생성 실패'),
+  });
+
+  // 서명 영역 저장
+  const signZoneMutation = useMutation({
+    mutationFn: (data: { contractId: string; zone: any }) =>
+      updateSignZone(data.contractId, data.zone),
+    onSuccess: () => {
+      message.success('서명 영역이 저장되었습니다.');
+      setSignZoneModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+    },
+    onError: (err: any) => message.error(err?.message || '저장 실패'),
   });
 
   // 대상자 배정 (단건)
@@ -161,6 +329,16 @@ export default function ContractListPage() {
       render: (pages: any[]) => `${pages?.length || 0}p`,
     },
     {
+      title: '서명',
+      key: 'signZone',
+      width: 80,
+      render: (_: any, record: any) => (
+        record.signPageNumber
+          ? <Tag color="green">{record.signPageNumber}p 설정됨</Tag>
+          : <Tag color="red">미설정</Tag>
+      ),
+    },
+    {
       title: '배정',
       dataIndex: 'assignments',
       key: 'assignments',
@@ -184,13 +362,13 @@ export default function ContractListPage() {
       title: '생성일',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      width: 120,
+      width: 100,
       render: (d: string) => dayjs(d).format('YYYY.MM.DD'),
     },
     {
       title: '',
       key: 'actions',
-      width: 200,
+      width: 250,
       render: (_: any, record: any) => (
         <Space>
           <Button
@@ -202,17 +380,19 @@ export default function ContractListPage() {
           </Button>
           <Button
             size="small"
+            icon={<EditOutlined />}
+            onClick={() => { setSelectedContract(record); setSignZoneModalOpen(true); }}
+          >
+            서명설정
+          </Button>
+          <Button
+            size="small"
             icon={<TeamOutlined />}
             onClick={() => { setSelectedContract(record); setAssignModalOpen(true); }}
           >
             배정
           </Button>
-          <Button
-            size="small"
-            onClick={() => openStatus(record)}
-          >
-            현황
-          </Button>
+          <Button size="small" onClick={() => openStatus(record)}>현황</Button>
           <Popconfirm title="삭제하시겠습니까?" onConfirm={() => deleteMutation.mutate(record.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -291,6 +471,37 @@ export default function ContractListPage() {
             <Text type="secondary">여러 페이지 이미지를 순서대로 업로드하세요 (최대 20장)</Text>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 서명 영역 설정 모달 */}
+      <Modal
+        title={`서명 영역 설정 - ${selectedContract?.title || ''}`}
+        open={signZoneModalOpen}
+        onCancel={() => setSignZoneModalOpen(false)}
+        footer={null}
+        width={800}
+        destroyOnClose
+      >
+        {selectedContract?.pages?.length > 0 && (
+          <SignZoneEditor
+            pages={selectedContract.pages}
+            initialZone={
+              selectedContract.signPageNumber
+                ? {
+                    signPageNumber: selectedContract.signPageNumber,
+                    signX: selectedContract.signX,
+                    signY: selectedContract.signY,
+                    signWidth: selectedContract.signWidth,
+                    signHeight: selectedContract.signHeight,
+                  }
+                : undefined
+            }
+            onSave={(zone) => {
+              signZoneMutation.mutate({ contractId: selectedContract.id, zone });
+            }}
+            saving={signZoneMutation.isPending}
+          />
+        )}
       </Modal>
 
       {/* 대상자 배정 모달 (단건) */}
@@ -460,14 +671,30 @@ export default function ContractListPage() {
         <div style={{ textAlign: 'center' }}>
           <AntImage.PreviewGroup>
             {selectedContract?.pages?.map((page: any) => (
-              <div key={page.id} style={{ marginBottom: 16 }}>
+              <div key={page.id} style={{ marginBottom: 16, position: 'relative' }}>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
                   {page.pageNumber}페이지
                 </Text>
-                <AntImage
-                  src={page.imageUrl}
-                  style={{ maxWidth: '100%', maxHeight: 600 }}
-                />
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <AntImage
+                    src={page.imageUrl}
+                    style={{ maxWidth: '100%', maxHeight: 600 }}
+                  />
+                  {selectedContract?.signPageNumber === page.pageNumber && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: `${selectedContract.signX}%`,
+                        top: `${selectedContract.signY}%`,
+                        width: `${selectedContract.signWidth}%`,
+                        height: `${selectedContract.signHeight}%`,
+                        border: '2px dashed #1890ff',
+                        backgroundColor: 'rgba(24, 144, 255, 0.1)',
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             ))}
           </AntImage.PreviewGroup>

@@ -55,6 +55,17 @@ export async function removeAssignment(assignmentId: string) {
   return apiClient.delete(`/contracts/assignments/${assignmentId}`);
 }
 
+// 서명 영역 설정
+export async function updateSignZone(contractId: string, data: {
+  signPageNumber: number;
+  signX: number;
+  signY: number;
+  signWidth: number;
+  signHeight: number;
+}) {
+  return apiClient.patch(`/contracts/${contractId}/sign-zone`, data);
+}
+
 // 계약 대상자 목록 조회
 export async function getContractTargets() {
   return apiClient.get('/contracts/targets');
