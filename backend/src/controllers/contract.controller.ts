@@ -156,6 +156,45 @@ export async function getContractStatus(req: Request, res: Response) {
 }
 
 /**
+ * GET /contracts/targets - 계약 대상자 목록 조회
+ */
+export async function getContractTargets(_req: Request, res: Response) {
+  try {
+    const targets = await contractService.getContractTargets();
+    return res.json({ success: true, data: targets });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
+ * POST /contracts/assign-bulk - 여러 계약서 일괄 배정
+ */
+export async function assignMultipleContracts(req: Request, res: Response) {
+  try {
+    const { contractIds, userIds, expiresAt } = req.body;
+
+    if (!contractIds || !Array.isArray(contractIds) || contractIds.length === 0) {
+      return res.status(400).json({ success: false, message: '배정할 계약서를 선택해주세요.' });
+    }
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({ success: false, message: '배정할 대상자를 선택해주세요.' });
+    }
+
+    const result = await contractService.assignMultipleContracts({
+      contractIds,
+      userIds,
+      expiresAt,
+    });
+
+    return res.json({ success: true, data: result });
+  } catch (error: any) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+/**
  * DELETE /contracts/:id - 계약서 삭제
  */
 export async function deleteContract(req: Request, res: Response) {

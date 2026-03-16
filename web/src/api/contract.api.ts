@@ -54,3 +54,17 @@ export async function deleteContract(id: string) {
 export async function removeAssignment(assignmentId: string) {
   return apiClient.delete(`/contracts/assignments/${assignmentId}`);
 }
+
+// 계약 대상자 목록 조회
+export async function getContractTargets() {
+  return apiClient.get('/contracts/targets');
+}
+
+// 여러 계약서 일괄 배정
+export async function assignMultipleContracts(data: {
+  contractIds: string[];
+  userIds: string[];
+  expiresAt?: string;
+}) {
+  return apiClient.post('/contracts/assign-bulk', data);
+}

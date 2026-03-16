@@ -70,6 +70,7 @@ export async function getStaffList(query: {
             division: true,
             isActive: true,
             canUseAttendance: true,
+            isContractTarget: true,
             lastLoginAt: true,
           },
         },
@@ -472,6 +473,28 @@ export async function assignStaffToSites(
   siteIds: string[]
 ) {
   return assignStaffToSitesAndGroups(staffId, siteIds, []);
+}
+
+/**
+ * 계약 대상자 토글
+ */
+export async function toggleContractTarget(staffId: string) {
+  const staff = await prisma.staff.findFirst({
+    where: { id: staffId, deletedAt: null },
+    include: { user: { select: { id: true, isContractTarget: true } } },
+  });
+
+  if (!staff) {
+    throw new Error('담당자를 찾을 수 없습니다');
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: staff.user.id },
+    data: { isContractTarget: !staff.user.isContractTarget },
+    select: { id: true, isContractTarget: true },
+  });
+
+  return updated;
 }
 
 /**

@@ -36,6 +36,7 @@ export interface Staff {
     role: Role;
     division?: Division;
     isActive: boolean;
+    isContractTarget?: boolean;
     lastLoginAt?: string;
   };
   manager?: {
@@ -162,6 +163,16 @@ export async function assignStaffToSites(id: string, siteIds: string[], siteGrou
   const response = await apiClient.post<{ data: { message: string } }>(
     `/staff/${id}/sites`,
     { siteIds, siteGroupIds }
+  );
+  return response.data.data;
+}
+
+/**
+ * 계약 대상자 토글
+ */
+export async function toggleContractTarget(id: string) {
+  const response = await apiClient.patch<{ data: { id: string; isContractTarget: boolean } }>(
+    `/staff/${id}/contract-target`
   );
   return response.data.data;
 }

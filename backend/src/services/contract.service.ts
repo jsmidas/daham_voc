@@ -199,6 +199,51 @@ export async function deleteContract(id: string) {
 }
 
 /**
+ * 계약 대상자 목록 조회 (isContractTarget=true)
+ */
+export async function getContractTargets() {
+  return prisma.user.findMany({
+    where: {
+      isContractTarget: true,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      phone: true,
+      role: true,
+      division: true,
+    },
+    orderBy: { name: 'asc' },
+  });
+}
+
+/**
+ * 여러 계약서 일괄 배정
+ */
+export async function assignMultipleContracts(data: {
+  contractIds: string[];
+  userIds: string[];
+  expiresAt?: string;
+}) {
+  let totalCount = 0;
+
+  for (const contractId of data.contractIds) {
+    const result = await prisma.contractAssignment.createMany({
+      data: data.userIds.map((userId) => ({
+        contractId,
+        userId,
+        expiresAt: data.expiresAt ? new Date(data.expiresAt) : undefined,
+      })),
+      skipDuplicates: true,
+    });
+    totalCount += result.count;
+  }
+
+  return { count: totalCount, contracts: data.contractIds.length };
+}
+
+/**
  * 배정 취소
  */
 export async function removeAssignment(assignmentId: string) {

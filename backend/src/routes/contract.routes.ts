@@ -13,6 +13,22 @@ const router = Router();
 // GET /api/v1/contracts/my - 내 계약서 조회 (모바일 - 모든 인증된 사용자)
 router.get('/my', authMiddleware, contractController.getMyContracts);
 
+// GET /api/v1/contracts/targets - 계약 대상자 목록 조회 (관리자)
+router.get(
+  '/targets',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'GROUP_MANAGER']),
+  contractController.getContractTargets
+);
+
+// POST /api/v1/contracts/assign-bulk - 여러 계약서 일괄 배정 (관리자)
+router.post(
+  '/assign-bulk',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'GROUP_MANAGER']),
+  contractController.assignMultipleContracts
+);
+
 // GET /api/v1/contracts - 계약서 목록 조회 (관리자)
 router.get(
   '/',

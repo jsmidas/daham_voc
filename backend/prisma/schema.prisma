@@ -18,6 +18,7 @@ model User {
   division            Division?
   isActive            Boolean              @default(true)
   canUseAttendance    Boolean              @default(false)
+  isContractTarget    Boolean              @default(false)
   lastLoginAt         DateTime?
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

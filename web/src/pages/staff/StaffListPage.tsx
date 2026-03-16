@@ -5,10 +5,10 @@
 
 import { useState } from 'react';
 import { Table, Button, Input, Select, Space, message, Popconfirm, Tag, Card, Row, Col } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, KeyOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined, ReloadOutlined, KeyOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getStaffList, deleteStaff, resetStaffPassword } from '@/api/staff.api';
+import { getStaffList, deleteStaff, resetStaffPassword, toggleContractTarget } from '@/api/staff.api';
 import type { Staff, Division, Role } from '@/api/staff.api';
 import { RoleLabels, DivisionLabels } from '@/types/index';
 import type { ColumnsType } from 'antd/es/table';
@@ -52,6 +52,18 @@ export default function StaffListPage() {
     },
     onError: (error: any) => {
       message.error(error.response?.data?.error?.message || '비밀번호 초기화 실패');
+    },
+  });
+
+  // 계약 대상자 토글 mutation
+  const toggleContractMutation = useMutation({
+    mutationFn: toggleContractTarget,
+    onSuccess: (data) => {
+      message.success(data.isContractTarget ? '계약 대상자로 지정되었습니다' : '계약 대상자에서 해제되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.error?.message || '변경 실패');
     },
   });
 
@@ -140,6 +152,23 @@ export default function StaffListPage() {
       key: 'sites',
       width: 90,
       render: (sites: any[]) => sites?.length || 0,
+    },
+    {
+      title: '계약',
+      dataIndex: ['user', 'isContractTarget'],
+      key: 'isContractTarget',
+      width: 60,
+      align: 'center' as const,
+      render: (isTarget: boolean, record: Staff) => (
+        <Button
+          type="text"
+          size="small"
+          icon={<FileTextOutlined />}
+          style={{ color: isTarget ? '#1890ff' : '#d9d9d9' }}
+          onClick={() => toggleContractMutation.mutate(record.id)}
+          title={isTarget ? '계약 대상자 해제' : '계약 대상자 지정'}
+        />
+      ),
     },
     {
       title: '상태',

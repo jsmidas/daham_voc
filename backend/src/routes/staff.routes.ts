@@ -30,6 +30,9 @@ router.delete('/:id', staffController.deleteStaff);
 // 담당자 사업장 배정
 router.post('/:id/sites', staffController.assignStaffToSites);
 
+// 계약 대상자 토글
+router.patch('/:id/contract-target', staffController.toggleContractTarget);
+
 // 비밀번호 초기화
 router.post('/:id/reset-password', staffController.resetStaffPassword);
 

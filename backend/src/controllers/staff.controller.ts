@@ -128,6 +128,21 @@ export const assignStaffToSites = async (req: Request, res: Response): Promise<v
 };
 
 /**
+ * 계약 대상자 토글
+ * PATCH /api/v1/staff/:id/contract-target
+ */
+export const toggleContractTarget = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const result = await staffService.toggleContractTarget(id);
+    res.json(successResponse(result, '계약 대상자 상태가 변경되었습니다'));
+  } catch (error: any) {
+    console.error('계약 대상자 토글 오류:', error);
+    res.status(400).json(errorResponse(error.message, 'TOGGLE_CONTRACT_TARGET_ERROR'));
+  }
+};
+
+/**
  * 비밀번호 초기화
  * POST /api/v1/staff/:id/reset-password
  */
