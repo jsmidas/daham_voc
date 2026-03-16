@@ -239,14 +239,20 @@ export async function getMealCountsByRange(
 /**
  * 전체 사업장 기간별 식수 인원 조회
  */
-export async function getAllMealCountsByRange(startDate: string, endDate: string) {
-  return await prisma.mealCount.findMany({
-    where: {
-      date: {
-        gte: new Date(startDate),
-        lte: new Date(endDate),
-      },
+export async function getAllMealCountsByRange(startDate: string, endDate: string, division?: string) {
+  const where: any = {
+    date: {
+      gte: new Date(startDate),
+      lte: new Date(endDate),
     },
+  };
+
+  if (division && division !== 'ALL') {
+    where.site = { division };
+  }
+
+  return await prisma.mealCount.findMany({
+    where,
     include: {
       site: {
         select: {

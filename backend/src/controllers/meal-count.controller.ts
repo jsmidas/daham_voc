@@ -237,9 +237,11 @@ export async function getAllMealCountsByRange(req: Request, res: Response) {
       });
     }
 
+    const { division } = req.query;
     const mealCounts = await mealCountService.getAllMealCountsByRange(
       startDate as string,
-      endDate as string
+      endDate as string,
+      division as string | undefined
     );
 
     return res.json({
