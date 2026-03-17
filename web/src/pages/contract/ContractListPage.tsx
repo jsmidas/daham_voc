@@ -19,7 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getContracts, createContract, assignContract,
   getContractStatus, deleteContract, getContractTargets,
-  assignMultipleContracts, updateSignZone,
+  assignMultipleContracts, updateSignZone, removeAssignment,
 } from '@/api/contract.api';
 import dayjs from 'dayjs';
 
@@ -654,6 +654,30 @@ export default function ContractListPage() {
                   dataIndex: 'signedAt',
                   key: 'signedAt',
                   render: (d: string) => d ? dayjs(d).format('YYYY.MM.DD HH:mm') : '-',
+                },
+                {
+                  title: '',
+                  key: 'action',
+                  width: 60,
+                  render: (_: any, record: any) => (
+                    <Popconfirm
+                      title="이 배정을 삭제하시겠습니까?"
+                      onConfirm={async () => {
+                        try {
+                          await removeAssignment(record.id);
+                          message.success('배정이 삭제되었습니다.');
+                          // 현황 새로고침
+                          const res = await getContractStatus(selectedContract.id);
+                          setStatusData((res as any)?.data || res);
+                          queryClient.invalidateQueries({ queryKey: ['contracts'] });
+                        } catch {
+                          message.error('삭제 실패');
+                        }
+                      }}
+                    >
+                      <Button size="small" danger icon={<DeleteOutlined />} />
+                    </Popconfirm>
+                  ),
                 },
                 {
                   title: '서명 문서',
