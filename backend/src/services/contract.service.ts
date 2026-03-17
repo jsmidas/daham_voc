@@ -171,6 +171,7 @@ export async function signContract(data: {
   assignmentId: string;
   userId: string;
   signatureImageUrl: string;
+  signatureBuffer: Buffer;
 }) {
   // 본인의 배정인지 확인
   const assignment = await prisma.contractAssignment.findFirst({
@@ -199,7 +200,7 @@ export async function signContract(data: {
   try {
     signedDocumentUrl = await compositeSignedDocument(
       assignment.contract,
-      data.signatureImageUrl,
+      data.signatureBuffer,
       data.assignmentId
     );
   } catch (err: any) {
@@ -227,7 +228,7 @@ export async function signContract(data: {
  */
 async function compositeSignedDocument(
   contract: any,
-  signatureImageUrl: string,
+  signatureBuffer: Buffer,
   assignmentId: string
 ): Promise<string> {
   const { signPageNumber, signX, signY, signWidth, signHeight, pages } = contract;
@@ -242,14 +243,10 @@ async function compositeSignedDocument(
     throw new Error('서명 페이지를 찾을 수 없습니다.');
   }
 
-  // 이미지 다운로드
-  const [pageResponse, sigResponse] = await Promise.all([
-    axios.get(signPage.imageUrl, { responseType: 'arraybuffer' }),
-    axios.get(signatureImageUrl, { responseType: 'arraybuffer' }),
-  ]);
-
+  // 계약서 페이지 이미지 다운로드
+  const pageResponse = await axios.get(signPage.imageUrl, { responseType: 'arraybuffer' });
   const pageBuffer = Buffer.from(pageResponse.data);
-  const sigBuffer = Buffer.from(sigResponse.data);
+  const sigBuffer = signatureBuffer;
 
   // 원본 이미지를 PNG로 변환 (알파 채널 지원)
   const pageImage = sharp(pageBuffer).png();

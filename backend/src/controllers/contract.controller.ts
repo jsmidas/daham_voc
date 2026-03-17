@@ -150,10 +150,20 @@ export async function signContract(req: Request, res: Response) {
       return res.status(400).json({ success: false, message: '서명 이미지를 제출해주세요.' });
     }
 
+    // 서명 원본 buffer 준비 (합성용)
+    let signatureBuffer: Buffer;
+    if (file) {
+      signatureBuffer = file.buffer;
+    } else {
+      const base64Data = signatureBase64.replace(/^data:image\/\w+;base64,/, '');
+      signatureBuffer = Buffer.from(base64Data, 'base64');
+    }
+
     const result = await contractService.signContract({
       assignmentId,
       userId,
       signatureImageUrl,
+      signatureBuffer,
     });
 
     return res.json({ success: true, data: result });
