@@ -185,22 +185,18 @@ export async function getContractStatus(req: Request, res: Response) {
 }
 
 /**
- * PATCH /contracts/:id/sign-zone - 서명 영역 설정
+ * PUT /contracts/:id/sign-zones - 서명 영역 전체 교체
  */
-export async function updateSignZone(req: Request, res: Response) {
+export async function replaceSignZones(req: Request, res: Response) {
   try {
-    const { signPageNumber, signX, signY, signWidth, signHeight } = req.body;
     const contractId = req.params.id;
+    const { zones } = req.body;
 
-    if (signPageNumber === undefined || signX === undefined || signY === undefined ||
-        signWidth === undefined || signHeight === undefined) {
-      return res.status(400).json({ success: false, message: '서명 영역 정보가 필요합니다.' });
+    if (!zones || !Array.isArray(zones)) {
+      return res.status(400).json({ success: false, message: '서명 영역 목록이 필요합니다.' });
     }
 
-    const result = await contractService.updateSignZone(contractId, {
-      signPageNumber, signX, signY, signWidth, signHeight,
-    });
-
+    const result = await contractService.replaceSignZones(contractId, zones);
     return res.json({ success: true, data: result });
   } catch (error: any) {
     return res.status(500).json({ success: false, message: error.message });

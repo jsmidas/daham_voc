@@ -19,31 +19,43 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getContracts, createContract, assignContract,
   getContractStatus, deleteContract, getContractTargets,
-  assignMultipleContracts, updateSignZone, removeAssignment,
+  assignMultipleContracts, replaceSignZones, removeAssignment,
 } from '@/api/contract.api';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-/** 서명 영역 드래그 배치 컴포넌트 */
+interface SignZoneItem {
+  label: string;
+  pageNumber: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sortOrder: number;
+}
+
+const ZONE_COLORS = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#13c2c2'];
+
+/** 다중 서명 영역 드래그 배치 컴포넌트 */
 function SignZoneEditor({
   pages,
-  initialZone,
+  initialZones,
   onSave,
   saving,
 }: {
   pages: any[];
-  initialZone?: { signPageNumber: number; signX: number; signY: number; signWidth: number; signHeight: number };
-  onSave: (zone: { signPageNumber: number; signX: number; signY: number; signWidth: number; signHeight: number }) => void;
+  initialZones: SignZoneItem[];
+  onSave: (zones: SignZoneItem[]) => void;
   saving: boolean;
 }) {
-  const [selectedPage, setSelectedPage] = useState(initialZone?.signPageNumber || 1);
-  const [zone, setZone] = useState<{ x: number; y: number; w: number; h: number } | null>(
-    initialZone ? { x: initialZone.signX, y: initialZone.signY, w: initialZone.signWidth, h: initialZone.signHeight } : null
-  );
+  const [selectedPage, setSelectedPage] = useState(initialZones[0]?.pageNumber || 1);
+  const [zones, setZones] = useState<SignZoneItem[]>(initialZones);
   const [dragging, setDragging] = useState(false);
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [drawingZone, setDrawingZone] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [newLabel, setNewLabel] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getRelativePos = useCallback((e: React.MouseEvent) => {
@@ -60,13 +72,13 @@ function SignZoneEditor({
     const pos = getRelativePos(e);
     setStartPos(pos);
     setDragging(true);
-    setZone({ x: pos.x, y: pos.y, w: 0, h: 0 });
+    setDrawingZone({ x: pos.x, y: pos.y, w: 0, h: 0 });
   }, [getRelativePos]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!dragging || !startPos) return;
     const pos = getRelativePos(e);
-    setZone({
+    setDrawingZone({
       x: Math.min(startPos.x, pos.x),
       y: Math.min(startPos.y, pos.y),
       w: Math.abs(pos.x - startPos.x),
@@ -75,35 +87,85 @@ function SignZoneEditor({
   }, [dragging, startPos, getRelativePos]);
 
   const handleMouseUp = useCallback(() => {
+    if (drawingZone && drawingZone.w >= 2 && drawingZone.h >= 2) {
+      const label = newLabel.trim() || `서명 ${zones.length + 1}`;
+      setZones((prev) => [...prev, {
+        label,
+        pageNumber: selectedPage,
+        x: Math.round(drawingZone.x * 100) / 100,
+        y: Math.round(drawingZone.y * 100) / 100,
+        width: Math.round(drawingZone.w * 100) / 100,
+        height: Math.round(drawingZone.h * 100) / 100,
+        sortOrder: prev.length,
+      }]);
+      setNewLabel('');
+    }
     setDragging(false);
     setStartPos(null);
-  }, []);
+    setDrawingZone(null);
+  }, [drawingZone, selectedPage, zones.length, newLabel]);
+
+  const removeZone = (index: number) => {
+    setZones((prev) => prev.filter((_, i) => i !== index).map((z, i) => ({ ...z, sortOrder: i })));
+  };
 
   const currentPage = pages.find((p: any) => p.pageNumber === selectedPage);
+  const zonesForPage = zones.filter((z) => z.pageNumber === selectedPage);
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <Text strong>서명 영역을 지정할 페이지:</Text>
-        <Select
-          value={selectedPage}
-          onChange={(v) => { setSelectedPage(v); setZone(null); }}
-          style={{ width: 120, marginLeft: 8 }}
-        >
-          {pages.map((p: any) => (
-            <Select.Option key={p.pageNumber} value={p.pageNumber}>
-              {p.pageNumber}페이지
-            </Select.Option>
-          ))}
-        </Select>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div>
+          <Text strong>페이지:</Text>
+          <Select
+            value={selectedPage}
+            onChange={(v) => setSelectedPage(v)}
+            style={{ width: 120, marginLeft: 8 }}
+          >
+            {pages.map((p: any) => (
+              <Select.Option key={p.pageNumber} value={p.pageNumber}>
+                {p.pageNumber}페이지
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <Text strong>라벨:</Text>
+          <Input
+            value={newLabel}
+            onChange={(e) => setNewLabel(e.target.value)}
+            placeholder={`서명 ${zones.length + 1}`}
+            style={{ width: 160, marginLeft: 8 }}
+          />
+        </div>
       </div>
 
       <Alert
-        message="계약서 이미지 위에서 마우스를 드래그하여 서명 영역을 지정하세요."
+        message="드래그하여 서명 영역을 추가하세요. 여러 영역을 추가할 수 있습니다."
         type="info"
         showIcon
         style={{ marginBottom: 12 }}
       />
+
+      {zones.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <Text strong>등록된 서명 영역 ({zones.length}개):</Text>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {zones.map((z, i) => (
+              <Tag
+                key={i}
+                color={ZONE_COLORS[i % ZONE_COLORS.length]}
+                closable
+                onClose={() => removeZone(i)}
+                style={{ cursor: 'pointer' }}
+                onClick={() => setSelectedPage(z.pageNumber)}
+              >
+                {z.label} ({z.pageNumber}p)
+              </Tag>
+            ))}
+          </div>
+        </div>
+      )}
 
       {currentPage && (
         <div
@@ -127,26 +189,51 @@ function SignZoneEditor({
             style={{ width: '100%', display: 'block', pointerEvents: 'none' }}
             draggable={false}
           />
-          {zone && zone.w > 0 && zone.h > 0 && (
+          {/* 저장된 영역들 */}
+          {zonesForPage.map((z, i) => {
+            const globalIdx = zones.indexOf(z);
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  left: `${z.x}%`,
+                  top: `${z.y}%`,
+                  width: `${z.width}%`,
+                  height: `${z.height}%`,
+                  border: `2px solid ${ZONE_COLORS[globalIdx % ZONE_COLORS.length]}`,
+                  backgroundColor: `${ZONE_COLORS[globalIdx % ZONE_COLORS.length]}22`,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <span style={{
+                  color: ZONE_COLORS[globalIdx % ZONE_COLORS.length],
+                  fontWeight: 'bold',
+                  fontSize: 11,
+                  textShadow: '0 0 3px white, 0 0 3px white',
+                }}>
+                  {z.label}
+                </span>
+              </div>
+            );
+          })}
+          {/* 드래그 중인 영역 */}
+          {drawingZone && drawingZone.w > 0 && drawingZone.h > 0 && (
             <div
               style={{
                 position: 'absolute',
-                left: `${zone.x}%`,
-                top: `${zone.y}%`,
-                width: `${zone.w}%`,
-                height: `${zone.h}%`,
+                left: `${drawingZone.x}%`,
+                top: `${drawingZone.y}%`,
+                width: `${drawingZone.w}%`,
+                height: `${drawingZone.h}%`,
                 border: '2px dashed #1890ff',
                 backgroundColor: 'rgba(24, 144, 255, 0.15)',
                 pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
               }}
-            >
-              <span style={{ color: '#1890ff', fontWeight: 'bold', fontSize: 12, textShadow: '0 0 3px white' }}>
-                서명 영역
-              </span>
-            </div>
+            />
           )}
         </div>
       )}
@@ -154,21 +241,11 @@ function SignZoneEditor({
       <div style={{ marginTop: 16, textAlign: 'right' }}>
         <Button
           type="primary"
-          disabled={!zone || zone.w < 2 || zone.h < 2}
+          disabled={zones.length === 0}
           loading={saving}
-          onClick={() => {
-            if (zone) {
-              onSave({
-                signPageNumber: selectedPage,
-                signX: Math.round(zone.x * 100) / 100,
-                signY: Math.round(zone.y * 100) / 100,
-                signWidth: Math.round(zone.w * 100) / 100,
-                signHeight: Math.round(zone.h * 100) / 100,
-              });
-            }
-          }}
+          onClick={() => onSave(zones)}
         >
-          서명 영역 저장
+          서명 영역 저장 ({zones.length}개)
         </Button>
       </div>
     </div>
@@ -225,8 +302,8 @@ export default function ContractListPage() {
 
   // 서명 영역 저장
   const signZoneMutation = useMutation({
-    mutationFn: (data: { contractId: string; zone: any }) =>
-      updateSignZone(data.contractId, data.zone),
+    mutationFn: (data: { contractId: string; zones: SignZoneItem[] }) =>
+      replaceSignZones(data.contractId, data.zones),
     onSuccess: () => {
       message.success('서명 영역이 저장되었습니다.');
       setSignZoneModalOpen(false);
@@ -332,12 +409,13 @@ export default function ContractListPage() {
     {
       title: '서명',
       key: 'signZone',
-      width: 80,
-      render: (_: any, record: any) => (
-        record.signPageNumber
-          ? <Tag color="green">{record.signPageNumber}p 설정됨</Tag>
-          : <Tag color="red">미설정</Tag>
-      ),
+      width: 100,
+      render: (_: any, record: any) => {
+        const zoneCount = record.signZones?.length || 0;
+        return zoneCount > 0
+          ? <Tag color="green">{zoneCount}개 설정됨</Tag>
+          : <Tag color="red">미설정</Tag>;
+      },
     },
     {
       title: '배정',
@@ -486,19 +564,17 @@ export default function ContractListPage() {
         {selectedContract?.pages?.length > 0 && (
           <SignZoneEditor
             pages={selectedContract.pages}
-            initialZone={
-              selectedContract.signPageNumber
-                ? {
-                    signPageNumber: selectedContract.signPageNumber,
-                    signX: selectedContract.signX,
-                    signY: selectedContract.signY,
-                    signWidth: selectedContract.signWidth,
-                    signHeight: selectedContract.signHeight,
-                  }
-                : undefined
-            }
-            onSave={(zone) => {
-              signZoneMutation.mutate({ contractId: selectedContract.id, zone });
+            initialZones={(selectedContract.signZones || []).map((z: any) => ({
+              label: z.label,
+              pageNumber: z.pageNumber,
+              x: z.x,
+              y: z.y,
+              width: z.width,
+              height: z.height,
+              sortOrder: z.sortOrder,
+            }))}
+            onSave={(zones) => {
+              signZoneMutation.mutate({ contractId: selectedContract.id, zones });
             }}
             saving={signZoneMutation.isPending}
           />
@@ -685,20 +761,41 @@ export default function ContractListPage() {
                   width: 120,
                   render: (_: any, record: any) => {
                     if (record.status !== 'SIGNED') return '-';
-                    const docUrl = record.signedDocumentUrl || record.signatureImageUrl;
-                    if (!docUrl) return '-';
+                    if (!record.signedDocumentUrl) return '-';
+
+                    // signedDocumentUrl은 JSON 배열: [{pageNumber, url}]
+                    let signedPages: { pageNumber: number; url: string }[] = [];
+                    try {
+                      signedPages = JSON.parse(record.signedDocumentUrl);
+                    } catch {
+                      // 레거시: 단일 URL
+                      signedPages = [{ pageNumber: 1, url: record.signedDocumentUrl }];
+                    }
+
+                    const signedPageMap = new Map(signedPages.map((sp) => [sp.pageNumber, sp.url]));
+
                     return (
                       <Space size={4}>
                         <Button
                           size="small"
                           icon={<FileImageOutlined />}
                           onClick={() => {
+                            const contract = selectedContract;
+                            const allPages = contract?.pages || [];
                             Modal.info({
                               title: `${record.user?.name} 서명 문서`,
                               width: 800,
                               content: (
                                 <div style={{ textAlign: 'center', marginTop: 16 }}>
-                                  <img src={docUrl} alt="서명 문서" style={{ maxWidth: '100%' }} />
+                                  {allPages.map((p: any) => (
+                                    <div key={p.pageNumber} style={{ marginBottom: 8 }}>
+                                      <img
+                                        src={signedPageMap.get(p.pageNumber) || p.imageUrl}
+                                        alt={`${p.pageNumber}페이지`}
+                                        style={{ maxWidth: '100%' }}
+                                      />
+                                    </div>
+                                  ))}
                                 </div>
                               ),
                             });
@@ -712,9 +809,7 @@ export default function ContractListPage() {
                           onClick={() => {
                             const printWin = window.open('', '_blank');
                             if (printWin) {
-                              // 서명 페이지 + 나머지 페이지 모두 인쇄
                               const contract = selectedContract;
-                              const signPageNum = contract?.signPageNumber;
                               const allPages = contract?.pages || [];
                               printWin.document.write(`<html><head><title>${record.user?.name} - ${contract?.title}</title>
                                 <style>
@@ -723,7 +818,7 @@ export default function ContractListPage() {
                                   img { max-width: 100%; height: auto; }
                                 </style></head><body>`);
                               allPages.forEach((p: any) => {
-                                const imgSrc = p.pageNumber === signPageNum ? docUrl : p.imageUrl;
+                                const imgSrc = signedPageMap.get(p.pageNumber) || p.imageUrl;
                                 printWin.document.write(`<img src="${imgSrc}" />`);
                               });
                               printWin.document.write('</body></html>');
@@ -754,33 +849,51 @@ export default function ContractListPage() {
       >
         <div style={{ textAlign: 'center' }}>
           <AntImage.PreviewGroup>
-            {selectedContract?.pages?.map((page: any) => (
-              <div key={page.id} style={{ marginBottom: 16, position: 'relative' }}>
-                <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
-                  {page.pageNumber}페이지
-                </Text>
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <AntImage
-                    src={page.imageUrl}
-                    style={{ maxWidth: '100%', maxHeight: 600 }}
-                  />
-                  {selectedContract?.signPageNumber === page.pageNumber && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: `${selectedContract.signX}%`,
-                        top: `${selectedContract.signY}%`,
-                        width: `${selectedContract.signWidth}%`,
-                        height: `${selectedContract.signHeight}%`,
-                        border: '2px dashed #1890ff',
-                        backgroundColor: 'rgba(24, 144, 255, 0.1)',
-                        pointerEvents: 'none',
-                      }}
+            {selectedContract?.pages?.map((page: any) => {
+              const zonesForPage = (selectedContract?.signZones || []).filter(
+                (z: any) => z.pageNumber === page.pageNumber
+              );
+              return (
+                <div key={page.id} style={{ marginBottom: 16, position: 'relative' }}>
+                  <Text type="secondary" style={{ display: 'block', marginBottom: 4 }}>
+                    {page.pageNumber}페이지
+                  </Text>
+                  <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <AntImage
+                      src={page.imageUrl}
+                      style={{ maxWidth: '100%', maxHeight: 600 }}
                     />
-                  )}
+                    {zonesForPage.map((z: any, i: number) => (
+                      <div
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: `${z.x}%`,
+                          top: `${z.y}%`,
+                          width: `${z.width}%`,
+                          height: `${z.height}%`,
+                          border: `2px dashed ${ZONE_COLORS[i % ZONE_COLORS.length]}`,
+                          backgroundColor: `${ZONE_COLORS[i % ZONE_COLORS.length]}1a`,
+                          pointerEvents: 'none',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <span style={{
+                          color: ZONE_COLORS[i % ZONE_COLORS.length],
+                          fontSize: 10,
+                          fontWeight: 'bold',
+                          textShadow: '0 0 3px white, 0 0 3px white',
+                        }}>
+                          {z.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </AntImage.PreviewGroup>
         </div>
       </Modal>

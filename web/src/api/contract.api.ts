@@ -55,15 +55,17 @@ export async function removeAssignment(assignmentId: string) {
   return apiClient.delete(`/contracts/assignments/${assignmentId}`);
 }
 
-// 서명 영역 설정
-export async function updateSignZone(contractId: string, data: {
-  signPageNumber: number;
-  signX: number;
-  signY: number;
-  signWidth: number;
-  signHeight: number;
-}) {
-  return apiClient.patch(`/contracts/${contractId}/sign-zone`, data);
+// 서명 영역 전체 교체
+export async function replaceSignZones(contractId: string, zones: {
+  label: string;
+  pageNumber: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  sortOrder: number;
+}[]) {
+  return apiClient.put(`/contracts/${contractId}/sign-zones`, { zones });
 }
 
 // 계약 대상자 목록 조회

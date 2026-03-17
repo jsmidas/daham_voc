@@ -54,12 +54,12 @@ router.post(
   contractController.createContract
 );
 
-// PATCH /api/v1/contracts/:id/sign-zone - 서명 영역 설정 (관리자)
-router.patch(
-  '/:id/sign-zone',
+// PUT /api/v1/contracts/:id/sign-zones - 서명 영역 전체 교체 (관리자)
+router.put(
+  '/:id/sign-zones',
   authMiddleware,
   roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
-  contractController.updateSignZone
+  contractController.replaceSignZones
 );
 
 // POST /api/v1/contracts/:id/assign - 대상자 배정 (관리자)
