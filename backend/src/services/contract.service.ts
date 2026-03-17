@@ -145,6 +145,7 @@ export async function getMyContracts(userId: string) {
   const assignments = await prisma.contractAssignment.findMany({
     where: {
       userId,
+      contract: { deletedAt: null },
       OR: [
         { status: 'PENDING' },
         { status: 'EXPIRED' },
