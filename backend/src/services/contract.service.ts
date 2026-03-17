@@ -4,6 +4,9 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+import sharp from 'sharp';
+import axios from 'axios';
+import { uploadBuffer } from './storage.service';
 
 const prisma = new PrismaClient();
 
@@ -133,10 +136,21 @@ export async function assignContract(data: {
 
 /**
  * 내 계약서 조회 (모바일용 - 본인에게 배정된 것만)
+ * 서명 완료 후 1개월 지난 것은 제외
  */
 export async function getMyContracts(userId: string) {
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+
   const assignments = await prisma.contractAssignment.findMany({
-    where: { userId },
+    where: {
+      userId,
+      OR: [
+        { status: 'PENDING' },
+        { status: 'EXPIRED' },
+        { status: 'SIGNED', signedAt: { gte: oneMonthAgo } },
+      ],
+    },
     include: {
       contract: {
         include: {
@@ -151,17 +165,21 @@ export async function getMyContracts(userId: string) {
 }
 
 /**
- * 서명 제출
+ * 서명 제출 + 합성 문서 생성
  */
 export async function signContract(data: {
   assignmentId: string;
   userId: string;
   signatureImageUrl: string;
-  signedDocumentUrl?: string;
 }) {
   // 본인의 배정인지 확인
   const assignment = await prisma.contractAssignment.findFirst({
     where: { id: data.assignmentId, userId: data.userId },
+    include: {
+      contract: {
+        include: { pages: { orderBy: { pageNumber: 'asc' } } },
+      },
+    },
   });
 
   if (!assignment) {
@@ -176,19 +194,91 @@ export async function signContract(data: {
     throw new Error('서명 기한이 만료된 계약서입니다.');
   }
 
+  // 서명 합성 문서 생성
+  let signedDocumentUrl: string | undefined;
+  try {
+    signedDocumentUrl = await compositeSignedDocument(
+      assignment.contract,
+      data.signatureImageUrl,
+      data.assignmentId
+    );
+  } catch (err: any) {
+    console.error('서명 합성 실패 (서명은 계속 저장):', err.message);
+  }
+
   return prisma.contractAssignment.update({
     where: { id: data.assignmentId },
     data: {
       status: 'SIGNED',
       signedAt: new Date(),
       signatureImageUrl: data.signatureImageUrl,
-      signedDocumentUrl: data.signedDocumentUrl,
+      signedDocumentUrl,
     },
     include: {
       contract: { select: { id: true, title: true } },
       user: { select: { id: true, name: true } },
     },
   });
+}
+
+/**
+ * 서명 합성 문서 생성
+ * 계약서의 서명 페이지에 서명 이미지를 합성하여 저장
+ */
+async function compositeSignedDocument(
+  contract: any,
+  signatureImageUrl: string,
+  assignmentId: string
+): Promise<string> {
+  const { signPageNumber, signX, signY, signWidth, signHeight, pages } = contract;
+
+  if (!signPageNumber || signX == null || signY == null || signWidth == null || signHeight == null) {
+    throw new Error('서명 영역이 설정되지 않았습니다.');
+  }
+
+  // 서명 페이지 이미지 가져오기
+  const signPage = pages.find((p: any) => p.pageNumber === signPageNumber);
+  if (!signPage) {
+    throw new Error('서명 페이지를 찾을 수 없습니다.');
+  }
+
+  // 이미지 다운로드
+  const [pageResponse, sigResponse] = await Promise.all([
+    axios.get(signPage.imageUrl, { responseType: 'arraybuffer' }),
+    axios.get(signatureImageUrl, { responseType: 'arraybuffer' }),
+  ]);
+
+  const pageBuffer = Buffer.from(pageResponse.data);
+  const sigBuffer = Buffer.from(sigResponse.data);
+
+  // 원본 이미지 메타데이터
+  const pageMeta = await sharp(pageBuffer).metadata();
+  const pageW = pageMeta.width || 1000;
+  const pageH = pageMeta.height || 1414;
+
+  // 서명 영역 계산 (% → px)
+  const sx = Math.round((signX / 100) * pageW);
+  const sy = Math.round((signY / 100) * pageH);
+  const sw = Math.round((signWidth / 100) * pageW);
+  const sh = Math.round((signHeight / 100) * pageH);
+
+  // 서명 이미지 리사이즈
+  const resizedSig = await sharp(sigBuffer)
+    .resize(sw, sh, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  // 합성
+  const composited = await sharp(pageBuffer)
+    .composite([{ input: resizedSig, left: sx, top: sy }])
+    .png()
+    .toBuffer();
+
+  // 업로드
+  const filename = `signed_${assignmentId}_page${signPageNumber}.png`;
+  const url = await uploadBuffer(composited, 'contracts', filename);
+
+  return url;
 }
 
 /**

@@ -216,6 +216,27 @@ export async function deleteMultipleImages(
 }
 
 /**
+ * Buffer를 직접 업로드 (합성 이미지 등)
+ */
+export async function uploadBuffer(
+  buffer: Buffer,
+  folder: 'menus' | 'meal-photos' | 'weekly-menus' | 'feedbacks' | 'contracts',
+  filename: string,
+  contentType: string = 'image/png'
+): Promise<string> {
+  const filePath = generateImagePath(folder, filename);
+  const bucket = getBucket();
+
+  if (bucket) {
+    await uploadToGCP(bucket, filePath, buffer, contentType);
+  } else {
+    await uploadToLocal(filePath, buffer);
+  }
+
+  return getPublicUrl(filePath);
+}
+
+/**
  * URL에서 경로 추출
  */
 export function extractPathFromUrl(url: string): string {

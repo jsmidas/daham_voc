@@ -13,6 +13,7 @@ import {
   PlusOutlined, UploadOutlined, DeleteOutlined, TeamOutlined,
   EyeOutlined, CheckCircleOutlined, ClockCircleOutlined,
   ExclamationCircleOutlined, SendOutlined, EditOutlined,
+  PrinterOutlined, FileImageOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -653,6 +654,65 @@ export default function ContractListPage() {
                   dataIndex: 'signedAt',
                   key: 'signedAt',
                   render: (d: string) => d ? dayjs(d).format('YYYY.MM.DD HH:mm') : '-',
+                },
+                {
+                  title: '서명 문서',
+                  key: 'signedDoc',
+                  width: 120,
+                  render: (_: any, record: any) => {
+                    if (record.status !== 'SIGNED') return '-';
+                    const docUrl = record.signedDocumentUrl || record.signatureImageUrl;
+                    if (!docUrl) return '-';
+                    return (
+                      <Space size={4}>
+                        <Button
+                          size="small"
+                          icon={<FileImageOutlined />}
+                          onClick={() => {
+                            Modal.info({
+                              title: `${record.user?.name} 서명 문서`,
+                              width: 800,
+                              content: (
+                                <div style={{ textAlign: 'center', marginTop: 16 }}>
+                                  <img src={docUrl} alt="서명 문서" style={{ maxWidth: '100%' }} />
+                                </div>
+                              ),
+                            });
+                          }}
+                        >
+                          보기
+                        </Button>
+                        <Button
+                          size="small"
+                          icon={<PrinterOutlined />}
+                          onClick={() => {
+                            const printWin = window.open('', '_blank');
+                            if (printWin) {
+                              // 서명 페이지 + 나머지 페이지 모두 인쇄
+                              const contract = selectedContract;
+                              const signPageNum = contract?.signPageNumber;
+                              const allPages = contract?.pages || [];
+                              printWin.document.write(`<html><head><title>${record.user?.name} - ${contract?.title}</title>
+                                <style>
+                                  @media print { @page { margin: 10mm; } img { page-break-after: always; } }
+                                  body { margin: 0; text-align: center; }
+                                  img { max-width: 100%; height: auto; }
+                                </style></head><body>`);
+                              allPages.forEach((p: any) => {
+                                const imgSrc = p.pageNumber === signPageNum ? docUrl : p.imageUrl;
+                                printWin.document.write(`<img src="${imgSrc}" />`);
+                              });
+                              printWin.document.write('</body></html>');
+                              printWin.document.close();
+                              printWin.onload = () => { printWin.print(); };
+                            }
+                          }}
+                        >
+                          인쇄
+                        </Button>
+                      </Space>
+                    );
+                  },
                 },
               ]}
             />
