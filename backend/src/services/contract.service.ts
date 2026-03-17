@@ -251,10 +251,19 @@ async function compositeSignedDocument(
   const pageBuffer = Buffer.from(pageResponse.data);
   const sigBuffer = Buffer.from(sigResponse.data);
 
-  // 원본 이미지 메타데이터
-  const pageMeta = await sharp(pageBuffer).metadata();
+  // 원본 이미지를 PNG로 변환 (알파 채널 지원)
+  const pageImage = sharp(pageBuffer).png();
+  const pageMeta = await pageImage.metadata();
   const pageW = pageMeta.width || 1000;
   const pageH = pageMeta.height || 1414;
+
+  // 흰 배경 위에 원본 이미지를 올려서 알파 채널 문제 방지
+  const baseImage = await sharp({
+    create: { width: pageW, height: pageH, channels: 3, background: { r: 255, g: 255, b: 255 } },
+  })
+    .composite([{ input: await pageImage.toBuffer(), left: 0, top: 0 }])
+    .png()
+    .toBuffer();
 
   // 서명 영역 계산 (% → px)
   const sx = Math.round((signX / 100) * pageW);
@@ -262,21 +271,21 @@ async function compositeSignedDocument(
   const sw = Math.round((signWidth / 100) * pageW);
   const sh = Math.round((signHeight / 100) * pageH);
 
-  // 서명 이미지 리사이즈
+  // 서명 이미지: 흰 배경 제거하고 투명하게 리사이즈
   const resizedSig = await sharp(sigBuffer)
     .resize(sw, sh, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
     .png()
     .toBuffer();
 
   // 합성
-  const composited = await sharp(pageBuffer)
+  const composited = await sharp(baseImage)
     .composite([{ input: resizedSig, left: sx, top: sy }])
-    .png()
+    .jpeg({ quality: 90 })
     .toBuffer();
 
   // 업로드
-  const filename = `signed_${assignmentId}_page${signPageNumber}.png`;
-  const url = await uploadBuffer(composited, 'contracts', filename);
+  const filename = `signed_${assignmentId}_page${signPageNumber}.jpg`;
+  const url = await uploadBuffer(composited, 'contracts', filename, 'image/jpeg');
 
   return url;
 }
