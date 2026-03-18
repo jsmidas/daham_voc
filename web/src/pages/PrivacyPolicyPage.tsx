@@ -23,7 +23,7 @@ export default function PrivacyPolicyPage() {
         개인정보처리방침
       </h1>
       <p style={{ color: '#7f8c8d', fontSize: '14px', marginBottom: '30px' }}>
-        최종 수정일: 2025년 1월 25일
+        최종 수정일: 2026년 3월 18일
       </p>
 
       <div style={{
@@ -104,8 +104,8 @@ export default function PrivacyPolicyPage() {
         3.2 수집 방법
       </h3>
       <ul style={{ marginLeft: '20px', marginBottom: '15px' }}>
-        <li>앱 사용 중 GPS를 통한 실시간 수집</li>
-        <li>백그라운드에서 배송 중에만 수집 (배송 시작/종료 시 자동 제어)</li>
+        <li>앱 사용 중(포그라운드) GPS를 통한 실시간 수집</li>
+        <li>앱이 화면에 표시되어 있을 때만 위치를 수집합니다</li>
       </ul>
 
       <h2 style={{ fontSize: '20px', marginTop: '30px', marginBottom: '15px' }}>
@@ -131,18 +131,13 @@ export default function PrivacyPolicyPage() {
             <td style={{ border: '1px solid #ddd', padding: '12px' }}>필수</td>
           </tr>
           <tr style={{ backgroundColor: '#f9f9f9' }}>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>백그라운드 위치</td>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>배송 중 경로 추적</td>
+            <td style={{ border: '1px solid #ddd', padding: '12px' }}>카메라</td>
+            <td style={{ border: '1px solid #ddd', padding: '12px' }}>배식 사진 촬영, VOC 사진 첨부</td>
             <td style={{ border: '1px solid #ddd', padding: '12px' }}>필수</td>
           </tr>
           <tr>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>카메라</td>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>배송 증빙 사진 촬영</td>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>필수</td>
-          </tr>
-          <tr style={{ backgroundColor: '#f9f9f9' }}>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>저장공간</td>
-            <td style={{ border: '1px solid #ddd', padding: '12px' }}>사진 및 보고서 파일 저장</td>
+            <td style={{ border: '1px solid #ddd', padding: '12px' }}>저장공간 (사진/동영상)</td>
+            <td style={{ border: '1px solid #ddd', padding: '12px' }}>배식 사진 갤러리 선택, 서명 완료 계약서 갤러리 저장</td>
             <td style={{ border: '1px solid #ddd', padding: '12px' }}>필수</td>
           </tr>
         </tbody>
@@ -199,7 +194,7 @@ export default function PrivacyPolicyPage() {
         fontSize: '14px'
       }}>
         <p><strong>다함푸드 VOC</strong></p>
-        <p>이 개인정보처리방침은 2025년 1월 25일부터 적용됩니다.</p>
+        <p>이 개인정보처리방침은 2026년 3월 18일부터 적용됩니다.</p>
       </div>
     </div>
   );
