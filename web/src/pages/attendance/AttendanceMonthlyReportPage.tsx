@@ -48,7 +48,7 @@ export default function AttendanceMonthlyReportPage() {
 
   const employees: MonthlyReportEmployee[] = reportRes?.data?.employees || [];
   const totalWeekdays = reportRes?.data?.totalWeekdays || 0;
-  const sites = sitesRes?.data || [];
+  const sites = sitesRes?.data?.sites || [];
 
   const handleDownloadExcel = () => {
     if (employees.length === 0) return;

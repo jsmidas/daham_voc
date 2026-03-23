@@ -46,7 +46,7 @@ export default function AttendanceSettingsPage() {
   });
 
   const settings: AttendanceSetting[] = settingsRes?.data || [];
-  const sites = sitesRes?.data || [];
+  const sites = sitesRes?.data?.sites || [];
 
   // 이미 설정된 사업장 ID 목록
   const configuredSiteIds = settings.map((s) => s.siteId);
