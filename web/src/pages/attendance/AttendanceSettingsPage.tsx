@@ -37,22 +37,16 @@ export default function AttendanceSettingsPage() {
 
   const { data: settingsRes, isLoading } = useQuery({
     queryKey: ['attendance-settings-all'],
-    queryFn: async () => {
-      const res = await getAllAttendanceSettings();
-      return res.data as AttendanceSetting[];
-    },
+    queryFn: () => getAllAttendanceSettings(),
   });
 
   const { data: sitesRes } = useQuery({
     queryKey: ['sites-light'],
-    queryFn: async () => {
-      const res = await getSitesLight({ isActive: true });
-      return res.data;
-    },
+    queryFn: () => getSitesLight({ isActive: true }),
   });
 
-  const settings = settingsRes || [];
-  const sites = sitesRes || [];
+  const settings: AttendanceSetting[] = settingsRes?.data || [];
+  const sites = sitesRes?.data || [];
 
   // 이미 설정된 사업장 ID 목록
   const configuredSiteIds = settings.map((s) => s.siteId);

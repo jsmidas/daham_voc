@@ -38,23 +38,17 @@ export default function AttendanceMonthlyReportPage() {
 
   const { data: reportRes, isLoading } = useQuery({
     queryKey: ['monthly-report', month.format('YYYY-MM'), siteFilter],
-    queryFn: async () => {
-      const res = await getMonthlyReport(month.format('YYYY-MM'), siteFilter);
-      return res.data;
-    },
+    queryFn: () => getMonthlyReport(month.format('YYYY-MM'), siteFilter),
   });
 
   const { data: sitesRes } = useQuery({
     queryKey: ['sites-light'],
-    queryFn: async () => {
-      const res = await getSitesLight({ isActive: true });
-      return res.data;
-    },
+    queryFn: () => getSitesLight({ isActive: true }),
   });
 
-  const employees: MonthlyReportEmployee[] = reportRes?.employees || [];
-  const totalWeekdays = reportRes?.totalWeekdays || 0;
-  const sites = sitesRes || [];
+  const employees: MonthlyReportEmployee[] = reportRes?.data?.employees || [];
+  const totalWeekdays = reportRes?.data?.totalWeekdays || 0;
+  const sites = sitesRes?.data || [];
 
   const handleDownloadExcel = () => {
     if (employees.length === 0) return;

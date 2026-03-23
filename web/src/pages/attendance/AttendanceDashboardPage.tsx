@@ -28,17 +28,14 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 };
 
 export default function AttendanceDashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data: dashboardRes, isLoading } = useQuery({
     queryKey: ['attendance-dashboard'],
-    queryFn: async () => {
-      const res = await getDashboard();
-      return res.data;
-    },
+    queryFn: () => getDashboard(),
     refetchInterval: 30000,
   });
 
-  const summary = data?.summary;
-  const users: DashboardUser[] = data?.users || [];
+  const summary = dashboardRes?.data?.summary;
+  const users: DashboardUser[] = dashboardRes?.data?.users || [];
 
   const columns = [
     {
