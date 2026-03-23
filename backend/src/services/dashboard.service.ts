@@ -8,10 +8,16 @@ import { cache } from '../config/redis';
 
 export interface DashboardSummary {
   totalSites: number;
+  activeSites: number;
+  inactiveSites: number;
   totalFeedbacks: number;
   pendingFeedbacks: number;
   resolvedFeedbacks: number;
   avgRating: number;
+  // 최근 2주 VOC 처리현황
+  recentTotalFeedbacks: number;
+  recentPendingFeedbacks: number;
+  recentResolvedFeedbacks: number;
   totalAttendances: number;
   normalAttendances: number;
   lateAttendances: number;
@@ -33,10 +39,39 @@ export async function getDashboardSummary(
     return JSON.parse(cached);
   }
 
-  // 사업장 수
-  const totalSites = await prisma.site.count({
+  // 사업장 수 (활성/비활성)
+  const activeSites = await prisma.site.count({
     where: { deletedAt: null, isActive: true },
   });
+  const inactiveSites = await prisma.site.count({
+    where: { deletedAt: null, isActive: false },
+  });
+  const totalSites = activeSites + inactiveSites;
+
+  // 최근 2주 VOC 처리현황
+  const twoWeeksAgo = new Date();
+  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+  twoWeeksAgo.setHours(0, 0, 0, 0);
+
+  const recentFeedbacks = await prisma.customerFeedback.findMany({
+    where: {
+      deletedAt: null,
+      createdAt: {
+        gte: twoWeeksAgo,
+      },
+    },
+    select: {
+      status: true,
+    },
+  });
+
+  const recentTotalFeedbacks = recentFeedbacks.length;
+  const recentPendingFeedbacks = recentFeedbacks.filter(
+    (f) => f.status === 'PENDING'
+  ).length;
+  const recentResolvedFeedbacks = recentFeedbacks.filter(
+    (f) => f.status === 'RESOLVED'
+  ).length;
 
   // 피드백 통계
   const feedbacks = await prisma.customerFeedback.findMany({
@@ -90,10 +125,15 @@ export async function getDashboardSummary(
 
   const summary: DashboardSummary = {
     totalSites,
+    activeSites,
+    inactiveSites,
     totalFeedbacks,
     pendingFeedbacks,
     resolvedFeedbacks,
     avgRating: Math.round(avgRating * 10) / 10,
+    recentTotalFeedbacks,
+    recentPendingFeedbacks,
+    recentResolvedFeedbacks,
     totalAttendances,
     normalAttendances,
     lateAttendances,

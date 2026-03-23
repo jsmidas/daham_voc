@@ -140,28 +140,37 @@ export default function DashboardPage() {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="전체 사업장"
-              value={summary?.data?.totalSites || 0}
+              title="사업장 현황"
+              value={summary?.data?.activeSites || 0}
               prefix={<ShopOutlined />}
+              suffix={<span style={{ fontSize: 14, color: '#999' }}>활성</span>}
             />
+            {(summary?.data?.inactiveSites || 0) > 0 && (
+              <div style={{ marginTop: 8, fontSize: 13, color: '#999' }}>
+                비활성: <span style={{ color: '#cf1322', fontWeight: 'bold' }}>{summary?.data?.inactiveSites}</span>개
+              </div>
+            )}
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="총 VOC"
-              value={summary?.data?.totalFeedbacks || 0}
+              title="VOC (최근 2주)"
+              value={summary?.data?.recentTotalFeedbacks || 0}
               prefix={<MessageOutlined />}
             />
+            <div style={{ marginTop: 8, fontSize: 13, color: '#999' }}>
+              미처리: <span style={{ color: '#cf1322', fontWeight: 'bold' }}>{summary?.data?.recentPendingFeedbacks || 0}</span>건 / 완료: <span style={{ color: '#3f8600', fontWeight: 'bold' }}>{summary?.data?.recentResolvedFeedbacks || 0}</span>건
+            </div>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="미처리 VOC"
-              value={summary?.data?.pendingFeedbacks || 0}
+              title="미처리 VOC (최근 2주)"
+              value={summary?.data?.recentPendingFeedbacks || 0}
               prefix={<MessageOutlined />}
-              valueStyle={{ color: '#cf1322' }}
+              valueStyle={{ color: (summary?.data?.recentPendingFeedbacks || 0) > 0 ? '#cf1322' : '#3f8600' }}
             />
           </Card>
         </Col>
