@@ -267,6 +267,59 @@ export async function getAttendanceTable(req: Request, res: Response): Promise<v
 }
 
 /**
+ * 출퇴근 대시보드
+ * GET /api/v1/attendances/dashboard
+ */
+export async function getDashboard(_req: Request, res: Response): Promise<void> {
+  try {
+    const data = await attendanceService.getDashboardData();
+    res.json(successResponse(data));
+  } catch (error: any) {
+    console.error('Get dashboard error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 전체 출퇴근 설정 목록
+ * GET /api/v1/attendances/settings/all
+ */
+export async function getAllAttendanceSettings(_req: Request, res: Response): Promise<void> {
+  try {
+    const settings = await attendanceService.getAllAttendanceSettings();
+    res.json(successResponse(settings));
+  } catch (error: any) {
+    console.error('Get all attendance settings error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 월별 근태 리포트
+ * GET /api/v1/attendances/monthly-report
+ */
+export async function getMonthlyReport(req: Request, res: Response): Promise<void> {
+  try {
+    const { month, siteId } = req.query;
+
+    if (!month) {
+      res.status(400).json(errorResponse('month parameter is required (YYYY-MM)'));
+      return;
+    }
+
+    const data = await attendanceService.getMonthlyReport(
+      month as string,
+      siteId as string | undefined
+    );
+
+    res.json(successResponse(data));
+  } catch (error: any) {
+    console.error('Get monthly report error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
  * 출퇴근 정보 수정 (휴게시간 등)
  * PUT /api/v1/attendances/:id
  */

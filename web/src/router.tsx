@@ -25,6 +25,9 @@ import FeedbackListPage from '@/pages/feedback/FeedbackListPage';
 import StaffListPage from '@/pages/staff/StaffListPage';
 import StaffFormPage from '@/pages/staff/StaffFormPage';
 import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
+import AttendanceDashboardPage from '@/pages/attendance/AttendanceDashboardPage';
+import AttendanceSettingsPage from '@/pages/attendance/AttendanceSettingsPage';
+import AttendanceMonthlyReportPage from '@/pages/attendance/AttendanceMonthlyReportPage';
 import StatsPage from '@/pages/stats/StatsPage';
 import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
 import MealCountListPage from '@/pages/meal-count/MealCountListPage';
@@ -137,7 +140,12 @@ export const router = createBrowserRouter([
       },
       {
         path: 'attendances',
-        element: <AttendanceListPage />,
+        children: [
+          { index: true, element: <AttendanceListPage /> },
+          { path: 'dashboard', element: <AttendanceDashboardPage /> },
+          { path: 'settings', element: <AttendanceSettingsPage /> },
+          { path: 'report', element: <AttendanceMonthlyReportPage /> },
+        ],
       },
       {
         path: 'stats',

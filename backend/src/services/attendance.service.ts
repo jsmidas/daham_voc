@@ -620,6 +620,238 @@ export async function getAttendanceTable(filter: AttendanceFilter): Promise<any[
 }
 
 /**
+ * 오늘의 출퇴근 대시보드 데이터
+ */
+export async function getDashboardData(): Promise<any> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  // 출퇴근 대상 사용자 조회
+  const users = await prisma.user.findMany({
+    where: {
+      canUseAttendance: true,
+      isActive: true,
+      deletedAt: null,
+    },
+    select: {
+      id: true,
+      name: true,
+      staff: {
+        include: {
+          staffSites: {
+            where: { removedAt: null },
+            include: {
+              site: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // 오늘 출퇴근 기록 조회
+  const todayAttendances = await prisma.attendance.findMany({
+    where: {
+      checkInTime: { gte: today, lt: tomorrow },
+      deletedAt: null,
+    },
+    include: {
+      site: { select: { id: true, name: true } },
+    },
+  });
+
+  // 사용자별 출퇴근 상태 매핑
+  const attendanceMap = new Map<string, any>();
+  todayAttendances.forEach((att) => {
+    attendanceMap.set(att.userId, att);
+  });
+
+  const userList = users.map((user) => {
+    const attendance = attendanceMap.get(user.id);
+    const primarySite = user.staff?.staffSites.find((ss) => ss.isPrimary);
+    const site = primarySite?.site || user.staff?.staffSites[0]?.site;
+
+    let status = 'NOT_CHECKED_IN';
+    if (attendance) {
+      if (attendance.checkOutTime) {
+        status = 'CHECKED_OUT';
+      } else if (attendance.status === 'LATE') {
+        status = 'LATE';
+      } else if (attendance.status === 'EARLY_LEAVE') {
+        status = 'EARLY_LEAVE';
+      } else if (attendance.status === 'OUTSIDE_RANGE') {
+        status = 'OUTSIDE_RANGE';
+      } else {
+        status = 'CHECKED_IN';
+      }
+    }
+
+    return {
+      userId: user.id,
+      userName: user.name,
+      siteName: site?.name || '-',
+      siteId: site?.id,
+      status,
+      checkInTime: attendance?.checkInTime || null,
+      checkOutTime: attendance?.checkOutTime || null,
+    };
+  });
+
+  const summary = {
+    total: userList.length,
+    checkedIn: userList.filter((u) => u.status === 'CHECKED_IN').length,
+    late: userList.filter((u) => u.status === 'LATE').length,
+    notCheckedIn: userList.filter((u) => u.status === 'NOT_CHECKED_IN').length,
+    earlyLeave: userList.filter((u) => u.status === 'EARLY_LEAVE').length,
+    checkedOut: userList.filter((u) => u.status === 'CHECKED_OUT').length,
+    outsideRange: userList.filter((u) => u.status === 'OUTSIDE_RANGE').length,
+  };
+
+  return { summary, users: userList };
+}
+
+/**
+ * 전체 출퇴근 설정 목록 조회
+ */
+export async function getAllAttendanceSettings(): Promise<any[]> {
+  return prisma.attendanceSetting.findMany({
+    where: { isActive: true },
+    include: {
+      site: {
+        select: { id: true, name: true, type: true, latitude: true, longitude: true },
+      },
+    },
+    orderBy: { site: { name: 'asc' } },
+  });
+}
+
+/**
+ * 월별 근태 리포트
+ */
+export async function getMonthlyReport(
+  month: string,
+  siteId?: string
+): Promise<any> {
+  // month: "2026-03" 형식
+  const [year, mon] = month.split('-').map(Number);
+  const dateFrom = new Date(year, mon - 1, 1);
+  const dateTo = new Date(year, mon, 0, 23, 59, 59, 999);
+
+  // 대상 사용자 조회
+  const userWhere: any = {
+    canUseAttendance: true,
+    isActive: true,
+    deletedAt: null,
+  };
+
+  const users = await prisma.user.findMany({
+    where: userWhere,
+    select: {
+      id: true,
+      name: true,
+      staff: {
+        include: {
+          staffSites: {
+            where: { removedAt: null },
+            include: {
+              site: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // siteId 필터 적용
+  const filteredUsers = siteId
+    ? users.filter((u) =>
+        u.staff?.staffSites.some((ss) => ss.siteId === siteId)
+      )
+    : users;
+
+  // 해당 월 출퇴근 기록 조회
+  const attWhere: any = {
+    checkInTime: { gte: dateFrom, lte: dateTo },
+    deletedAt: null,
+  };
+  if (siteId) attWhere.siteId = siteId;
+
+  const attendances = await prisma.attendance.findMany({
+    where: attWhere,
+    select: {
+      userId: true,
+      siteId: true,
+      checkInTime: true,
+      checkOutTime: true,
+      status: true,
+      breakStartTime: true,
+      breakEndTime: true,
+    },
+    orderBy: { checkInTime: 'asc' },
+  });
+
+  // 사용자별 출퇴근 기록 매핑
+  const userAttMap = new Map<string, any[]>();
+  attendances.forEach((att) => {
+    const list = userAttMap.get(att.userId) || [];
+    list.push(att);
+    userAttMap.set(att.userId, list);
+  });
+
+  // 해당 월의 평일 수 계산
+  const totalWeekdays = countWeekdays(dateFrom, dateTo);
+
+  const employees = filteredUsers.map((user) => {
+    const primarySite = user.staff?.staffSites.find((ss) => ss.isPrimary);
+    const site = primarySite?.site || user.staff?.staffSites[0]?.site;
+    const records = userAttMap.get(user.id) || [];
+
+    const summary = {
+      totalWorkDays: records.length,
+      normalCount: records.filter((r) => r.status === 'NORMAL').length,
+      lateCount: records.filter((r) => r.status === 'LATE').length,
+      earlyLeaveCount: records.filter((r) => r.status === 'EARLY_LEAVE').length,
+      outsideRangeCount: records.filter((r) => r.status === 'OUTSIDE_RANGE').length,
+      absentCount: Math.max(0, totalWeekdays - records.length),
+    };
+
+    const dailyRecords = records.map((r) => ({
+      date: new Date(r.checkInTime).toISOString().split('T')[0],
+      status: r.status,
+      checkInTime: r.checkInTime,
+      checkOutTime: r.checkOutTime,
+      breakStartTime: r.breakStartTime,
+      breakEndTime: r.breakEndTime,
+    }));
+
+    return {
+      user: { id: user.id, name: user.name },
+      site: site ? { id: site.id, name: site.name } : null,
+      summary,
+      dailyRecords,
+    };
+  });
+
+  return { month, totalWeekdays, employees };
+}
+
+/**
+ * 기간 내 평일 수 계산
+ */
+function countWeekdays(from: Date, to: Date): number {
+  let count = 0;
+  const current = new Date(from);
+  while (current <= to) {
+    const day = current.getDay();
+    if (day !== 0 && day !== 6) count++;
+    current.setDate(current.getDate() + 1);
+  }
+  return count;
+}
+
+/**
  * 출퇴근 정보 수정 (휴게시간 등)
  */
 export async function updateAttendance(

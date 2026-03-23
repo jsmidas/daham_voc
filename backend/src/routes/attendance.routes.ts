@@ -15,6 +15,30 @@ import {
 
 const router = Router();
 
+// GET /api/v1/attendances/dashboard - 출퇴근 대시보드 (Admin only)
+router.get(
+  '/dashboard',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  attendanceController.getDashboard
+);
+
+// GET /api/v1/attendances/settings/all - 전체 출퇴근 설정 목록 (Admin only)
+router.get(
+  '/settings/all',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  attendanceController.getAllAttendanceSettings
+);
+
+// GET /api/v1/attendances/monthly-report - 월별 근태 리포트 (Admin only)
+router.get(
+  '/monthly-report',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  attendanceController.getMonthlyReport
+);
+
 // GET /api/v1/attendances/statistics - 출퇴근 통계 조회 (Admin only)
 router.get(
   '/statistics',

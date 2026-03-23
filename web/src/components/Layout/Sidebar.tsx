@@ -105,9 +105,15 @@ export default function Sidebar() {
       label: <span>담당자 관리</span>,
     },
     {
-      key: '/attendances',
+      key: 'attendance-group',
       icon: <ClockCircleOutlined />,
-      label: <span>근태 관리</span>,
+      label: '근태 관리',
+      children: [
+        { key: '/attendances/dashboard', label: '출퇴근 대시보드' },
+        { key: '/attendances', label: '근태 현황' },
+        { key: '/attendances/report', label: '월별 리포트' },
+        { key: '/attendances/settings', label: '근무지 설정' },
+      ],
     },
     {
       key: '/stats',
@@ -127,6 +133,10 @@ export default function Sidebar() {
     if (path.startsWith('/sites')) return '/sites';
     if (path.startsWith('/delivery-routes')) return '/delivery-routes';
     if (path.startsWith('/delivery-logs')) return '/delivery-logs';
+    if (path.startsWith('/attendances/dashboard')) return '/attendances/dashboard';
+    if (path.startsWith('/attendances/settings')) return '/attendances/settings';
+    if (path.startsWith('/attendances/report')) return '/attendances/report';
+    if (path === '/attendances') return '/attendances';
     if (path.startsWith('/contracts')) return '/contracts';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';

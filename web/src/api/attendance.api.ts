@@ -132,6 +132,82 @@ export async function upsertAttendanceSetting(data: {
 }
 
 /**
+ * 출퇴근 대시보드 데이터
+ */
+export interface DashboardUser {
+  userId: string;
+  userName: string;
+  siteName: string;
+  siteId?: string;
+  status: 'CHECKED_IN' | 'LATE' | 'NOT_CHECKED_IN' | 'EARLY_LEAVE' | 'CHECKED_OUT' | 'OUTSIDE_RANGE';
+  checkInTime: string | null;
+  checkOutTime: string | null;
+}
+
+export interface DashboardData {
+  summary: {
+    total: number;
+    checkedIn: number;
+    late: number;
+    notCheckedIn: number;
+    earlyLeave: number;
+    checkedOut: number;
+    outsideRange: number;
+  };
+  users: DashboardUser[];
+}
+
+export interface MonthlyReportEmployee {
+  user: { id: string; name: string };
+  site: { id: string; name: string } | null;
+  summary: {
+    totalWorkDays: number;
+    normalCount: number;
+    lateCount: number;
+    earlyLeaveCount: number;
+    outsideRangeCount: number;
+    absentCount: number;
+  };
+  dailyRecords: Array<{
+    date: string;
+    status: string;
+    checkInTime: string;
+    checkOutTime: string | null;
+    breakStartTime: string | null;
+    breakEndTime: string | null;
+  }>;
+}
+
+export interface MonthlyReportData {
+  month: string;
+  totalWeekdays: number;
+  employees: MonthlyReportEmployee[];
+}
+
+/**
+ * 출퇴근 대시보드
+ */
+export async function getDashboard(): Promise<any> {
+  return apiClient.get('/attendances/dashboard');
+}
+
+/**
+ * 전체 출퇴근 설정 목록
+ */
+export async function getAllAttendanceSettings(): Promise<any> {
+  return apiClient.get('/attendances/settings/all');
+}
+
+/**
+ * 월별 근태 리포트
+ */
+export async function getMonthlyReport(month: string, siteId?: string): Promise<any> {
+  const params = new URLSearchParams({ month });
+  if (siteId) params.append('siteId', siteId);
+  return apiClient.get(`/attendances/monthly-report?${params.toString()}`);
+}
+
+/**
  * 출퇴근 정보 수정 (휴게시간 등)
  */
 export async function updateAttendance(id: string, data: {
