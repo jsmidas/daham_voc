@@ -3,15 +3,16 @@
  * @description 담당자 등록/수정 페이지 - 그룹/개별 사업장 선택 지원
  */
 
-import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Tree, Space, Tag } from 'antd';
+import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Tree, Space, Tag, TimePicker, Checkbox, Table } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
-import { createStaff, updateStaff, getStaffById, assignStaffToSites } from '@/api/staff.api';
+import { createStaff, updateStaff, getStaffById, assignStaffToSites, getWorkSchedule, saveWorkSchedule } from '@/api/staff.api';
 import { getSites } from '@/api/site.api';
 import { getSiteGroups } from '@/api/site-group.api';
 import { getDeliveryRoutes, getDriverRoutes } from '@/api/delivery-route.api';
 import { useEffect, useState, useMemo } from 'react';
+import dayjs from 'dayjs';
 
 export default function StaffFormPage() {
   const navigate = useNavigate();
@@ -32,6 +33,17 @@ export default function StaffFormPage() {
 
   // 배정된 코스 목록 (수정 모드에서 배송기사인 경우)
   const [assignedRoutes, setAssignedRoutes] = useState<any[]>([]);
+
+  // 요일별 근무시간
+  const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토', '공휴일'];
+  const defaultSchedule = [1, 2, 3, 4, 5, 6, 0, 7].map((day) => ({
+    dayOfWeek: day,
+    isWorkDay: day >= 1 && day <= 5,
+    checkInTime: day >= 1 && day <= 5 ? '09:00' : null,
+    checkOutTime: day >= 1 && day <= 5 ? '18:00' : null,
+  }));
+  const [workSchedules, setWorkSchedules] = useState(defaultSchedule);
+  const [showWorkSchedule, setShowWorkSchedule] = useState(false);
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: staffData } = useQuery({
@@ -83,6 +95,21 @@ export default function StaffFormPage() {
         position: staffData.position,
         managerId: staffData.managerId,
       });
+
+      // 출퇴근 사용 시 근무시간 표시
+      if ((staffData.user as any).canUseAttendance) {
+        setShowWorkSchedule(true);
+        // 근무시간 데이터 로드
+        getWorkSchedule(id!).then((data: any) => {
+          if (data && data.length > 0) {
+            const ordered = [1, 2, 3, 4, 5, 6, 0, 7].map((day) => {
+              const found = data.find((s: any) => s.dayOfWeek === day);
+              return found || { dayOfWeek: day, isWorkDay: false, checkInTime: null, checkOutTime: null };
+            });
+            setWorkSchedules(ordered);
+          }
+        }).catch(() => {});
+      }
 
       // 역할 설정
       setSelectedRole(staffData.user.role);
@@ -213,11 +240,17 @@ export default function StaffFormPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: any) => updateStaff(id, data),
     onSuccess: async () => {
-      // 사업장 및 그룹 배정 업데이트
+      // 사업장 및 그룹 배정 + 근무시간 업데이트
       if (id) {
         try {
           const { siteIds, siteGroupIds } = parseCheckedKeys(checkedKeys);
           await assignStaffToSites(id, siteIds, siteGroupIds);
+
+          // 근무시간 저장
+          if (showWorkSchedule) {
+            await saveWorkSchedule(id, workSchedules);
+          }
+
           message.success('담당자 정보 및 사업장 배정이 수정되었습니다');
         } catch (error: any) {
           message.error('사업장 배정 업데이트 실패: ' + (error.response?.data?.error?.message || error.message));
@@ -560,10 +593,109 @@ export default function StaffFormPage() {
                 valuePropName="checked"
                 tooltip="출퇴근 기능을 사용할 수 있는 권한을 부여합니다. 앱 메인 화면에 출퇴근 현황이 표시됩니다."
               >
-                <Switch checkedChildren="사용" unCheckedChildren="미사용" />
+                <Switch
+                  checkedChildren="사용"
+                  unCheckedChildren="미사용"
+                  onChange={(checked) => setShowWorkSchedule(checked)}
+                />
               </Form.Item>
             </Col>
           </Row>
+
+          {/* 요일별 근무시간 */}
+          {showWorkSchedule && (
+            <>
+              <h3 style={{ marginTop: 24 }}>요일별 근무시간 (한국시간)</h3>
+              <div style={{ marginBottom: 12 }}>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setWorkSchedules(prev => prev.map(s => ({
+                      ...s,
+                      isWorkDay: s.dayOfWeek >= 1 && s.dayOfWeek <= 5,
+                      checkInTime: s.dayOfWeek >= 1 && s.dayOfWeek <= 5 ? '09:00' : null,
+                      checkOutTime: s.dayOfWeek >= 1 && s.dayOfWeek <= 5 ? '18:00' : null,
+                    })));
+                  }}
+                >
+                  평일 09:00~18:00 일괄 적용
+                </Button>
+              </div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
+                <thead>
+                  <tr style={{ background: '#fafafa', borderBottom: '1px solid #f0f0f0' }}>
+                    <th style={{ padding: '8px 12px', textAlign: 'left', width: 80 }}>요일</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', width: 80 }}>근무일</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', width: 140 }}>출근 시간</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'center', width: 140 }}>퇴근 시간</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {workSchedules.map((schedule, idx) => {
+                    const dayLabel = DAY_LABELS[schedule.dayOfWeek] || `${schedule.dayOfWeek}`;
+                    const isHoliday = schedule.dayOfWeek === 0 || schedule.dayOfWeek === 6 || schedule.dayOfWeek === 7;
+                    return (
+                      <tr key={schedule.dayOfWeek} style={{ borderBottom: '1px solid #f0f0f0', background: isHoliday ? '#fff7e6' : undefined }}>
+                        <td style={{ padding: '8px 12px', fontWeight: 'bold', color: schedule.dayOfWeek === 0 ? '#cf1322' : schedule.dayOfWeek === 6 ? '#1890ff' : undefined }}>
+                          {dayLabel}
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          <Checkbox
+                            checked={schedule.isWorkDay}
+                            onChange={(e) => {
+                              const updated = [...workSchedules];
+                              updated[idx] = {
+                                ...updated[idx],
+                                isWorkDay: e.target.checked,
+                                checkInTime: e.target.checked ? (updated[idx].checkInTime || '09:00') : null,
+                                checkOutTime: e.target.checked ? (updated[idx].checkOutTime || '18:00') : null,
+                              };
+                              setWorkSchedules(updated);
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          {schedule.isWorkDay ? (
+                            <TimePicker
+                              value={schedule.checkInTime ? dayjs(schedule.checkInTime, 'HH:mm') : null}
+                              format="HH:mm"
+                              minuteStep={10}
+                              size="small"
+                              onChange={(time) => {
+                                const updated = [...workSchedules];
+                                updated[idx] = { ...updated[idx], checkInTime: time ? time.format('HH:mm') : null };
+                                setWorkSchedules(updated);
+                              }}
+                            />
+                          ) : (
+                            <span style={{ color: '#999' }}>휴무</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                          {schedule.isWorkDay ? (
+                            <TimePicker
+                              value={schedule.checkOutTime ? dayjs(schedule.checkOutTime, 'HH:mm') : null}
+                              format="HH:mm"
+                              minuteStep={10}
+                              size="small"
+                              onChange={(time) => {
+                                const updated = [...workSchedules];
+                                updated[idx] = { ...updated[idx], checkOutTime: time ? time.format('HH:mm') : null };
+                                setWorkSchedules(updated);
+                              }}
+                            />
+                          ) : (
+                            <span style={{ color: '#999' }}>휴무</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item

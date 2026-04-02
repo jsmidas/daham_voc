@@ -143,6 +143,45 @@ export const toggleContractTarget = async (req: Request, res: Response): Promise
 };
 
 /**
+ * 요일별 근무시간 조회
+ * GET /api/v1/staff/:id/work-schedule
+ */
+export const getWorkSchedule = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const staff = await staffService.getStaffById(id);
+    const schedules = await staffService.getWorkSchedule(staff.user.id);
+    res.json(successResponse(schedules));
+  } catch (error: any) {
+    console.error('근무시간 조회 오류:', error);
+    res.status(400).json(errorResponse(error.message, 'GET_WORK_SCHEDULE_ERROR'));
+  }
+};
+
+/**
+ * 요일별 근무시간 저장
+ * PUT /api/v1/staff/:id/work-schedule
+ */
+export const saveWorkSchedule = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { schedules } = req.body;
+
+    if (!Array.isArray(schedules)) {
+      res.status(400).json(errorResponse('schedules는 배열이어야 합니다', 'INVALID_SCHEDULES'));
+      return;
+    }
+
+    const staff = await staffService.getStaffById(id);
+    const result = await staffService.saveWorkSchedule(staff.user.id, schedules);
+    res.json(successResponse(result, '근무시간이 저장되었습니다'));
+  } catch (error: any) {
+    console.error('근무시간 저장 오류:', error);
+    res.status(400).json(errorResponse(error.message, 'SAVE_WORK_SCHEDULE_ERROR'));
+  }
+};
+
+/**
  * 비밀번호 초기화
  * POST /api/v1/staff/:id/reset-password
  */

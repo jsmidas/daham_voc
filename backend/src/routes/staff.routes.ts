@@ -33,6 +33,12 @@ router.post('/:id/sites', staffController.assignStaffToSites);
 // 계약 대상자 토글
 router.patch('/:id/contract-target', staffController.toggleContractTarget);
 
+// 요일별 근무시간 조회
+router.get('/:id/work-schedule', staffController.getWorkSchedule);
+
+// 요일별 근무시간 저장
+router.put('/:id/work-schedule', staffController.saveWorkSchedule);
+
 // 비밀번호 초기화
 router.post('/:id/reset-password', staffController.resetStaffPassword);
 

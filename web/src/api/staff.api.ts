@@ -178,6 +178,22 @@ export async function toggleContractTarget(id: string) {
 }
 
 /**
+ * 요일별 근무시간 조회
+ */
+export async function getWorkSchedule(staffId: string) {
+  const response = await apiClient.get(`/staff/${staffId}/work-schedule`);
+  return response.data.data;
+}
+
+/**
+ * 요일별 근무시간 저장
+ */
+export async function saveWorkSchedule(staffId: string, schedules: any[]) {
+  const response = await apiClient.put(`/staff/${staffId}/work-schedule`, { schedules });
+  return response.data.data;
+}
+
+/**
  * 비밀번호 초기화
  */
 export async function resetStaffPassword(id: string, newPassword: string) {

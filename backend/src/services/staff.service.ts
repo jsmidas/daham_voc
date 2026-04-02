@@ -517,6 +517,57 @@ export async function toggleContractTarget(staffId: string) {
 }
 
 /**
+ * 요일별 근무시간 조회
+ */
+export async function getWorkSchedule(userId: string) {
+  const schedules = await prisma.userWorkSchedule.findMany({
+    where: { userId },
+    orderBy: { dayOfWeek: 'asc' },
+  });
+  return schedules;
+}
+
+/**
+ * 요일별 근무시간 저장 (upsert)
+ */
+export async function saveWorkSchedule(
+  userId: string,
+  schedules: Array<{
+    dayOfWeek: number;
+    isWorkDay: boolean;
+    checkInTime: string | null;
+    checkOutTime: string | null;
+  }>
+) {
+  await prisma.$transaction(
+    schedules.map((s) =>
+      prisma.userWorkSchedule.upsert({
+        where: {
+          userId_dayOfWeek: { userId, dayOfWeek: s.dayOfWeek },
+        },
+        update: {
+          isWorkDay: s.isWorkDay,
+          checkInTime: s.checkInTime,
+          checkOutTime: s.checkOutTime,
+        },
+        create: {
+          userId,
+          dayOfWeek: s.dayOfWeek,
+          isWorkDay: s.isWorkDay,
+          checkInTime: s.checkInTime,
+          checkOutTime: s.checkOutTime,
+        },
+      })
+    )
+  );
+
+  return prisma.userWorkSchedule.findMany({
+    where: { userId },
+    orderBy: { dayOfWeek: 'asc' },
+  });
+}
+
+/**
  * 비밀번호 초기화 (관리자 기능)
  */
 export async function resetStaffPassword(staffId: string, newPassword: string) {
