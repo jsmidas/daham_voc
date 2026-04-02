@@ -67,7 +67,7 @@ export async function checkOut(req: Request, res: Response): Promise<void> {
  */
 export async function getAttendances(req: Request, res: Response): Promise<void> {
   try {
-    const { siteId, siteIds, userId, status, dateFrom, dateTo } = req.query;
+    const { siteId, siteIds, userId, userName, status, dateFrom, dateTo } = req.query;
 
     const filter: attendanceService.AttendanceFilter = {};
 
@@ -76,6 +76,7 @@ export async function getAttendances(req: Request, res: Response): Promise<void>
       filter.siteIds = (siteIds as string).split(',');
     }
     if (userId) filter.userId = userId as string;
+    if (userName) filter.userName = userName as string;
     if (status) filter.status = status as AttendanceStatus;
     if (dateFrom) filter.dateFrom = new Date(dateFrom as string);
     if (dateTo) filter.dateTo = new Date(dateTo as string);

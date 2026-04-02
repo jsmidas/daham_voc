@@ -46,6 +46,7 @@ export default function AttendanceListPage() {
   ]);
   const [siteFilter, setSiteFilter] = useState<string | undefined>();
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
+  const [nameSearch, setNameSearch] = useState<string>('');
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState<any>(null);
   const [form] = Form.useForm();
@@ -63,6 +64,7 @@ export default function AttendanceListPage() {
       {
         siteId: siteFilter,
         status: statusFilter,
+        userName: nameSearch,
         dateFrom: dateRange[0].format('YYYY-MM-DD'),
         dateTo: dateRange[1].format('YYYY-MM-DD'),
       },
@@ -71,6 +73,7 @@ export default function AttendanceListPage() {
       getAttendances({
         siteId: siteFilter,
         status: statusFilter,
+        userName: nameSearch || undefined,
         dateFrom: dateRange[0].format('YYYY-MM-DD'),
         dateTo: dateRange[1].format('YYYY-MM-DD'),
       }),
@@ -370,6 +373,13 @@ export default function AttendanceListPage() {
             }
           }}
           format="YYYY-MM-DD"
+        />
+        <Input.Search
+          placeholder="담당자 이름 검색"
+          style={{ width: 180 }}
+          allowClear
+          onSearch={(value) => setNameSearch(value)}
+          onChange={(e) => { if (!e.target.value) setNameSearch(''); }}
         />
         <Select
           placeholder="사업장 선택"

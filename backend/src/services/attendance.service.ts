@@ -26,6 +26,7 @@ export interface AttendanceFilter {
   siteId?: string;
   siteIds?: string[];
   userId?: string;
+  userName?: string;
   status?: AttendanceStatus;
   dateFrom?: Date;
   dateTo?: Date;
@@ -256,6 +257,12 @@ export async function getAttendances(filter: AttendanceFilter): Promise<any[]> {
 
   if (filter.userId) {
     where.userId = filter.userId;
+  }
+
+  if (filter.userName) {
+    where.user = {
+      name: { contains: filter.userName, mode: 'insensitive' },
+    };
   }
 
   if (filter.status) {
