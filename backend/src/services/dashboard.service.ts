@@ -294,6 +294,41 @@ export async function getSiteComparison(
 }
 
 /**
+ * 대시보드 전체 데이터 통합 조회 (1회 호출)
+ */
+export async function getDashboardAll(
+  dateFrom: Date,
+  dateTo: Date
+) {
+  const cacheKey = `dashboard:all:${dateFrom.toISOString()}:${dateTo.toISOString()}`;
+
+  const cached = await cache.get(cacheKey);
+  if (cached) {
+    return JSON.parse(cached);
+  }
+
+  // 모든 데이터를 병렬로 조회
+  const [summary, vocTrend, siteComparison, staffPerformance] = await Promise.all([
+    getDashboardSummary(dateFrom, dateTo),
+    getDailyVOCTrend(dateFrom, dateTo),
+    getSiteComparison(dateFrom, dateTo),
+    getStaffPerformance(dateFrom, dateTo),
+  ]);
+
+  const result = {
+    summary,
+    vocTrend,
+    siteComparison,
+    staffPerformance,
+  };
+
+  // 통합 캐시 30분
+  await cache.set(cacheKey, JSON.stringify(result), 1800);
+
+  return result;
+}
+
+/**
  * 담당자별 평점 통계
  */
 export async function getStaffPerformance(

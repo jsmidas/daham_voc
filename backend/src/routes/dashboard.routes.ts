@@ -13,6 +13,13 @@ const router = Router();
 router.use(authMiddleware);
 
 /**
+ * GET /api/v1/dashboard/all
+ * @description 대시보드 전체 통합 조회 (1회 호출)
+ * @access Private (모든 인증된 사용자)
+ */
+router.get('/all', dashboardController.getAll);
+
+/**
  * GET /api/v1/dashboard/summary
  * @description 대시보드 요약 통계
  * @access Private (모든 인증된 사용자)

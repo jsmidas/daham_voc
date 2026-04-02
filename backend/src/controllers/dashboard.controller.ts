@@ -118,6 +118,43 @@ export async function getSiteComparison(
 }
 
 /**
+ * GET /api/v1/dashboard/all
+ * @description 대시보드 전체 데이터 통합 조회 (1회 호출)
+ */
+export async function getAll(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    if (!dateFrom || !dateTo) {
+      res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_REQUEST',
+          message: 'dateFrom and dateTo are required',
+        },
+      });
+      return;
+    }
+
+    const data = await dashboardService.getDashboardAll(
+      new Date(dateFrom as string),
+      new Date(dateTo as string)
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
  * GET /api/v1/dashboard/staff-performance
  * @description 담당자별 평점 통계 조회
  */

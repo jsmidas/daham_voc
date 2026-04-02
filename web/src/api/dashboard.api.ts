@@ -5,6 +5,13 @@
 
 import { apiClient } from '@/utils/axios';
 
+// 대시보드 전체 통합 조회 (1회 호출)
+export async function getDashboardAll(dateFrom: string, dateTo: string) {
+  return apiClient.get('/dashboard/all', {
+    params: { dateFrom, dateTo },
+  });
+}
+
 // 대시보드 요약 조회
 export async function getDashboardSummary(dateFrom: string, dateTo: string) {
   return apiClient.get('/dashboard/summary', {

@@ -12,12 +12,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import {
-  getDashboardSummary,
-  getDailyVOCTrend,
-  getSiteComparison,
-  getStaffPerformanceStats,
-} from '@/api/dashboard.api';
+import { getDashboardAll } from '@/api/dashboard.api';
 import { getUnassignedSites } from '@/api/site.api';
 import { useState } from 'react';
 import dayjs, { Dayjs } from 'dayjs';
@@ -55,45 +50,20 @@ export default function DashboardPage() {
     dayjs(),
   ]);
 
-  const { data: summary, isLoading } = useQuery({
-    queryKey: ['dashboard-summary', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
+  const { data: dashboardData, isLoading } = useQuery({
+    queryKey: ['dashboard-all', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
     queryFn: () =>
-      getDashboardSummary(
+      getDashboardAll(
         dateRange[0].format('YYYY-MM-DD'),
         dateRange[1].format('YYYY-MM-DD')
       ),
     retry: false,
   });
 
-  const { data: vocTrend } = useQuery({
-    queryKey: ['daily-voc-trend', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
-    queryFn: () =>
-      getDailyVOCTrend(
-        dateRange[0].format('YYYY-MM-DD'),
-        dateRange[1].format('YYYY-MM-DD')
-      ),
-    retry: false,
-  });
-
-  const { data: siteComparison } = useQuery({
-    queryKey: ['site-comparison', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
-    queryFn: () =>
-      getSiteComparison(
-        dateRange[0].format('YYYY-MM-DD'),
-        dateRange[1].format('YYYY-MM-DD')
-      ),
-    retry: false,
-  });
-
-  const { data: staffPerformance } = useQuery({
-    queryKey: ['staff-performance', dateRange[0].format('YYYY-MM-DD'), dateRange[1].format('YYYY-MM-DD')],
-    queryFn: () =>
-      getStaffPerformanceStats(
-        dateRange[0].format('YYYY-MM-DD'),
-        dateRange[1].format('YYYY-MM-DD')
-      ),
-    retry: false,
-  });
+  const summary = dashboardData ? { data: dashboardData.data?.summary } : undefined;
+  const vocTrend = dashboardData ? { data: dashboardData.data?.vocTrend } : undefined;
+  const siteComparison = dashboardData ? { data: dashboardData.data?.siteComparison } : undefined;
+  const staffPerformance = dashboardData ? { data: dashboardData.data?.staffPerformance } : undefined;
 
   // 미배정 사업장 조회
   const { data: unassignedData } = useQuery({
