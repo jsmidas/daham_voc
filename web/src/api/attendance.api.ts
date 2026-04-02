@@ -35,6 +35,7 @@ export interface AttendanceFilter {
   siteId?: string;
   siteIds?: string[];
   userId?: string;
+  userName?: string;
   status?: string;
   dateFrom?: string;
   dateTo?: string;
@@ -72,6 +73,7 @@ export async function getAttendances(filter: AttendanceFilter): Promise<any> {
     params.append('siteIds', filter.siteIds.join(','));
   }
   if (filter.userId) params.append('userId', filter.userId);
+  if (filter.userName) params.append('userName', filter.userName);
   if (filter.status) params.append('status', filter.status);
   if (filter.dateFrom) params.append('dateFrom', filter.dateFrom);
   if (filter.dateTo) params.append('dateTo', filter.dateTo);
