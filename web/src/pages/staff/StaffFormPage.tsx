@@ -563,10 +563,17 @@ export default function StaffFormPage() {
           <Row gutter={16}>
             <Col xs={24} sm={12}>
               <Form.Item
-                label="부서"
+                label="부서 (사업장)"
                 name="department"
+                tooltip="배정된 사업장 중 소속 부서를 선택합니다. 근무지 설정과 연동됩니다."
               >
-                <Input placeholder="예: 영업팀" />
+                <Select placeholder="부서 선택" allowClear showSearch optionFilterProp="children">
+                  {(sitesData?.data?.sites || []).map((site: any) => (
+                    <Select.Option key={site.id} value={site.name}>
+                      {site.name}
+                    </Select.Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={12}>
