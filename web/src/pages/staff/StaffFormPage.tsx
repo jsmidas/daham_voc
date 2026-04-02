@@ -3,7 +3,7 @@
  * @description 담당자 등록/수정 페이지 - 그룹/개별 사업장 선택 지원
  */
 
-import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Tree, Space, Tag, TimePicker, Checkbox, Table } from 'antd';
+import { Form, Input, Button, Card, message, Select, Row, Col, Switch, Tree, Space, Tag, TimePicker, Checkbox } from 'antd';
 import type { DataNode } from 'antd/es/tree';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
