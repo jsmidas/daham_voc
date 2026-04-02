@@ -605,7 +605,16 @@ export default function StaffFormPage() {
           {/* 요일별 근무시간 */}
           {showWorkSchedule && (
             <>
-              <h3 style={{ marginTop: 24 }}>요일별 근무시간 (한국시간)</h3>
+              <h3 style={{ marginTop: 24 }}>
+                요일별 근무시간 (한국시간)
+                <Tag
+                  color="blue"
+                  style={{ marginLeft: 8, cursor: 'help', fontWeight: 'normal', fontSize: 12 }}
+                  title={"[퇴근 처리 기준]\n\n• 정상 퇴근: 근무지 내에서 퇴근 시간 전후 퇴근 처리\n• 원격 퇴근: 근무지 GPS 범위 밖에서 퇴근 처리 시 자동 기록\n• 지연 퇴근: 퇴근 예정시간 2시간 초과 후 처리 시 자동 기록\n• 퇴근 누락: 퇴근 처리를 하지 않은 경우 (푸시 알림 발송)\n\n※ 공휴일 설정은 대한민국 법정 공휴일 기준입니다."}
+                >
+                  ? 기준 안내
+                </Tag>
+              </h3>
               <div style={{ marginBottom: 12 }}>
                 <Button
                   size="small"
