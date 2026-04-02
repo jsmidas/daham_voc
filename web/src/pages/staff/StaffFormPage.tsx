@@ -11,7 +11,9 @@ import { createStaff, updateStaff, getStaffById, assignStaffToSites, getWorkSche
 import { getSites } from '@/api/site.api';
 import { getSiteGroups } from '@/api/site-group.api';
 import { getDeliveryRoutes, getDriverRoutes } from '@/api/delivery-route.api';
+import { getAllAttendanceSettings } from '@/api/attendance.api';
 import { useEffect, useState, useMemo } from 'react';
+import { Alert } from 'antd';
 import dayjs from 'dayjs';
 
 export default function StaffFormPage() {
@@ -44,6 +46,7 @@ export default function StaffFormPage() {
   }));
   const [workSchedules, setWorkSchedules] = useState(defaultSchedule);
   const [showWorkSchedule, setShowWorkSchedule] = useState(false);
+  const [missingSiteSettings, setMissingSiteSettings] = useState<string[]>([]);
 
   // 수정 모드일 때 기존 데이터 조회
   const { data: staffData } = useQuery({
@@ -596,11 +599,53 @@ export default function StaffFormPage() {
                 <Switch
                   checkedChildren="사용"
                   unCheckedChildren="미사용"
-                  onChange={(checked) => setShowWorkSchedule(checked)}
+                  onChange={async (checked) => {
+                    setShowWorkSchedule(checked);
+                    setMissingSiteSettings([]);
+                    if (checked && isEditMode) {
+                      try {
+                        const settings = await getAllAttendanceSettings();
+                        const settingSiteIds = new Set((settings || []).map((s: any) => s.siteId));
+                        const assignedSites = checkedKeys
+                          .filter((k) => String(k).startsWith('site-'))
+                          .map((k) => String(k).replace('site-', ''));
+                        const sitesData2 = sitesData?.data?.sites || [];
+                        const missing = assignedSites
+                          .filter((siteId: string) => !settingSiteIds.has(siteId))
+                          .map((siteId: string) => {
+                            const site = sitesData2.find((s: any) => s.id === siteId);
+                            return site?.name || siteId;
+                          });
+                        if (missing.length > 0) {
+                          setMissingSiteSettings(missing);
+                        }
+                      } catch {}
+                    }
+                  }}
                 />
               </Form.Item>
             </Col>
           </Row>
+
+          {/* 근무지 미설정 경고 */}
+          {missingSiteSettings.length > 0 && (
+            <Alert
+              type="warning"
+              showIcon
+              style={{ marginTop: 12, marginBottom: 12 }}
+              message="근무지 설정이 필요한 사업장이 있습니다"
+              description={
+                <div>
+                  <div>아래 사업장에 출퇴근 시간/GPS 반경이 설정되지 않았습니다. <strong>근태 관리 → 근무지 설정</strong>에서 설정해주세요.</div>
+                  <div style={{ marginTop: 8 }}>
+                    {missingSiteSettings.map((name) => (
+                      <Tag key={name} color="orange" style={{ marginBottom: 4 }}>{name}</Tag>
+                    ))}
+                  </div>
+                </div>
+              }
+            />
+          )}
 
           {/* 요일별 근무시간 */}
           {showWorkSchedule && (
