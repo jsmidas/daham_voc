@@ -95,12 +95,11 @@ export default function DashboardPage() {
     retry: false,
   });
 
-  // 미배정 사업장 조회 (페이지 열릴 때마다 새로 조회)
+  // 미배정 사업장 조회
   const { data: unassignedData } = useQuery({
     queryKey: ['unassigned-sites'],
     queryFn: () => getUnassignedSites(),
-    staleTime: 0, // 항상 stale로 처리
-    refetchOnMount: 'always', // 마운트 시 항상 refetch
+    staleTime: 5 * 60 * 1000, // 5분 캐시
   });
 
   const unassignedCount = unassignedData?.data?.count || 0;

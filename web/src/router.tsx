@@ -1,42 +1,53 @@
 /**
  * Router Configuration
- * @description React Router 설정
+ * @description React Router 설정 - lazy loading으로 초기 로딩 최적화
  */
 
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuthStore, WEB_ALLOWED_ROLES, type Role } from '@/store/authStore';
+import { Spin } from 'antd';
 
-// Layouts
+// Layouts (항상 로드)
 import MainLayout from '@/components/Layout/MainLayout';
 
-// Pages
+// Login (항상 로드 - 첫 화면)
 import LoginPage from '@/pages/auth/LoginPage';
-import ChangePasswordPage from '@/pages/auth/ChangePasswordPage';
-import DashboardPage from '@/pages/dashboard/DashboardPage';
-import SiteListPage from '@/pages/site/SiteListPage';
-import SiteFormPage from '@/pages/site/SiteFormPage';
-import SiteGroupPage from '@/pages/site/SiteGroupPage';
-import SiteMapPage from '@/pages/map/SiteMapPage';
-import MenuTypePage from '@/pages/menu-type/MenuTypePage';
-import WeeklyMenuPage from '@/pages/menu/WeeklyMenuPage';
-import PhotoGalleryPage from '@/pages/photo/PhotoGalleryPage';
-import MealPhotoManagementPage from '@/pages/meal-photo/MealPhotoManagementPage';
-import FeedbackListPage from '@/pages/feedback/FeedbackListPage';
-import StaffListPage from '@/pages/staff/StaffListPage';
-import StaffFormPage from '@/pages/staff/StaffFormPage';
-import AttendanceListPage from '@/pages/attendance/AttendanceListPage';
-import AttendanceDashboardPage from '@/pages/attendance/AttendanceDashboardPage';
-import AttendanceSettingsPage from '@/pages/attendance/AttendanceSettingsPage';
-import AttendanceMonthlyReportPage from '@/pages/attendance/AttendanceMonthlyReportPage';
-import StatsPage from '@/pages/stats/StatsPage';
-import MealCountSettingPage from '@/pages/meal-count/MealCountSettingPage';
-import MealCountListPage from '@/pages/meal-count/MealCountListPage';
-import MealMenuPage from '@/pages/meal-menu/MealMenuPage';
-import DeliveryRouteListPage from '@/pages/delivery-route/DeliveryRouteListPage';
-import DeliveryRouteDetailPage from '@/pages/delivery-route/DeliveryRouteDetailPage';
-import DeliveryLogPage from '@/pages/delivery-log/DeliveryLogPage';
-import PrivacyPolicyPage from '@/pages/PrivacyPolicyPage';
-import ContractListPage from '@/pages/contract/ContractListPage';
+
+// Lazy loaded pages
+const ChangePasswordPage = lazy(() => import('@/pages/auth/ChangePasswordPage'));
+const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
+const SiteListPage = lazy(() => import('@/pages/site/SiteListPage'));
+const SiteFormPage = lazy(() => import('@/pages/site/SiteFormPage'));
+const SiteGroupPage = lazy(() => import('@/pages/site/SiteGroupPage'));
+const SiteMapPage = lazy(() => import('@/pages/map/SiteMapPage'));
+const MenuTypePage = lazy(() => import('@/pages/menu-type/MenuTypePage'));
+const WeeklyMenuPage = lazy(() => import('@/pages/menu/WeeklyMenuPage'));
+const PhotoGalleryPage = lazy(() => import('@/pages/photo/PhotoGalleryPage'));
+const MealPhotoManagementPage = lazy(() => import('@/pages/meal-photo/MealPhotoManagementPage'));
+const FeedbackListPage = lazy(() => import('@/pages/feedback/FeedbackListPage'));
+const StaffListPage = lazy(() => import('@/pages/staff/StaffListPage'));
+const StaffFormPage = lazy(() => import('@/pages/staff/StaffFormPage'));
+const AttendanceListPage = lazy(() => import('@/pages/attendance/AttendanceListPage'));
+const AttendanceDashboardPage = lazy(() => import('@/pages/attendance/AttendanceDashboardPage'));
+const AttendanceSettingsPage = lazy(() => import('@/pages/attendance/AttendanceSettingsPage'));
+const AttendanceMonthlyReportPage = lazy(() => import('@/pages/attendance/AttendanceMonthlyReportPage'));
+const StatsPage = lazy(() => import('@/pages/stats/StatsPage'));
+const MealCountSettingPage = lazy(() => import('@/pages/meal-count/MealCountSettingPage'));
+const MealCountListPage = lazy(() => import('@/pages/meal-count/MealCountListPage'));
+const MealMenuPage = lazy(() => import('@/pages/meal-menu/MealMenuPage'));
+const DeliveryRouteListPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteListPage'));
+const DeliveryRouteDetailPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteDetailPage'));
+const DeliveryLogPage = lazy(() => import('@/pages/delivery-log/DeliveryLogPage'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
+const ContractListPage = lazy(() => import('@/pages/contract/ContractListPage'));
+
+// Lazy wrapper
+const L = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<div style={{ textAlign: 'center', padding: 50 }}><Spin size="large" /></div>}>
+    {children}
+  </Suspense>
+);
 
 // Protected Route 컴포넌트
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -64,11 +75,11 @@ export const router = createBrowserRouter([
   },
   {
     path: '/privacy-policy',
-    element: <PrivacyPolicyPage />,
+    element: <L><PrivacyPolicyPage /></L>,
   },
   {
     path: '/privacy',
-    element: <PrivacyPolicyPage />,
+    element: <L><PrivacyPolicyPage /></L>,
   },
   {
     path: '/',
@@ -84,27 +95,27 @@ export const router = createBrowserRouter([
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: <L><DashboardPage /></L>,
       },
       {
         path: 'change-password',
-        element: <ChangePasswordPage />,
+        element: <L><ChangePasswordPage /></L>,
       },
       {
         path: 'sites',
         children: [
-          { index: true, element: <SiteListPage /> },
-          { path: 'new', element: <SiteFormPage /> },
-          { path: ':id/edit', element: <SiteFormPage /> },
+          { index: true, element: <L><SiteListPage /></L> },
+          { path: 'new', element: <L><SiteFormPage /></L> },
+          { path: ':id/edit', element: <L><SiteFormPage /></L> },
         ],
       },
       {
         path: 'site-groups',
-        element: <SiteGroupPage />,
+        element: <L><SiteGroupPage /></L>,
       },
       {
         path: 'map',
-        element: <SiteMapPage />,
+        element: <L><SiteMapPage /></L>,
       },
       {
         path: 'menus',
@@ -112,71 +123,71 @@ export const router = createBrowserRouter([
       },
       {
         path: 'menu-types',
-        element: <MenuTypePage />,
+        element: <L><MenuTypePage /></L>,
       },
       {
         path: 'weekly-menus',
-        element: <WeeklyMenuPage />,
+        element: <L><WeeklyMenuPage /></L>,
       },
       {
         path: 'photos',
-        element: <PhotoGalleryPage />,
+        element: <L><PhotoGalleryPage /></L>,
       },
       {
         path: 'meal-photos',
-        element: <MealPhotoManagementPage />,
+        element: <L><MealPhotoManagementPage /></L>,
       },
       {
         path: 'feedbacks',
-        element: <FeedbackListPage />,
+        element: <L><FeedbackListPage /></L>,
       },
       {
         path: 'staff',
         children: [
-          { index: true, element: <StaffListPage /> },
-          { path: 'new', element: <StaffFormPage /> },
-          { path: ':id/edit', element: <StaffFormPage /> },
+          { index: true, element: <L><StaffListPage /></L> },
+          { path: 'new', element: <L><StaffFormPage /></L> },
+          { path: ':id/edit', element: <L><StaffFormPage /></L> },
         ],
       },
       {
         path: 'attendances',
         children: [
-          { index: true, element: <AttendanceListPage /> },
-          { path: 'dashboard', element: <AttendanceDashboardPage /> },
-          { path: 'settings', element: <AttendanceSettingsPage /> },
-          { path: 'report', element: <AttendanceMonthlyReportPage /> },
+          { index: true, element: <L><AttendanceListPage /></L> },
+          { path: 'dashboard', element: <L><AttendanceDashboardPage /></L> },
+          { path: 'settings', element: <L><AttendanceSettingsPage /></L> },
+          { path: 'report', element: <L><AttendanceMonthlyReportPage /></L> },
         ],
       },
       {
         path: 'stats',
-        element: <StatsPage />,
+        element: <L><StatsPage /></L>,
       },
       {
         path: 'meal-count-settings',
-        element: <MealCountSettingPage />,
+        element: <L><MealCountSettingPage /></L>,
       },
       {
         path: 'meal-counts',
-        element: <MealCountListPage />,
+        element: <L><MealCountListPage /></L>,
       },
       {
         path: 'meal-menus',
-        element: <MealMenuPage />,
+        element: <L><MealMenuPage /></L>,
       },
       {
         path: 'delivery-routes',
         children: [
-          { index: true, element: <DeliveryRouteListPage /> },
-          { path: ':id', element: <DeliveryRouteDetailPage /> },
+          { index: true, element: <L><DeliveryRouteListPage /></L> },
+          { path: ':id', element: <L><DeliveryRouteDetailPage /></L> },
         ],
       },
       {
         path: 'delivery-logs',
-        element: <DeliveryLogPage />,
+        element: <L><DeliveryLogPage /></L>,
       },
       {
         path: 'contracts',
-        element: <ContractListPage />,
+        element: <L><ContractListPage /></L>,
       },
     ],
   },

@@ -91,7 +91,7 @@ export class AuthService {
    * Login user (using phone number)
    */
   async login(phone: string, password: string): Promise<LoginResponse> {
-    // Find user by phone (include staff sites for mobile app)
+    // 1단계: 사용자 기본 정보만 조회 (가벼운 쿼리)
     const user = await prisma.user.findUnique({
       where: { phone },
       include: {
@@ -99,38 +99,11 @@ export class AuthService {
           include: {
             staffSites: {
               where: { removedAt: null },
-              include: {
-                site: {
-                  select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                    division: true,
-                    address: true,
-                    latitude: true,
-                    longitude: true,
-                    group: {
-                      select: {
-                        id: true,
-                        name: true,
-                        division: true,
-                      },
-                    },
-                  },
-                },
-              },
+              select: { site: { select: { id: true, name: true, type: true, division: true, address: true, latitude: true, longitude: true, group: { select: { id: true, name: true, division: true } } } } },
             },
             staffSiteGroups: {
               where: { removedAt: null },
-              include: {
-                siteGroup: {
-                  select: {
-                    id: true,
-                    name: true,
-                    division: true,
-                  },
-                },
-              },
+              select: { siteGroup: { select: { id: true, name: true, division: true } } },
             },
           },
         },
@@ -141,30 +114,27 @@ export class AuthService {
       throw new Error('전화번호 또는 비밀번호가 올바르지 않습니다');
     }
 
-    // Check if user is active
     if (!user.isActive) {
       throw new Error('비활성화된 계정입니다');
     }
 
-    // Check if user is soft deleted
     if (user.deletedAt) {
       throw new Error('삭제된 계정입니다');
     }
 
-    // Verify password
+    // 비밀번호 검증
     const isPasswordValid = await comparePassword(password, user.password);
-
     if (!isPasswordValid) {
       throw new Error('전화번호 또는 비밀번호가 올바르지 않습니다');
     }
 
-    // Update last login time
-    await prisma.user.update({
+    // lastLoginAt 업데이트는 비동기로 (응답을 기다리지 않음)
+    prisma.user.update({
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
-    });
+    }).catch(() => {});
 
-    // Generate JWT token
+    // JWT 토큰 생성 (동기, 빠름)
     const token = generateToken({
       userId: user.id,
       email: (user.email || user.phone) as string,
@@ -172,77 +142,43 @@ export class AuthService {
       division: user.division || undefined,
     });
 
-    // Extract assigned sites and site groups
+    // 사업장 목록 구성
     const individualSites = user.staff?.staffSites?.map(ss => ss.site) || [];
     const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
 
-    // Expand site groups: fetch all sites belonging to assigned groups
-    let groupSites: typeof individualSites = [];
-    if (assignedSiteGroups.length > 0) {
-      const groupIds = assignedSiteGroups.map(g => g.id);
-      groupSites = await prisma.site.findMany({
-        where: {
-          groupId: { in: groupIds },
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          division: true,
-          address: true,
-          latitude: true,
-          longitude: true,
-          group: {
-            select: {
-              id: true,
-              name: true,
-              division: true,
-            },
-          },
-        },
-      });
-    }
-
-    // Combine individual sites and group sites, remove duplicates
-    const allSitesMap = new Map();
-    [...individualSites, ...groupSites].forEach(site => {
-      allSitesMap.set(site.id, site);
-    });
-    let assignedSites = Array.from(allSitesMap.values());
-
-    // 관리자 역할인 경우 전체 사업장 목록을 반환
+    // 그룹 사이트 확장 + 관리자 전체 사업장 조회를 병렬로
     const adminRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN'];
     const isAdmin = adminRoles.includes(user.role);
-    if (isAdmin && assignedSites.length === 0) {
-      console.log(`[Auth] Admin user ${user.name} - fetching all sites`);
+    const groupIds = assignedSiteGroups.map(g => g.id);
+
+    const siteSelect = {
+      id: true, name: true, type: true, division: true,
+      address: true, latitude: true, longitude: true,
+      group: { select: { id: true, name: true, division: true } },
+    };
+
+    let assignedSites: any[];
+
+    if (isAdmin) {
+      // 관리자: 전체 사업장 조회 (한 번의 쿼리로)
       assignedSites = await prisma.site.findMany({
-        where: {
-          isActive: true,
-          deletedAt: null,
-        },
-        select: {
-          id: true,
-          name: true,
-          type: true,
-          division: true,
-          address: true,
-          latitude: true,
-          longitude: true,
-          group: {
-            select: {
-              id: true,
-              name: true,
-              division: true,
-            },
-          },
-        },
+        where: { isActive: true, deletedAt: null },
+        select: siteSelect,
         orderBy: { name: 'asc' },
       });
-      console.log(`[Auth] Admin user ${user.name} - found ${assignedSites.length} sites`);
+    } else if (groupIds.length > 0) {
+      // 그룹 소속 사이트 확장
+      const groupSites = await prisma.site.findMany({
+        where: { groupId: { in: groupIds }, deletedAt: null },
+        select: siteSelect,
+      });
+      const allSitesMap = new Map();
+      [...individualSites, ...groupSites].forEach(site => allSitesMap.set(site.id, site));
+      assignedSites = Array.from(allSitesMap.values());
+    } else {
+      assignedSites = individualSites;
     }
 
-    // Remove password from response
     const { password: _, staff, ...userWithoutPassword } = user;
 
     return {
@@ -250,7 +186,6 @@ export class AuthService {
         ...userWithoutPassword,
         staffSites: assignedSites,
         staffSiteGroups: assignedSiteGroups,
-        // Keep siteId for backward compatibility (single site)
         siteId: assignedSites[0]?.id || null,
       } as any,
       token,
