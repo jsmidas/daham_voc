@@ -113,6 +113,7 @@ export default function Sidebar() {
         { key: '/attendances', label: '근태 현황' },
         { key: '/attendances/report', label: '월별 리포트' },
         { key: '/attendances/settings', label: '근무지 설정' },
+        { key: '/attendances/holidays', label: '공휴일 관리' },
       ],
     },
     {
@@ -134,6 +135,7 @@ export default function Sidebar() {
     if (path.startsWith('/delivery-routes')) return '/delivery-routes';
     if (path.startsWith('/delivery-logs')) return '/delivery-logs';
     if (path.startsWith('/attendances/dashboard')) return '/attendances/dashboard';
+    if (path.startsWith('/attendances/holidays')) return '/attendances/holidays';
     if (path.startsWith('/attendances/settings')) return '/attendances/settings';
     if (path.startsWith('/attendances/report')) return '/attendances/report';
     if (path === '/attendances') return '/attendances';

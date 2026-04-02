@@ -30,6 +30,7 @@ const StaffListPage = lazy(() => import('@/pages/staff/StaffListPage'));
 const StaffFormPage = lazy(() => import('@/pages/staff/StaffFormPage'));
 const AttendanceListPage = lazy(() => import('@/pages/attendance/AttendanceListPage'));
 const AttendanceDashboardPage = lazy(() => import('@/pages/attendance/AttendanceDashboardPage'));
+const HolidayManagementPage = lazy(() => import('@/pages/attendance/HolidayManagementPage'));
 const AttendanceSettingsPage = lazy(() => import('@/pages/attendance/AttendanceSettingsPage'));
 const AttendanceMonthlyReportPage = lazy(() => import('@/pages/attendance/AttendanceMonthlyReportPage'));
 const StatsPage = lazy(() => import('@/pages/stats/StatsPage'));
@@ -156,6 +157,7 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: <L><AttendanceDashboardPage /></L> },
           { path: 'settings', element: <L><AttendanceSettingsPage /></L> },
           { path: 'report', element: <L><AttendanceMonthlyReportPage /></L> },
+          { path: 'holidays', element: <L><HolidayManagementPage /></L> },
         ],
       },
       {

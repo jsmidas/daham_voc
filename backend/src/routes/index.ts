@@ -15,6 +15,7 @@ import mealMenuRoutes from './meal-menu.routes';
 import deliveryRouteRoutes from './delivery-route.routes';
 import deliveryLogRoutes from './delivery-log.routes';
 import contractRoutes from './contract.routes';
+import holidayRoutes from './holiday.routes';
 
 const router = Router();
 
@@ -62,6 +63,7 @@ router.use('/meal-menus', mealMenuRoutes);
 router.use('/delivery-routes', deliveryRouteRoutes);
 router.use('/delivery-logs', deliveryLogRoutes);
 router.use('/contracts', contractRoutes);
+router.use('/holidays', holidayRoutes);
 
 // Future routes will be added here:
 // router.use('/stats', statsRoutes);
