@@ -352,6 +352,31 @@ export class SiteService {
       },
     });
 
+    // 위탁사업장인 경우 자체식단 메뉴 자동 생성 및 연결
+    if (data.type === 'CONSIGNMENT') {
+      const menuName = `${data.name} 자체식단`;
+      let mealMenu = await prisma.mealMenu.findFirst({ where: { name: menuName } });
+
+      if (!mealMenu) {
+        mealMenu = await prisma.mealMenu.create({
+          data: {
+            name: menuName,
+            description: `${data.name} 위탁사업장 자체식단`,
+            sortOrder: 100,
+            isActive: true,
+          },
+        });
+      }
+
+      // SiteMealMenu 연결
+      await prisma.siteMealMenu.create({
+        data: {
+          siteId: site.id,
+          mealMenuId: mealMenu.id,
+        },
+      }).catch(() => {}); // 이미 연결된 경우 무시
+    }
+
     // Invalidate cache
     await this.invalidateCache();
 
