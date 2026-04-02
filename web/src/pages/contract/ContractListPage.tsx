@@ -263,7 +263,6 @@ function SignZoneEditor({
       <div style={{ marginTop: 16, textAlign: 'right' }}>
         <Button
           type="primary"
-          disabled={zones.length === 0}
           loading={saving}
           onClick={() => onSave(zones)}
         >
