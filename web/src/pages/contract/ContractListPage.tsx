@@ -326,10 +326,13 @@ export default function ContractListPage() {
   const signZoneMutation = useMutation({
     mutationFn: (data: { contractId: string; zones: SignZoneItem[] }) =>
       replaceSignZones(data.contractId, data.zones),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       message.success('서명 영역이 저장되었습니다.');
       setSignZoneModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      // selectedContract 갱신 (다시 열 때 최신 signZones 반영)
+      const updated = res?.data;
+      if (updated) setSelectedContract(updated);
     },
     onError: (err: any) => message.error(err?.message || '저장 실패'),
   });
