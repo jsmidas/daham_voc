@@ -84,6 +84,7 @@ export async function replaceSignZones(contractId: string, zones: {
   width: number;
   height: number;
   sortOrder: number;
+  signGroup?: number;
 }[]) {
   await prisma.contractSignZone.deleteMany({ where: { contractId } });
 
@@ -98,6 +99,7 @@ export async function replaceSignZones(contractId: string, zones: {
         width: z.width,
         height: z.height,
         sortOrder: z.sortOrder,
+        signGroup: z.signGroup || 1,
       })),
     });
   }
@@ -118,6 +120,8 @@ export async function getContracts(filter: {
   isActive?: boolean;
   page?: number;
   limit?: number;
+  userId?: string;
+  role?: string;
 }) {
   const page = filter.page || 1;
   const limit = filter.limit || 20;
@@ -125,6 +129,11 @@ export async function getContracts(filter: {
 
   const where: any = { deletedAt: null };
   if (filter.isActive !== undefined) where.isActive = filter.isActive;
+
+  // 권한 필터: SUPER_ADMIN, HQ_ADMIN만 전체 조회, 나머지는 본인 생성 계약서만
+  if (filter.userId && filter.role && !['SUPER_ADMIN', 'HQ_ADMIN'].includes(filter.role)) {
+    where.createdBy = filter.userId;
+  }
 
   const [contracts, total] = await Promise.all([
     prisma.contract.findMany({
@@ -224,7 +233,8 @@ export async function signContract(data: {
   assignmentId: string;
   userId: string;
   signatureImageUrl: string;
-  signatureBuffer: Buffer;
+  signatureBuffer?: Buffer;
+  groupSignatureBuffers?: Map<number, Buffer>;
 }) {
   // 본인의 배정인지 확인
   const assignment = await prisma.contractAssignment.findFirst({
@@ -251,12 +261,29 @@ export async function signContract(data: {
     throw new Error('서명 기한이 만료된 계약서입니다.');
   }
 
-  // 서명 합성 문서 생성 (여러 페이지에 서명 합성)
+  // 그룹별 서명 버퍼 맵 구성
+  let signatureBufferMap: Map<number, Buffer>;
+  if (data.groupSignatureBuffers && data.groupSignatureBuffers.size > 0) {
+    signatureBufferMap = data.groupSignatureBuffers;
+  } else if (data.signatureBuffer) {
+    // 단일 서명: 모든 그룹에 동일 서명 적용
+    const groups = Array.from(new Set(
+      (assignment.contract.signZones as any[]).map((z: any) => z.signGroup || 1)
+    ));
+    signatureBufferMap = new Map();
+    for (const g of groups) {
+      signatureBufferMap.set(g, data.signatureBuffer);
+    }
+  } else {
+    throw new Error('서명 데이터가 없습니다.');
+  }
+
+  // 서명 합성 문서 생성
   let signedDocumentUrl: string | undefined;
   try {
     signedDocumentUrl = await compositeSignedDocuments(
       assignment.contract,
-      data.signatureBuffer,
+      signatureBufferMap,
       data.assignmentId
     );
   } catch (err: any) {
@@ -284,7 +311,7 @@ export async function signContract(data: {
  */
 async function compositeSignedDocuments(
   contract: any,
-  signatureBuffer: Buffer,
+  signatureBufferMap: Map<number, Buffer>,
   assignmentId: string
 ): Promise<string> {
   const { signZones, pages } = contract;
@@ -321,14 +348,18 @@ async function compositeSignedDocuments(
       { input: await pageImage.toBuffer(), left: 0, top: 0 },
     ];
 
-    // 각 서명 영역에 서명 합성
+    // 각 서명 영역에 해당 그룹의 서명 합성
     for (const zone of zonesForPage) {
+      const group = zone.signGroup || 1;
+      const sigBuffer = signatureBufferMap.get(group);
+      if (!sigBuffer) continue;
+
       const sx = Math.round((zone.x / 100) * pageW);
       const sy = Math.round((zone.y / 100) * pageH);
       const sw = Math.round((zone.width / 100) * pageW);
       const sh = Math.round((zone.height / 100) * pageH);
 
-      const resizedSig = await sharp(signatureBuffer)
+      const resizedSig = await sharp(sigBuffer)
         .resize(sw, sh, { fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
         .png()
         .toBuffer();

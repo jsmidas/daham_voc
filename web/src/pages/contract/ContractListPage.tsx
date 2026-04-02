@@ -34,6 +34,7 @@ interface SignZoneItem {
   width: number;
   height: number;
   sortOrder: number;
+  signGroup: number;
 }
 
 const ZONE_COLORS = ['#1890ff', '#52c41a', '#fa8c16', '#722ed1', '#eb2f96', '#13c2c2'];
@@ -56,6 +57,7 @@ function SignZoneEditor({
   const [startPos, setStartPos] = useState<{ x: number; y: number } | null>(null);
   const [drawingZone, setDrawingZone] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [newLabel, setNewLabel] = useState('');
+  const [newSignGroup, setNewSignGroup] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getRelativePos = useCallback((e: React.MouseEvent) => {
@@ -97,6 +99,7 @@ function SignZoneEditor({
         width: Math.round(drawingZone.w * 100) / 100,
         height: Math.round(drawingZone.h * 100) / 100,
         sortOrder: prev.length,
+        signGroup: newSignGroup,
       }]);
       setNewLabel('');
     }
@@ -138,7 +141,26 @@ function SignZoneEditor({
             style={{ width: 160, marginLeft: 8 }}
           />
         </div>
+        <div>
+          <Text strong>서명 그룹:</Text>
+          <Select
+            value={newSignGroup}
+            onChange={(v) => setNewSignGroup(v)}
+            style={{ width: 120, marginLeft: 8 }}
+          >
+            {[1, 2, 3, 4, 5].map((g) => (
+              <Select.Option key={g} value={g}>그룹 {g}</Select.Option>
+            ))}
+          </Select>
+        </div>
       </div>
+
+      <Alert
+        message="같은 서명 그룹의 영역은 한번 서명으로 동시에 적용됩니다. 다른 그룹은 별도 서명이 필요합니다."
+        type="warning"
+        showIcon
+        style={{ marginBottom: 12 }}
+      />
 
       <Alert
         message="드래그하여 서명 영역을 추가하세요. 여러 영역을 추가할 수 있습니다."
@@ -154,13 +176,13 @@ function SignZoneEditor({
             {zones.map((z, i) => (
               <Tag
                 key={i}
-                color={ZONE_COLORS[i % ZONE_COLORS.length]}
+                color={ZONE_COLORS[(z.signGroup - 1) % ZONE_COLORS.length]}
                 closable
                 onClose={() => removeZone(i)}
                 style={{ cursor: 'pointer' }}
                 onClick={() => setSelectedPage(z.pageNumber)}
               >
-                {z.label} ({z.pageNumber}p)
+                {z.label} ({z.pageNumber}p) [그룹{z.signGroup}]
               </Tag>
             ))}
           </div>
@@ -191,7 +213,7 @@ function SignZoneEditor({
           />
           {/* 저장된 영역들 */}
           {zonesForPage.map((z, i) => {
-            const globalIdx = zones.indexOf(z);
+            const colorIdx = (z.signGroup - 1) % ZONE_COLORS.length;
             return (
               <div
                 key={i}
@@ -201,8 +223,8 @@ function SignZoneEditor({
                   top: `${z.y}%`,
                   width: `${z.width}%`,
                   height: `${z.height}%`,
-                  border: `2px solid ${ZONE_COLORS[globalIdx % ZONE_COLORS.length]}`,
-                  backgroundColor: `${ZONE_COLORS[globalIdx % ZONE_COLORS.length]}22`,
+                  border: `2px solid ${ZONE_COLORS[colorIdx]}`,
+                  backgroundColor: `${ZONE_COLORS[colorIdx]}22`,
                   pointerEvents: 'none',
                   display: 'flex',
                   alignItems: 'center',
@@ -210,12 +232,12 @@ function SignZoneEditor({
                 }}
               >
                 <span style={{
-                  color: ZONE_COLORS[globalIdx % ZONE_COLORS.length],
+                  color: ZONE_COLORS[colorIdx],
                   fontWeight: 'bold',
                   fontSize: 11,
                   textShadow: '0 0 3px white, 0 0 3px white',
                 }}>
-                  {z.label}
+                  {z.label} [G{z.signGroup}]
                 </span>
               </div>
             );
@@ -467,7 +489,13 @@ export default function ContractListPage() {
           <Button
             size="small"
             icon={<TeamOutlined />}
-            onClick={() => { setSelectedContract(record); setAssignModalOpen(true); }}
+            onClick={() => {
+              setSelectedContract(record);
+              setAssignModalOpen(true);
+              // 기존 배정된 사용자만 선택 상태로 설정
+              const existingUserIds = (record.assignments || []).map((a: any) => a.userId);
+              setTimeout(() => assignForm.setFieldsValue({ userIds: existingUserIds }), 0);
+            }}
           >
             배정
           </Button>
@@ -572,6 +600,7 @@ export default function ContractListPage() {
               width: z.width,
               height: z.height,
               sortOrder: z.sortOrder,
+              signGroup: z.signGroup || 1,
             }))}
             onSave={(zones) => {
               signZoneMutation.mutate({ contractId: selectedContract.id, zones });
@@ -592,19 +621,10 @@ export default function ContractListPage() {
         width={600}
       >
         <Form form={assignForm} layout="vertical">
-          {targetOptions.length > 0 && (
-            <Alert
-              message={`계약 대상자 ${targetOptions.length}명이 자동으로 선택됩니다. 담당자 관리에서 대상자를 설정할 수 있습니다.`}
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
           <Form.Item
             name="userIds"
             label="대상자 선택"
             rules={[{ required: true, message: '대상자를 선택하세요' }]}
-            initialValue={targetOptions.map((t: any) => t.value)}
           >
             <Select
               mode="multiple"

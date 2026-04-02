@@ -633,6 +633,7 @@ model ContractSignZone {
   width      Float    // 너비 (% 단위)
   height     Float    // 높이 (% 단위)
   sortOrder  Int      @default(0) // 서명 순서
+  signGroup  Int      @default(1) // 서명 그룹 (같은 그룹은 한번 서명으로 적용)
   createdAt  DateTime @default(now())
   contract   Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 

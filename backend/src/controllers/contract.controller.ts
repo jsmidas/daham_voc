@@ -51,10 +51,13 @@ export async function createContract(req: Request, res: Response) {
 export async function getContracts(req: Request, res: Response) {
   try {
     const { isActive, page, limit } = req.query;
+    const user = (req as any).user;
     const result = await contractService.getContracts({
       isActive: isActive !== undefined ? isActive === 'true' : undefined,
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
+      userId: user?.userId,
+      role: user?.role,
     });
 
     return res.json({ success: true, ...result });
@@ -123,20 +126,50 @@ export async function signContract(req: Request, res: Response) {
     const userId = (req as any).user.userId;
     const assignmentId = req.params.id;
     const file = req.file as Express.Multer.File;
-    const { signatureBase64 } = req.body;
+    const { signatureBase64, groupSignatures } = req.body;
 
     let signatureImageUrl: string;
+    let signatureBuffer: Buffer | undefined;
+    let groupSignatureBuffers: Map<number, Buffer> | undefined;
 
-    if (file) {
+    if (groupSignatures) {
+      // 그룹별 서명 (다중 서명 그룹)
+      const groups: Record<string, string> = typeof groupSignatures === 'string'
+        ? JSON.parse(groupSignatures) : groupSignatures;
+
+      groupSignatureBuffers = new Map();
+      let firstBuffer: Buffer | undefined;
+
+      for (const [groupStr, base64] of Object.entries(groups)) {
+        const base64Data = (base64 as string).replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        groupSignatureBuffers.set(parseInt(groupStr), buffer);
+        if (!firstBuffer) firstBuffer = buffer;
+      }
+
+      // 대표 서명 이미지 업로드 (첫 번째 그룹)
+      if (firstBuffer) {
+        const tempFile = {
+          buffer: firstBuffer,
+          originalname: `signature_${Date.now()}.png`,
+          mimetype: 'image/png',
+          size: firstBuffer.length,
+        } as Express.Multer.File;
+        const uploaded = await uploadImage(tempFile, 'contracts' as any);
+        signatureImageUrl = uploaded.originalUrl;
+      } else {
+        return res.status(400).json({ success: false, message: '서명 데이터가 없습니다.' });
+      }
+    } else if (file) {
       // 파일 업로드 방식
       const uploaded = await uploadImage(file, 'contracts' as any);
       signatureImageUrl = uploaded.originalUrl;
+      signatureBuffer = file.buffer;
     } else if (signatureBase64) {
-      // base64 방식: data URL에서 Buffer로 변환 후 업로드
+      // base64 방식 (단일 서명)
       const base64Data = signatureBase64.replace(/^data:image\/\w+;base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // 임시 Multer file 객체 생성
       const tempFile = {
         buffer,
         originalname: `signature_${Date.now()}.png`,
@@ -146,24 +179,17 @@ export async function signContract(req: Request, res: Response) {
 
       const uploaded = await uploadImage(tempFile, 'contracts' as any);
       signatureImageUrl = uploaded.originalUrl;
+      signatureBuffer = buffer;
     } else {
       return res.status(400).json({ success: false, message: '서명 이미지를 제출해주세요.' });
-    }
-
-    // 서명 원본 buffer 준비 (합성용)
-    let signatureBuffer: Buffer;
-    if (file) {
-      signatureBuffer = file.buffer;
-    } else {
-      const base64Data = signatureBase64.replace(/^data:image\/\w+;base64,/, '');
-      signatureBuffer = Buffer.from(base64Data, 'base64');
     }
 
     const result = await contractService.signContract({
       assignmentId,
       userId,
-      signatureImageUrl,
+      signatureImageUrl: signatureImageUrl!,
       signatureBuffer,
+      groupSignatureBuffers,
     });
 
     return res.json({ success: true, data: result });
