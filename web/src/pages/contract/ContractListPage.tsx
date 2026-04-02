@@ -175,10 +175,10 @@ function SignZoneEditor({
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {zones.map((z, i) => (
               <Tag
-                key={i}
+                key={`${z.label}-${z.pageNumber}-${z.x.toFixed(2)}-${z.y.toFixed(2)}`}
                 color={ZONE_COLORS[(z.signGroup - 1) % ZONE_COLORS.length]}
                 closable
-                onClose={() => removeZone(i)}
+                onClose={(e) => { e.preventDefault(); removeZone(i); }}
                 style={{ cursor: 'pointer' }}
                 onClick={() => setSelectedPage(z.pageNumber)}
               >
