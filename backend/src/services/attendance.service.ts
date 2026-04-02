@@ -347,6 +347,42 @@ export async function getTodayAttendance(
 }
 
 /**
+ * 오늘의 출퇴근 기록 조회 (userId만으로, siteId 불필요)
+ */
+export async function getTodayAttendanceByUser(
+  userId: string
+): Promise<any | null> {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const attendance = await prisma.attendance.findFirst({
+    where: {
+      userId,
+      checkInTime: {
+        gte: today,
+        lt: tomorrow,
+      },
+      deletedAt: null,
+    },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true, role: true },
+      },
+      site: {
+        select: { id: true, name: true, type: true },
+      },
+    },
+    orderBy: {
+      checkInTime: 'desc',
+    },
+  });
+
+  return attendance;
+}
+
+/**
  * 출퇴근 설정 생성/수정
  */
 export async function upsertAttendanceSetting(

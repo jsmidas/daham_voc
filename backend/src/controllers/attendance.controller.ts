@@ -112,29 +112,12 @@ export async function getAttendanceById(req: Request, res: Response): Promise<vo
 export async function getTodayAttendance(req: Request, res: Response): Promise<void> {
   try {
     const userId = req.user!.userId;
-    let { siteId } = req.query;
+    const { siteId } = req.query;
 
-    // siteId가 없으면 사용자의 siteId 사용
-    if (!siteId) {
-      const user = await attendanceService.getUserById(userId);
-      siteId = user?.siteId;
-
-      // Staff로 등록되지 않은 사용자(관리자 등)의 경우 첫 번째 활성 사업장 사용
-      if (!siteId) {
-        const firstSite = await attendanceService.getFirstActiveSite();
-        siteId = firstSite?.id;
-      }
-
-      if (!siteId) {
-        res.status(400).json(errorResponse('사업장 정보가 없습니다'));
-        return;
-      }
-    }
-
-    const attendance = await attendanceService.getTodayAttendance(
-      userId,
-      siteId as string
-    );
+    // siteId가 있으면 해당 사업장 기준, 없으면 userId만으로 조회
+    const attendance = siteId
+      ? await attendanceService.getTodayAttendance(userId, siteId as string)
+      : await attendanceService.getTodayAttendanceByUser(userId);
 
     res.json(successResponse(attendance));
   } catch (error: any) {
