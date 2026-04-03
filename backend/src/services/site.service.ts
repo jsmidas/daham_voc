@@ -1151,11 +1151,9 @@ export class SiteService {
       deletedAt: null,
       // 위탁(CONSIGNMENT) 유형은 배송이 필요 없으므로 제외
       type: { not: 'CONSIGNMENT' },
-      // 배송 코스에 배정되지 않은 사업장 (활성 배정만 확인)
+      // 배송 코스에 배정된 적이 없는 사업장
       routeStops: {
-        none: {
-          isActive: true,
-        },
+        none: {},
       },
     };
 
