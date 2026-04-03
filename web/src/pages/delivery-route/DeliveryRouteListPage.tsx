@@ -100,8 +100,8 @@ export default function DeliveryRouteListPage() {
       key: 'division',
       width: 100,
       render: (division: string) => (
-        <Tag color={division === 'HQ' ? 'blue' : 'green'}>
-          {division === 'HQ' ? '본사' : '영남지사'}
+        <Tag color={division === 'HQ' ? 'blue' : division === 'YEONGNAM' ? 'green' : 'orange'}>
+          {division === 'HQ' ? '본사' : division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
         </Tag>
       ),
     },
@@ -221,6 +221,7 @@ export default function DeliveryRouteListPage() {
           >
             <Select.Option value="HQ">본사</Select.Option>
             <Select.Option value="YEONGNAM">영남지사</Select.Option>
+            <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
           </Select>
           <Select
             placeholder="상태"
@@ -297,7 +298,7 @@ export default function DeliveryRouteListPage() {
                   <Space>
                     <span>{site.name}</span>
                     <Tag color={site.division === 'HQ' ? 'blue' : 'green'}>
-                      {site.division === 'HQ' ? '본사' : '영남지사'}
+                      {site.division === 'HQ' ? '본사' : site.division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
                     </Tag>
                     <Tag>{site.type === 'CONSIGNMENT' ? '위탁' : site.type === 'DELIVERY' ? '운반' : site.type === 'LUNCHBOX' ? '도시락' : '행사'}</Tag>
                   </Space>

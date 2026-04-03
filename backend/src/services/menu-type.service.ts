@@ -3,7 +3,7 @@ import { cache } from '../config/redis';
 
 export interface CreateMenuTypeDto {
   name: string;
-  division?: 'HQ' | 'YEONGNAM';
+  division?: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
   description?: string;
   price?: number;
   sortOrder?: number;
@@ -11,7 +11,7 @@ export interface CreateMenuTypeDto {
 
 export interface UpdateMenuTypeDto {
   name?: string;
-  division?: 'HQ' | 'YEONGNAM';
+  division?: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
   description?: string;
   price?: number;
   sortOrder?: number;

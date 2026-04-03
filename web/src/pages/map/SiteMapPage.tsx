@@ -558,7 +558,7 @@ export default function SiteMapPage() {
                     ${getTypeLabel(site.type)}
                   </span>
                   <span style="display:inline-block;padding:2px 8px;background:#52c41a;color:white;border-radius:4px;font-size:12px;">
-                    ${site.division === 'HQ' ? '본사' : '영남지사'}
+                    ${site.division === 'HQ' ? '본사' : site.division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
                   </span>
                 </div>
                 <div style="margin-bottom:8px;">
@@ -690,6 +690,7 @@ export default function SiteMapPage() {
               >
                 <Select.Option value="HQ">본사</Select.Option>
                 <Select.Option value="YEONGNAM">영남지사</Select.Option>
+                <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
               </Select>
             </div>
 

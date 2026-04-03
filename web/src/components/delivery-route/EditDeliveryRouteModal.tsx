@@ -80,7 +80,7 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
 
         {/* 부문 (읽기 전용) */}
         <Form.Item label="부문">
-          <Input value={route?.division === 'HQ' ? '본사' : '영남지사'} disabled />
+          <Input value={route?.division === 'HQ' ? '본사' : route?.division === 'YEONGNAM' ? '영남지사' : '위탁사업장'} disabled />
         </Form.Item>
 
         <Form.Item

@@ -6,7 +6,7 @@ import { DeliveryStatus } from '@prisma/client';
 export interface CreateDeliveryRouteDto {
   name: string;           // "A코스"
   code: string;           // "A"
-  division: 'HQ' | 'YEONGNAM';
+  division: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
   description?: string;
   color?: string;
 }

@@ -241,6 +241,7 @@ export default function StaffListPage() {
             >
               <Select.Option value="HQ">본사</Select.Option>
               <Select.Option value="YEONGNAM">영남지사</Select.Option>
+              <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={6}>

@@ -15,7 +15,7 @@ export class DeliveryRouteService {
    * 배송 코스 목록 조회
    */
   async getDeliveryRoutes(filters: {
-    division?: 'HQ' | 'YEONGNAM';
+    division?: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
     isActive?: boolean;
     search?: string;
   }): Promise<DeliveryRouteResponse[]> {

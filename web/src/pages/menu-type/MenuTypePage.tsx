@@ -129,13 +129,14 @@ export default function MenuTypePage() {
       key: 'division',
       width: 100,
       render: (division: Division) => (
-        <Tag color={division === 'HQ' ? 'blue' : 'green'}>
-          {division === 'HQ' ? '본사' : '영남지사'}
+        <Tag color={division === 'HQ' ? 'blue' : division === 'YEONGNAM' ? 'green' : 'orange'}>
+          {division === 'HQ' ? '본사' : division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
         </Tag>
       ),
       filters: [
         { text: '본사', value: 'HQ' },
         { text: '영남지사', value: 'YEONGNAM' },
+        { text: '위탁사업장', value: 'CONSIGNMENT' },
       ],
       onFilter: (value, record) => record.division === value,
     },
@@ -320,6 +321,7 @@ export default function MenuTypePage() {
             <Select placeholder="부문을 선택하세요">
               <Select.Option value="HQ">본사</Select.Option>
               <Select.Option value="YEONGNAM">영남지사</Select.Option>
+              <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
             </Select>
           </Form.Item>
 

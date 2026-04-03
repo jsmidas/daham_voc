@@ -447,7 +447,7 @@ export default function DeliveryRouteDetailPage() {
                   {route.name}
                 </Title>
                 <Tag color={route.division === 'HQ' ? 'blue' : 'green'}>
-                  {route.division === 'HQ' ? '본사' : '영남지사'}
+                  {route.division === 'HQ' ? '본사' : route.division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
                 </Tag>
                 <Tag color={route.isActive ? 'success' : 'default'}>
                   {route.isActive ? '활성' : '비활성'}

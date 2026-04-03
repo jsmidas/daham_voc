@@ -447,8 +447,8 @@ export default function DeliveryLogPage() {
               {selectedLog.route?.name || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="부문">
-              <Tag color={selectedLog.route?.division === 'HQ' ? 'blue' : 'green'}>
-                {selectedLog.route?.division === 'HQ' ? '본사' : '영남지사'}
+              <Tag color={selectedLog.route?.division === 'HQ' ? 'blue' : selectedLog.route?.division === 'YEONGNAM' ? 'green' : 'orange'}>
+                {selectedLog.route?.division === 'HQ' ? '본사' : selectedLog.route?.division === 'YEONGNAM' ? '영남지사' : '위탁사업장'}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="사업장" span={2}>

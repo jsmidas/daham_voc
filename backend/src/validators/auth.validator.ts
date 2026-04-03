@@ -26,7 +26,7 @@ export const registerSchema = Joi.object({
   role: Joi.string()
     .valid('SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'STAFF', 'CLIENT')
     .optional(),
-  division: Joi.string().valid('HQ', 'YEONGNAM').optional(),
+  division: Joi.string().valid('HQ', 'YEONGNAM', 'CONSIGNMENT').optional(),
 });
 
 /**

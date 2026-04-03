@@ -555,6 +555,7 @@ export default function StaffFormPage() {
                 <Select placeholder="부문 선택" allowClear>
                   <Select.Option value="HQ">본사</Select.Option>
                   <Select.Option value="YEONGNAM">영남지사</Select.Option>
+                  <Select.Option value="CONSIGNMENT">위탁사업장</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
