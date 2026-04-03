@@ -258,11 +258,19 @@ export default function DeliveryRouteDetailPage() {
     setDriverModalOpen(true);
   };
 
-  // 코스에 포함되지 않은 사업장 필터링 (위탁 사업장 제외 - 배송 필요 없음)
-  const availableSites = allSites?.filter(
-    (site: any) =>
-      !route?.stops.some((stop: any) => stop.site.id === site.id) &&
-      site.type !== 'CONSIGNMENT'
+  // 어떤 코스에도 활성 배정이 없는 사업장 조회
+  const { data: unassignedSitesData } = useQuery({
+    queryKey: ['unassigned-sites'],
+    queryFn: async () => {
+      const res: any = await apiClient.get('/sites/unassigned');
+      return res?.data || res;
+    },
+    enabled: !!route,
+  });
+
+  // 코스에 포함되지 않은 사업장: 미배정 사업장 중 현재 코스에도 없는 것
+  const availableSites = unassignedSitesData?.sites?.filter(
+    (site: any) => !route?.stops.some((stop: any) => stop.site.id === site.id)
   );
 
   // 사업장 추가 핸들러
