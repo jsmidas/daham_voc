@@ -124,10 +124,10 @@ export default function SiteGroupPage() {
                   <span style={{ color: '#999', fontSize: '12px' }}>
                     ({group.sites.length}개 사업장)
                   </span>
-                  {(group as any).staff?.length > 0 && (
+                  {(group as any).staff?.filter((s: any) => !s.role?.includes('ADMIN')).length > 0 && (
                     <span style={{ fontSize: '12px' }}>
                       <UserOutlined style={{ color: '#1890ff', marginRight: 2 }} />
-                      {(group as any).staff.map((s: any) => s.name).join(', ')}
+                      {(group as any).staff.filter((s: any) => !s.role?.includes('ADMIN')).map((s: any) => s.name).join(', ')}
                     </span>
                   )}
                   <Button
@@ -164,33 +164,67 @@ export default function SiteGroupPage() {
               ),
               key: `group-${group.id}`,
               selectable: false,
-              children: group.sites.map((site: any) => ({
-                title: (
-                  <Space>
-                    <ShopOutlined />
-                    {site.siteCode && (
-                      <Tag color="default" style={{ fontSize: 11, marginRight: 0 }}>{site.siteCode}</Tag>
-                    )}
-                    <span>{site.name}</span>
-                    <span style={{ color: '#999', fontSize: '12px' }}>
-                      ({site.address})
-                    </span>
-                    {site.staff?.length > 0 && (
-                      <span style={{ fontSize: '12px' }}>
-                        <UserOutlined style={{ color: '#52c41a', marginRight: 2 }} />
-                        {site.staff.map((s: any) => s.name).join(', ')}
+              children: group.sites.map((site: any) => {
+                // 담당자(ADMIN 제외)와 고객(CLIENT) 분리
+                const siteStaff = (site.staff || []).filter((s: any) => !s.role?.includes('ADMIN') && s.role !== 'CLIENT');
+                const clients = (site.staff || []).filter((s: any) => s.role === 'CLIENT');
+
+                // 고객 하위 노드
+                const clientChildren = clients.length > 0
+                  ? [{
+                      title: (
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          👥 고객 ({clients.length}명)
+                        </span>
+                      ),
+                      key: `clients-${site.id}`,
+                      selectable: false,
+                      children: clients.map((c: any) => ({
+                        title: (
+                          <Space>
+                            <UserOutlined style={{ color: '#fa8c16' }} />
+                            <span style={{ fontSize: '12px' }}>{c.name}</span>
+                            {c.phone && <span style={{ fontSize: '11px', color: '#999' }}>{c.phone}</span>}
+                          </Space>
+                        ),
+                        key: `client-${site.id}-${c.id}`,
+                        isLeaf: true,
+                      })),
+                    }]
+                  : [];
+
+                return {
+                  title: (
+                    <Space>
+                      <ShopOutlined />
+                      {site.siteCode && (
+                        <Tag color="default" style={{ fontSize: 11, marginRight: 0 }}>{site.siteCode}</Tag>
+                      )}
+                      <span>{site.name}</span>
+                      <span style={{ color: '#999', fontSize: '12px' }}>
+                        ({site.address})
                       </span>
-                    )}
-                    {site.contactPerson1 && (
-                      <span style={{ fontSize: '12px', color: '#fa8c16' }}>
-                        📞 {site.contactPerson1}
-                      </span>
-                    )}
-                  </Space>
-                ),
-                key: `site-${site.id}`,
-                isLeaf: true,
-              })),
+                      {siteStaff.length > 0 && (
+                        <span style={{ fontSize: '12px' }}>
+                          <UserOutlined style={{ color: '#52c41a', marginRight: 2 }} />
+                          {siteStaff.map((s: any) => s.name).join(', ')}
+                        </span>
+                      )}
+                      {site.contactPerson1 && (
+                        <span style={{ fontSize: '12px', color: '#fa8c16' }}>
+                          📞 {site.contactPerson1}
+                        </span>
+                      )}
+                      {clients.length > 0 && (
+                        <Tag color="orange" style={{ fontSize: 11 }}>고객 {clients.length}명</Tag>
+                      )}
+                    </Space>
+                  ),
+                  key: `site-${site.id}`,
+                  isLeaf: clientChildren.length === 0,
+                  children: clientChildren.length > 0 ? clientChildren : undefined,
+                };
+              }),
             })) || []),
               ],
         })),
