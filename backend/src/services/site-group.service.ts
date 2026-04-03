@@ -39,7 +39,7 @@ export class SiteGroupService {
       // Continue to fetch from DB
     }
 
-    // Get all groups with sites
+    // Get all groups with sites, staff assignments
     const groups = await prisma.siteGroup.findMany({
       where: { isActive: true },
       include: {
@@ -47,14 +47,37 @@ export class SiteGroupService {
           where: { isActive: true },
           select: {
             id: true,
+            siteCode: true,
             name: true,
             type: true,
             address: true,
             latitude: true,
             longitude: true,
             sortOrder: true,
+            contactPerson1: true,
+            contactPhone1: true,
+            staffSites: {
+              where: { removedAt: null },
+              select: {
+                staff: {
+                  select: {
+                    user: { select: { id: true, name: true, role: true, phone: true } },
+                  },
+                },
+              },
+            },
           },
           orderBy: { sortOrder: 'asc' },
+        },
+        staffSiteGroups: {
+          where: { removedAt: null },
+          select: {
+            staff: {
+              select: {
+                user: { select: { id: true, name: true, role: true, phone: true } },
+              },
+            },
+          },
         },
       },
       orderBy: { sortOrder: 'asc' },
@@ -69,45 +92,21 @@ export class SiteGroupService {
           name: '본사',
           groups: groups
             .filter((g) => g.division === 'HQ')
-            .map((g) => ({
-              id: g.id,
-              name: g.name,
-              markerShape: g.markerShape,
-              markerColor: g.markerColor,
-              description: g.description,
-              sortOrder: g.sortOrder,
-              sites: g.sites,
-            })),
+            .map((g) => this.mapGroup(g)),
         },
         {
           code: 'YEONGNAM',
           name: '영남지사',
           groups: groups
             .filter((g) => g.division === 'YEONGNAM')
-            .map((g) => ({
-              id: g.id,
-              name: g.name,
-              markerShape: g.markerShape,
-              markerColor: g.markerColor,
-              description: g.description,
-              sortOrder: g.sortOrder,
-              sites: g.sites,
-            })),
+            .map((g) => this.mapGroup(g)),
         },
         {
           code: 'CONSIGNMENT',
           name: '위탁사업장',
           groups: groups
             .filter((g) => g.division === 'CONSIGNMENT')
-            .map((g) => ({
-              id: g.id,
-              name: g.name,
-              markerShape: g.markerShape,
-              markerColor: g.markerColor,
-              description: g.description,
-              sortOrder: g.sortOrder,
-              sites: g.sites,
-            })),
+            .map((g) => this.mapGroup(g)),
         },
       ],
     };
@@ -361,6 +360,28 @@ export class SiteGroupService {
     if (user.role === 'YEONGNAM_ADMIN' && group.division !== 'YEONGNAM') {
       throw new Error('권한이 없습니다');
     }
+  }
+
+  /**
+   * Map group data with staff info
+   */
+  private mapGroup(g: any) {
+    return {
+      id: g.id,
+      name: g.name,
+      markerShape: g.markerShape,
+      markerColor: g.markerColor,
+      description: g.description,
+      sortOrder: g.sortOrder,
+      // 그룹에 배정된 담당자
+      staff: (g.staffSiteGroups || []).map((ssg: any) => ssg.staff?.user).filter(Boolean),
+      sites: (g.sites || []).map((site: any) => ({
+        ...site,
+        // 사업장에 배정된 담당자
+        staff: (site.staffSites || []).map((ss: any) => ss.staff?.user).filter(Boolean),
+        staffSites: undefined, // 원본 제거
+      })),
+    };
   }
 
   /**

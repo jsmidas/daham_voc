@@ -279,14 +279,27 @@ export default function SiteFormPage() {
             />
           </Form.Item>
 
-          {/* 사업장명 */}
-          <Form.Item
-            label="사업장명"
-            name="name"
-            rules={[{ required: true, message: '사업장명을 입력하세요' }]}
-          >
-            <Input placeholder="예: 삼성전자 본사" />
-          </Form.Item>
+          {/* 사업장명, 사업장코드 */}
+          <Row gutter={16}>
+            <Col xs={24} sm={16}>
+              <Form.Item
+                label="사업장명"
+                name="name"
+                rules={[{ required: true, message: '사업장명을 입력하세요' }]}
+              >
+                <Input placeholder="예: 삼성전자 본사" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item
+                label="사업장 코드"
+                name="siteCode"
+                tooltip="고객 회원가입 시 사용하는 코드입니다. 영문2자리+숫자3자리 (예: DH001). 비워두면 자동 생성됩니다."
+              >
+                <Input placeholder="예: DH001" maxLength={5} style={{ textTransform: 'uppercase' }} disabled={isEditMode} />
+              </Form.Item>
+            </Col>
+          </Row>
 
           {/* 유형, 부문, 거래상태 */}
           <Row gutter={16}>

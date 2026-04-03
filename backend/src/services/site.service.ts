@@ -304,9 +304,24 @@ export class SiteService {
       throw new Error(`이미 동일한 이름의 사업장이 존재합니다: ${data.name}`);
     }
 
+    // 사업장 코드 생성 (siteCode가 없으면 자동 생성)
+    let siteCode = (data as any).siteCode;
+    if (!siteCode) {
+      const letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+      const existing = await prisma.site.findMany({ where: { siteCode: { not: null } }, select: { siteCode: true } });
+      const usedCodes = new Set(existing.map(s => s.siteCode));
+      do {
+        const l1 = letters[Math.floor(Math.random() * letters.length)];
+        const l2 = letters[Math.floor(Math.random() * letters.length)];
+        const num = String(Math.floor(Math.random() * 1000)).padStart(3, '0');
+        siteCode = l1 + l2 + num;
+      } while (usedCodes.has(siteCode));
+    }
+
     // Create site
     const site = await prisma.site.create({
       data: {
+        siteCode,
         name: data.name,
         type: data.type,
         division: data.division,

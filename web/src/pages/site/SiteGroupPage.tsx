@@ -25,6 +25,7 @@ import {
   ReloadOutlined,
   ShopOutlined,
   BankOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import type { DataNode } from 'antd/es/tree';
 import { useNavigate } from 'react-router-dom';
@@ -123,6 +124,12 @@ export default function SiteGroupPage() {
                   <span style={{ color: '#999', fontSize: '12px' }}>
                     ({group.sites.length}개 사업장)
                   </span>
+                  {(group as any).staff?.length > 0 && (
+                    <span style={{ fontSize: '12px' }}>
+                      <UserOutlined style={{ color: '#1890ff', marginRight: 2 }} />
+                      {(group as any).staff.map((s: any) => s.name).join(', ')}
+                    </span>
+                  )}
                   <Button
                     type="link"
                     size="small"
@@ -157,14 +164,28 @@ export default function SiteGroupPage() {
               ),
               key: `group-${group.id}`,
               selectable: false,
-              children: group.sites.map((site) => ({
+              children: group.sites.map((site: any) => ({
                 title: (
                   <Space>
                     <ShopOutlined />
+                    {site.siteCode && (
+                      <Tag color="default" style={{ fontSize: 11, marginRight: 0 }}>{site.siteCode}</Tag>
+                    )}
                     <span>{site.name}</span>
                     <span style={{ color: '#999', fontSize: '12px' }}>
                       ({site.address})
                     </span>
+                    {site.staff?.length > 0 && (
+                      <span style={{ fontSize: '12px' }}>
+                        <UserOutlined style={{ color: '#52c41a', marginRight: 2 }} />
+                        {site.staff.map((s: any) => s.name).join(', ')}
+                      </span>
+                    )}
+                    {site.contactPerson1 && (
+                      <span style={{ fontSize: '12px', color: '#fa8c16' }}>
+                        📞 {site.contactPerson1}
+                      </span>
+                    )}
                   </Space>
                 ),
                 key: `site-${site.id}`,

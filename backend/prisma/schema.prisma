@@ -118,6 +118,7 @@ model SiteGroup {
 
 model Site {
   id                 String              @id @default(uuid())
+  siteCode           String?             @unique
   name               String
   type               SiteType
   division           Division
