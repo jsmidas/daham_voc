@@ -555,16 +555,9 @@ export default function DeliveryRouteDetailPage() {
             <Select
               placeholder="사업장 선택"
               showSearch
-              filterOption={(input, option) =>
-                ((option?.children as unknown) as string).toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              {availableSites?.map((site: any) => (
-                <Select.Option key={site.id} value={site.id}>
-                  {site.name}
-                </Select.Option>
-              ))}
-            </Select>
+              optionFilterProp="label"
+              options={availableSites?.map((site: any) => ({ value: site.id, label: site.name }))}
+            />
           </Form.Item>
 
           <Form.Item
@@ -605,17 +598,13 @@ export default function DeliveryRouteDetailPage() {
               mode="multiple"
               placeholder="배송 기사를 선택하세요"
               showSearch
-              filterOption={(input, option) =>
-                ((option?.children as unknown) as string)?.toLowerCase().includes(input.toLowerCase())
-              }
+              optionFilterProp="label"
               allowClear
-            >
-              {driversData?.items?.map((staff: any) => (
-                <Select.Option key={staff.user.id} value={staff.user.id}>
-                  {staff.user.name} ({staff.user.phone})
-                </Select.Option>
-              ))}
-            </Select>
+              options={driversData?.items?.map((staff: any) => ({
+                value: staff.user.id,
+                label: `${staff.user.name} (${staff.user.phone})`,
+              }))}
+            />
           </Form.Item>
         </Form>
       </Modal>
