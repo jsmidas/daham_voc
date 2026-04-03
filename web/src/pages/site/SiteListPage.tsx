@@ -144,6 +144,13 @@ export default function SiteListPage() {
 
   const columns = [
     {
+      title: '코드',
+      dataIndex: 'siteCode',
+      key: 'siteCode',
+      width: 80,
+      render: (code: string) => code ? <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{code}</span> : '-',
+    },
+    {
       title: '사업장명',
       dataIndex: 'name',
       key: 'name',
