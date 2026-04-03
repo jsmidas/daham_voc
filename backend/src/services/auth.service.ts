@@ -146,9 +146,7 @@ export class AuthService {
     const individualSites = user.staff?.staffSites?.map(ss => ss.site) || [];
     const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
 
-    // 그룹 사이트 확장 + 관리자 전체 사업장 조회를 병렬로
-    const adminRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN'];
-    const isAdmin = adminRoles.includes(user.role);
+    // 그룹 소속 사이트 확장 (웹에서 배정한 사업장만 반환)
     const groupIds = assignedSiteGroups.map(g => g.id);
 
     const siteSelect = {
@@ -159,14 +157,7 @@ export class AuthService {
 
     let assignedSites: any[];
 
-    if (isAdmin) {
-      // 관리자: 전체 사업장 조회 (한 번의 쿼리로)
-      assignedSites = await prisma.site.findMany({
-        where: { isActive: true, deletedAt: null },
-        select: siteSelect,
-        orderBy: { name: 'asc' },
-      });
-    } else if (groupIds.length > 0) {
+    if (groupIds.length > 0) {
       // 그룹 소속 사이트 확장
       const groupSites = await prisma.site.findMany({
         where: { groupId: { in: groupIds }, deletedAt: null },
@@ -179,6 +170,23 @@ export class AuthService {
       assignedSites = individualSites;
     }
 
+    // 웹에서 지정한 "부서(사업장)" 기반 기본 사업장 조회
+    const departmentName = user.staff?.department;
+    let departmentSite: any = null;
+    if (departmentName) {
+      departmentSite = await prisma.site.findFirst({
+        where: { name: departmentName, deletedAt: null },
+        select: siteSelect,
+      });
+      // 부서 사업장이 assignedSites에 없으면 추가
+      if (departmentSite && !assignedSites.some((s: any) => s.id === departmentSite.id)) {
+        assignedSites.unshift(departmentSite);
+      }
+    }
+
+    // 기본 사업장: 부서 사업장 우선, 없으면 첫 번째 배정 사업장
+    const primarySiteId = departmentSite?.id || assignedSites[0]?.id || null;
+
     const { password: _, staff, ...userWithoutPassword } = user;
 
     return {
@@ -186,7 +194,7 @@ export class AuthService {
         ...userWithoutPassword,
         staffSites: assignedSites,
         staffSiteGroups: assignedSiteGroups,
-        siteId: assignedSites[0]?.id || null,
+        siteId: primarySiteId,
       } as any,
       token,
     };
