@@ -116,14 +116,6 @@ const DraggableRow: React.FC<DraggableRowProps> = ({ index, moveRow, record, cla
   );
 };
 
-// 사업장 목록 조회 함수
-async function getSites(params?: { division?: string }) {
-  const response: any = await apiClient.get('/sites', { params });
-  // axios interceptor가 이미 response.data를 반환하므로
-  // response는 { success: true, data: { sites: [...] } } 형태임
-  return response;
-}
-
 export default function DeliveryRouteDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -149,15 +141,6 @@ export default function DeliveryRouteDetailPage() {
       setStops([...route.stops].sort((a, b) => a.stopNumber - b.stopNumber));
     }
   }, [route]);
-
-  // 전체 사업장 목록 조회 (같은 division)
-  const { data: allSitesData } = useQuery({
-    queryKey: ['sites', route?.division],
-    queryFn: () => getSites({ division: route?.division }),
-    enabled: !!route?.division,
-  });
-
-  const allSites = allSitesData?.data?.sites;
 
   // 배송기사 목록 조회
   const { data: driversData } = useQuery({
