@@ -242,17 +242,17 @@ export default function DeliveryRouteDetailPage() {
   };
 
   // 어떤 코스에도 활성 배정이 없는 사업장 조회
-  const { data: unassignedSitesData } = useQuery({
-    queryKey: ['unassigned-sites'],
+  // 전체 활성 사업장 조회 (코스에 이미 포함된 것 제외)
+  const { data: allSitesData } = useQuery({
+    queryKey: ['all-active-sites'],
     queryFn: async () => {
-      const res: any = await apiClient.get('/sites/unassigned');
+      const res: any = await apiClient.get('/sites', { params: { isActive: true, limit: 500 } });
       return res?.data || res;
     },
     enabled: !!route,
   });
 
-  // 코스에 포함되지 않은 사업장: 미배정 사업장 중 현재 코스에도 없는 것
-  const availableSites = unassignedSitesData?.sites?.filter(
+  const availableSites = (allSitesData?.sites || []).filter(
     (site: any) => !route?.stops.some((stop: any) => stop.site.id === site.id)
   );
 
