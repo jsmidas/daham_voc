@@ -184,7 +184,7 @@ export default function SiteListPage() {
     {
       title: '식단유형',
       key: 'menuTypes',
-      width: 150,
+      width: 188,
       render: (_: any, record: any) => {
         const types = record.siteMenuTypes || [];
         return types.length > 0
@@ -199,7 +199,7 @@ export default function SiteListPage() {
     {
       title: '식수메뉴',
       key: 'mealMenus',
-      width: 120,
+      width: 158,
       render: (_: any, record: any) => {
         const menus = record.siteMealMenus || [];
         return menus.length > 0
@@ -214,7 +214,7 @@ export default function SiteListPage() {
     {
       title: '단가',
       key: 'price',
-      width: 80,
+      width: 118,
       render: (_: any, record: any) => {
         const types = record.siteMenuTypes || [];
         if (types.length === 0) return <span style={{ color: '#ccc' }}>-</span>;
