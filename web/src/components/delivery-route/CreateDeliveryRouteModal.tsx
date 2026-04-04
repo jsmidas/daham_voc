@@ -53,6 +53,7 @@ export default function CreateDeliveryRouteModal({ open, onClose, onSuccess }: P
         layout="vertical"
         initialValues={{
           color: '#1890ff',
+          scheduleType: 'WEEKDAY',
         }}
       >
         <Form.Item
@@ -93,7 +94,6 @@ export default function CreateDeliveryRouteModal({ open, onClose, onSuccess }: P
           label="운영 유형"
           name="scheduleType"
           rules={[{ required: true, message: '운영 유형을 선택해주세요' }]}
-          initialValue="WEEKDAY"
         >
           <Select placeholder="운영 유형 선택">
             <Select.Option value="WEEKDAY">평일</Select.Option>
