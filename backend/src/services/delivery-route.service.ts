@@ -49,6 +49,10 @@ export class DeliveryRouteService {
       include: {
         routeStops: {
           where: { isActive: true },
+          include: {
+            site: { select: { id: true, name: true, address: true } },
+          },
+          orderBy: { stopNumber: 'asc' },
         },
         assignments: {
           where: { isActive: true },
@@ -78,6 +82,8 @@ export class DeliveryRouteService {
       updatedAt: route.updatedAt,
       stopsCount: route.routeStops.length,
       assignedDrivers: route.assignments.map((a) => a.driver),
+      scheduleType: (route as any).scheduleType,
+      routeStops: route.routeStops,
     }));
   }
 
