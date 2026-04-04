@@ -32,8 +32,10 @@ model User {
   mealCounts          MealCount[]
   mealPhotos          MealPhoto[]
   staff               Staff?
-  deliveryAssignments DeliveryAssignment[]
-  deliveryLogs        DeliveryLog[]
+  deliveryAssignments  DeliveryAssignment[]
+  deliveryLogs         DeliveryLog[]
+  deliverySchedules    DeliverySchedule[]       @relation("deliverySchedules")
+  dailyDriverOverrides DailyDriverOverride[]    @relation("dailyDriverOverrides")
   contractAssignments ContractAssignment[]
   workSchedules       UserWorkSchedule[]
 
@@ -448,9 +450,11 @@ model DeliveryRoute {
   updatedAt    DateTime             @updatedAt
   deletedAt    DateTime?
   markerShape  MarkerShape          @default(CIRCLE)
-  assignments  DeliveryAssignment[]
-  deliveryLogs DeliveryLog[]
-  routeStops   DeliveryRouteStop[]
+  assignments          DeliveryAssignment[]
+  deliveryLogs         DeliveryLog[]
+  routeStops           DeliveryRouteStop[]
+  deliverySchedules    DeliverySchedule[]
+  dailyDriverOverrides DailyDriverOverride[]
 
   @@index([division])
   @@index([isActive])
@@ -492,6 +496,44 @@ model DeliveryAssignment {
   @@index([driverId])
   @@index([routeId])
   @@map("delivery_assignments")
+}
+
+/// 요일별 기본 배송 스케줄 (평일/토/일 코스 템플릿)
+model DeliverySchedule {
+  id        String        @id @default(uuid())
+  routeId   String
+  driverId  String
+  dayOfWeek Int           // 0=일, 1=월, 2=화, ..., 6=토
+  mealType  MealType      // BREAKFAST, LUNCH, DINNER, SUPPER
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  driver    User          @relation("deliverySchedules", fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, dayOfWeek, mealType])
+  @@index([driverId])
+  @@index([routeId])
+  @@index([dayOfWeek])
+  @@map("delivery_schedules")
+}
+
+/// 특정 날짜 배송 기사 오버라이드 (급한 변경 시)
+model DailyDriverOverride {
+  id        String        @id @default(uuid())
+  routeId   String
+  driverId  String
+  date      DateTime      @db.Date
+  mealType  MealType
+  note      String?       // 변경 사유
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  driver    User          @relation("dailyDriverOverrides", fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([routeId, date, mealType])
+  @@index([driverId])
+  @@index([date])
+  @@map("daily_driver_overrides")
 }
 
 model DeliveryLog {

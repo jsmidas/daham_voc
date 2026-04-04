@@ -14,6 +14,7 @@ import mealCountRoutes from './meal-count.routes';
 import mealMenuRoutes from './meal-menu.routes';
 import deliveryRouteRoutes from './delivery-route.routes';
 import deliveryLogRoutes from './delivery-log.routes';
+import deliveryScheduleRoutes from './delivery-schedule.routes';
 import contractRoutes from './contract.routes';
 import holidayRoutes from './holiday.routes';
 
@@ -62,6 +63,7 @@ router.use('/meal-counts', mealCountRoutes);
 router.use('/meal-menus', mealMenuRoutes);
 router.use('/delivery-routes', deliveryRouteRoutes);
 router.use('/delivery-logs', deliveryLogRoutes);
+router.use('/delivery-schedules', deliveryScheduleRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/holidays', holidayRoutes);
 
