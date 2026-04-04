@@ -1,6 +1,6 @@
 /**
  * 배송 스케줄 관리 페이지
- * - 요일별(평일/토/일) 기본 기사 배정
+ * - 요일별(평일/토/일) 기본 기사 배정 (코스당 1명)
  * - 특정 날짜 오버라이드 (급한 기사 변경)
  */
 
@@ -11,7 +11,6 @@ import {
   getSchedules,
   upsertSchedule,
   deleteSchedule,
-  getOverrides,
   upsertOverride,
   deleteOverride,
   getAssignmentsForDate,
@@ -20,12 +19,8 @@ import { getDeliveryRoutes } from '@/api/delivery-route.api';
 import { getStaffList } from '@/api/staff.api';
 import dayjs from 'dayjs';
 
-const MEAL_TYPES = [
-  { value: 'BREAKFAST', label: '조식' },
-  { value: 'LUNCH', label: '중식' },
-  { value: 'DINNER', label: '석식' },
-  { value: 'SUPPER', label: '야식' },
-];
+// 끼니는 내부적으로 LUNCH 고정 (코스 = 1기사)
+const DEFAULT_MEAL = 'LUNCH';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 const WEEKDAY_GROUPS = [
@@ -36,10 +31,10 @@ const WEEKDAY_GROUPS = [
 
 export default function DeliverySchedulePage() {
   const queryClient = useQueryClient();
-  const [selectedDayGroup, setSelectedDayGroup] = useState(0); // 0=평일, 1=토, 2=일
+  const [selectedDayGroup, setSelectedDayGroup] = useState(0);
   const [overrideDate, setOverrideDate] = useState<dayjs.Dayjs | null>(dayjs());
   const [overrideModal, setOverrideModal] = useState(false);
-  const [overrideForm, setOverrideForm] = useState({ routeId: '', driverId: '', mealType: '', note: '' });
+  const [overrideForm, setOverrideForm] = useState({ routeId: '', driverId: '', note: '' });
 
   // 데이터 조회
   const { data: schedulesData } = useQuery({
@@ -55,12 +50,6 @@ export default function DeliverySchedulePage() {
   const { data: driversData } = useQuery({
     queryKey: ['delivery-drivers'],
     queryFn: () => getStaffList({ role: 'DELIVERY_DRIVER', limit: 100 }),
-  });
-
-  const { data: _overridesData } = useQuery({
-    queryKey: ['delivery-overrides', overrideDate?.format('YYYY-MM-DD')],
-    queryFn: () => getOverrides({ date: overrideDate?.format('YYYY-MM-DD') }),
-    enabled: !!overrideDate,
   });
 
   const { data: dateAssignments } = useQuery({
@@ -79,7 +68,8 @@ export default function DeliverySchedulePage() {
     mutationFn: upsertSchedule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-schedules'] });
-      message.success('스케줄이 저장되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['delivery-routes'] });
+      message.success('기사가 배정되었습니다');
     },
     onError: (e: any) => message.error(e.message || '저장 실패'),
   });
@@ -88,7 +78,8 @@ export default function DeliverySchedulePage() {
     mutationFn: deleteSchedule,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-schedules'] });
-      message.success('삭제되었습니다');
+      queryClient.invalidateQueries({ queryKey: ['delivery-routes'] });
+      message.success('배정이 해제되었습니다');
     },
   });
 
@@ -108,11 +99,10 @@ export default function DeliverySchedulePage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['delivery-overrides'] });
       queryClient.invalidateQueries({ queryKey: ['date-assignments'] });
-      message.success('오버라이드가 삭제되었습니다');
+      message.success('원래 배정으로 복구되었습니다');
     },
   });
 
-  // 선택된 요일 그룹의 대표 요일 및 scheduleType
   const selectedDays = WEEKDAY_GROUPS[selectedDayGroup].days;
   const selectedScheduleType = WEEKDAY_GROUPS[selectedDayGroup].scheduleType;
 
@@ -122,30 +112,31 @@ export default function DeliverySchedulePage() {
     return allRoutes.filter((r: any) => r.scheduleType === selectedScheduleType);
   }, [routes, selectedScheduleType]);
 
-  // 스케줄 데이터를 코스 x 끼니 격자로 변환
-  const scheduleGrid = useMemo(() => {
-    const grid: Record<string, Record<string, any>> = {};
+  // 코스 → 배정 기사 매핑 (코스당 1명)
+  const scheduleMap = useMemo(() => {
+    const map: Record<string, any> = {};
     (Array.isArray(schedules) ? schedules : []).forEach((s: any) => {
       if (selectedDays.includes(s.dayOfWeek)) {
-        if (!grid[s.routeId]) grid[s.routeId] = {};
-        grid[s.routeId][s.mealType] = s;
+        // 코스당 하나만 (먼저 나온 것 우선)
+        if (!map[s.routeId]) {
+          map[s.routeId] = s;
+        }
       }
     });
-    return grid;
+    return map;
   }, [schedules, selectedDays]);
 
-  // 기사 배정 변경
-  const handleDriverChange = (routeId: string, mealType: string, driverId: string) => {
-    // 평일이면 월~금 모두 동일하게 설정
+  // 기사 배정
+  const handleDriverChange = (routeId: string, driverId: string) => {
     for (const day of selectedDays) {
-      upsertMutation.mutate({ routeId, driverId, dayOfWeek: day, mealType });
+      upsertMutation.mutate({ routeId, driverId, dayOfWeek: day, mealType: DEFAULT_MEAL });
     }
   };
 
-  // 스케줄 삭제
-  const handleDeleteSchedule = (routeId: string, mealType: string) => {
+  // 배정 해제
+  const handleDeleteSchedule = (routeId: string) => {
     const items = (Array.isArray(schedules) ? schedules : []).filter(
-      (s: any) => s.routeId === routeId && s.mealType === mealType && selectedDays.includes(s.dayOfWeek)
+      (s: any) => s.routeId === routeId && selectedDays.includes(s.dayOfWeek)
     );
     items.forEach((item: any) => deleteMutation.mutate(item.id));
   };
@@ -156,13 +147,12 @@ export default function DeliverySchedulePage() {
     label: `${d.user?.name || d.name} (${d.user?.phone || d.phone || ''})`,
   }));
 
-  // 코스 테이블 컬럼
+  // 코스 테이블 컬럼 (코스 + 담당기사)
   const columns = [
     {
       title: '코스',
-      dataIndex: 'name',
       key: 'name',
-      width: 150,
+      width: 250,
       render: (_: any, record: any) => (
         <Space>
           <Tag color={record.color}>{record.code}</Tag>
@@ -173,12 +163,19 @@ export default function DeliverySchedulePage() {
         </Space>
       ),
     },
-    ...MEAL_TYPES.map((meal) => ({
-      title: meal.label,
-      key: meal.value,
-      width: 200,
+    {
+      title: '사업장 수',
+      key: 'stopsCount',
+      width: 90,
+      align: 'center' as const,
+      render: (_: any, record: any) => record.stopsCount || 0,
+    },
+    {
+      title: '담당 기사',
+      key: 'driver',
+      width: 280,
       render: (_: any, record: any) => {
-        const schedule = scheduleGrid[record.id]?.[meal.value];
+        const schedule = scheduleMap[record.id];
         return (
           <Select
             style={{ width: '100%' }}
@@ -187,9 +184,9 @@ export default function DeliverySchedulePage() {
             value={schedule?.driverId || undefined}
             onChange={(value) => {
               if (value) {
-                handleDriverChange(record.id, meal.value, value);
+                handleDriverChange(record.id, value);
               } else {
-                handleDeleteSchedule(record.id, meal.value);
+                handleDeleteSchedule(record.id);
               }
             }}
             options={driverOptions}
@@ -197,10 +194,10 @@ export default function DeliverySchedulePage() {
           />
         );
       },
-    })),
+    },
   ];
 
-  // 오버라이드 테이블 컬럼
+  // 날짜별 배정 현황 (오버라이드 탭)
   const overrideColumns = [
     {
       title: '코스',
@@ -212,16 +209,21 @@ export default function DeliverySchedulePage() {
         </Space>
       ),
     },
-    { title: '끼니', dataIndex: 'mealType', render: (v: string) => MEAL_TYPES.find(m => m.value === v)?.label || v },
     { title: '배정 기사', key: 'driver', render: (_: any, r: any) => r.driver?.name },
     { title: '변경 사유', dataIndex: 'note' },
-    { title: '출처', key: 'source', render: (_: any, r: any) => r.source === 'override' ? <Tag color="red">변경</Tag> : <Tag color="blue">기본</Tag> },
+    {
+      title: '출처',
+      key: 'source',
+      width: 80,
+      render: (_: any, r: any) =>
+        r.source === 'override' ? <Tag color="red">변경</Tag> : <Tag color="blue">기본</Tag>,
+    },
     {
       title: '',
       key: 'action',
       width: 80,
       render: (_: any, r: any) => r.source === 'override' ? (
-        <Button size="small" danger onClick={() => deleteOverrideMutation.mutate(r.id)}>취소</Button>
+        <Button size="small" danger onClick={() => deleteOverrideMutation.mutate(r.id)}>원복</Button>
       ) : null,
     },
   ];
@@ -250,7 +252,7 @@ export default function DeliverySchedulePage() {
                     ))}
                   </Space>
                   <p style={{ color: '#999', marginTop: 8, fontSize: 13 }}>
-                    각 코스의 끼니별 기본 담당 기사를 설정합니다. 평일은 월~금 동일하게 적용됩니다.
+                    각 코스의 담당 기사를 설정합니다. 평일은 월~금 동일하게 적용됩니다.
                   </p>
                 </div>
 
@@ -260,7 +262,6 @@ export default function DeliverySchedulePage() {
                   rowKey="id"
                   pagination={false}
                   size="small"
-                  scroll={{ x: 900 }}
                 />
               </Card>
             ),
@@ -280,7 +281,7 @@ export default function DeliverySchedulePage() {
                   </Col>
                   <Col>
                     <Button type="primary" onClick={() => {
-                      setOverrideForm({ routeId: '', driverId: '', mealType: '', note: '' });
+                      setOverrideForm({ routeId: '', driverId: '', note: '' });
                       setOverrideModal(true);
                     }}>
                       배정 변경 추가
@@ -314,15 +315,15 @@ export default function DeliverySchedulePage() {
         open={overrideModal}
         onCancel={() => setOverrideModal(false)}
         onOk={() => {
-          if (!overrideForm.routeId || !overrideForm.driverId || !overrideForm.mealType || !overrideDate) {
-            message.error('코스, 끼니, 기사를 모두 선택하세요');
+          if (!overrideForm.routeId || !overrideForm.driverId || !overrideDate) {
+            message.error('코스와 기사를 모두 선택하세요');
             return;
           }
           overrideMutation.mutate({
             routeId: overrideForm.routeId,
             driverId: overrideForm.driverId,
             date: overrideDate.format('YYYY-MM-DD'),
-            mealType: overrideForm.mealType,
+            mealType: DEFAULT_MEAL,
             note: overrideForm.note || undefined,
           });
         }}
@@ -344,16 +345,6 @@ export default function DeliverySchedulePage() {
                 value: r.id,
                 label: `[${r.code}] ${r.name} (${r.division === 'HQ' ? '본사' : '영남'})`,
               }))}
-            />
-          </div>
-          <div>
-            <label>끼니</label>
-            <Select
-              style={{ width: '100%' }}
-              placeholder="끼니 선택"
-              value={overrideForm.mealType || undefined}
-              onChange={(v) => setOverrideForm({ ...overrideForm, mealType: v })}
-              options={MEAL_TYPES}
             />
           </div>
           <div>
