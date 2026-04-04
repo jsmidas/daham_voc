@@ -372,7 +372,7 @@ export default function SiteGroupPage() {
         ) : (
           <Tree
             showLine
-            defaultExpandAll
+            defaultExpandedKeys={['root']}
             draggable
             treeData={convertToTreeData()}
             style={{ fontSize: '14px' }}
