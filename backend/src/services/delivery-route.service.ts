@@ -66,25 +66,53 @@ export class DeliveryRouteService {
             },
           },
         },
+        deliverySchedules: {
+          include: {
+            driver: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
+        },
       },
       orderBy: [{ division: 'asc' }, { code: 'asc' }],
     });
 
-    return routes.map((route) => ({
-      id: route.id,
-      name: route.name,
-      code: route.code,
-      division: route.division,
-      description: route.description || undefined,
-      color: route.color,
-      isActive: route.isActive,
-      createdAt: route.createdAt,
-      updatedAt: route.updatedAt,
-      stopsCount: route.routeStops.length,
-      assignedDrivers: route.assignments.map((a) => a.driver),
-      scheduleType: (route as any).scheduleType,
-      routeStops: route.routeStops,
-    }));
+    return routes.map((route) => {
+      // 스케줄에 배정된 기사 (중복 제거)
+      const scheduleDrivers = (route as any).deliverySchedules || [];
+      const driverMap = new Map<string, { id: string; name: string; phone: string }>();
+      for (const s of scheduleDrivers) {
+        if (s.driver && !driverMap.has(s.driver.id)) {
+          driverMap.set(s.driver.id, { ...s.driver, phone: s.driver.phone || '' });
+        }
+      }
+      // 기존 정적 배정 기사도 포함
+      for (const a of route.assignments) {
+        if (a.driver && !driverMap.has(a.driver.id)) {
+          driverMap.set(a.driver.id, { ...a.driver, phone: a.driver.phone || '' });
+        }
+      }
+
+      return {
+        id: route.id,
+        name: route.name,
+        code: route.code,
+        division: route.division,
+        description: route.description || undefined,
+        color: route.color,
+        isActive: route.isActive,
+        createdAt: route.createdAt,
+        updatedAt: route.updatedAt,
+        stopsCount: route.routeStops.length,
+        assignedDrivers: Array.from(driverMap.values()),
+        scheduleType: (route as any).scheduleType,
+        routeStops: route.routeStops,
+      };
+    });
   }
 
   /**
