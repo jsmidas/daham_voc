@@ -5,7 +5,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table, Checkbox } from 'antd';
-import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import {
@@ -806,11 +806,15 @@ export default function MealPhotoManagementPage() {
             <label style={{ display: 'block', marginBottom: 8, fontWeight: 'bold' }}>
               날짜 선택
             </label>
-            <DatePicker
-              value={selectedDate}
-              onChange={(date) => date && setSelectedDate(date)}
-              style={{ width: '100%' }}
-            />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Button icon={<LeftOutlined />} size="small" onClick={() => setSelectedDate(selectedDate.subtract(1, 'day'))} />
+              <DatePicker
+                value={selectedDate}
+                onChange={(date) => date && setSelectedDate(date)}
+                style={{ flex: 1 }}
+              />
+              <Button icon={<RightOutlined />} size="small" onClick={() => setSelectedDate(selectedDate.add(1, 'day'))} />
+            </div>
           </div>
 
           <div style={{ flex: 1, minWidth: 200 }}>

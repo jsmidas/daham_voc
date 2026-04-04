@@ -253,7 +253,7 @@ export default function MenuTypePage() {
           rowKey="id"
           loading={isLoading}
           pagination={{
-            pageSize: 10,
+            pageSize: 15,
             showTotal: (total) => `총 ${total}개`,
           }}
           expandable={{

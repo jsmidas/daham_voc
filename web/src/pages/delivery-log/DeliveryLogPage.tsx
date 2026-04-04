@@ -24,6 +24,8 @@ import {
   ClockCircleOutlined,
   ExclamationCircleOutlined,
   CarOutlined,
+  LeftOutlined,
+  RightOutlined,
 } from '@ant-design/icons';
 import dayjs, { Dayjs } from 'dayjs';
 import { getDeliveryLogs, deleteDeliveryLog } from '../../api/delivery-log.api';
@@ -341,8 +343,9 @@ export default function DeliveryLogPage() {
         {/* 필터 */}
         <Card>
           <Space wrap size="middle">
-            <div>
-              <span style={{ marginRight: 8 }}>날짜:</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ marginRight: 4 }}>날짜:</span>
+              <Button icon={<LeftOutlined />} size="small" onClick={() => setDateRange([dateRange[0].subtract(1, 'day'), dateRange[1].subtract(1, 'day')])} />
               <DatePicker
                 value={dateRange[0]}
                 onChange={(date) => {
@@ -350,9 +353,10 @@ export default function DeliveryLogPage() {
                     setDateRange([date, date]);
                   }
                 }}
-                style={{ width: 200 }}
+                style={{ width: 160 }}
                 placeholder="날짜 선택"
               />
+              <Button icon={<RightOutlined />} size="small" onClick={() => setDateRange([dateRange[0].add(1, 'day'), dateRange[1].add(1, 'day')])} />
             </div>
 
             <div>
