@@ -236,7 +236,7 @@ export class AuthService {
   }): Promise<LoginResponse> {
     // 사업장 코드 확인
     const site = await prisma.site.findFirst({
-      where: { siteCode: data.siteCode, isActive: true, deletedAt: null },
+      where: { siteCode: { equals: data.siteCode, mode: 'insensitive' }, isActive: true, deletedAt: null },
       select: { id: true, name: true, type: true, division: true },
     });
 
