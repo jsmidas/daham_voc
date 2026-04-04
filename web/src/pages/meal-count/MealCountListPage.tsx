@@ -23,6 +23,14 @@ import * as XLSX from 'xlsx';
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
+const DIVISION_LABELS: Record<string, string> = {
+  HQ: '본사',
+  YEONGNAM: '영남지사',
+  CONSIGNMENT: '위탁',
+};
+
+const getDivisionLabel = (div: string) => DIVISION_LABELS[div] || div;
+
 const MEAL_TYPES = [
   { label: '조식', value: 'BREAKFAST' },
   { label: '중식', value: 'LUNCH' },
@@ -455,7 +463,7 @@ export default function MealCountListPage() {
       const excelData = allSitesTableData.map((row: any) => {
         const rowData: any = {
           '사업장': row.siteName,
-          '지사': row.division,
+          '부문': getDivisionLabel(row.division),
           '유형': row.type,
         };
 
@@ -670,7 +678,7 @@ export default function MealCountListPage() {
         <div>
           <div style={{ fontWeight: 600 }}>{text}</div>
           <div style={{ fontSize: 11, color: '#999' }}>
-            {record.division} | {record.type}
+            {getDivisionLabel(record.division)} | {record.type}
           </div>
         </div>
       ),
@@ -810,7 +818,7 @@ export default function MealCountListPage() {
       <Card style={{ marginBottom: 24 }}>
         <Space size="large" style={{ width: '100%', flexWrap: 'wrap' }}>
           <div>
-            <div style={{ marginBottom: 8, fontWeight: 500 }}>지사</div>
+            <div style={{ marginBottom: 8, fontWeight: 500 }}>부문</div>
             <Select
               placeholder="전체"
               style={{ width: 120 }}
@@ -818,8 +826,9 @@ export default function MealCountListPage() {
               onChange={setFilterDivision}
               options={[
                 { label: '전체', value: 'ALL' },
-                { label: 'HQ', value: 'HQ' },
-                { label: '영남', value: 'YEONGNAM' },
+                { label: '본사', value: 'HQ' },
+                { label: '영남지사', value: 'YEONGNAM' },
+                { label: '위탁', value: 'CONSIGNMENT' },
               ]}
             />
           </div>
@@ -877,7 +886,7 @@ export default function MealCountListPage() {
                 ...filteredSites.map((site: any) => {
                   const hasInput = todayAllMealCounts?.[site.id] || false;
                   return {
-                    label: `${hasInput ? '✅' : '⏳'} ${site.name} (${site.division})`,
+                    label: `${hasInput ? '✅' : '⏳'} ${site.name} (${getDivisionLabel(site.division)})`,
                     value: site.id,
                   };
                 }),
