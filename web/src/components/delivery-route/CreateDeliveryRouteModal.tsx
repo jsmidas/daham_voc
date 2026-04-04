@@ -72,7 +72,7 @@ export default function CreateDeliveryRouteModal({ open, onClose, onSuccess }: P
           name="code"
           rules={[
             { required: true, message: '코스 코드를 입력해주세요' },
-            { pattern: /^[A-Z0-9]+$/, message: '영문 대문자와 숫자만 입력 가능합니다' },
+            { pattern: /^[A-Za-z0-9_]+$/, message: '영문, 숫자, 언더스코어만 입력 가능합니다' },
           ]}
         >
           <Input placeholder="예: A, B, C" maxLength={10} style={{ textTransform: 'uppercase' }} />

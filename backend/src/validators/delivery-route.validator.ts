@@ -9,7 +9,7 @@ export const createDeliveryRouteSchema = Joi.object({
     'string.max': '코스 이름은 최대 50자까지 입력 가능합니다',
     'any.required': '코스 이름은 필수 항목입니다',
   }),
-  code: Joi.string().min(1).max(10).required().messages({
+  code: Joi.string().min(1).max(20).required().messages({
     'string.min': '코스 코드는 최소 1자 이상이어야 합니다',
     'string.max': '코스 코드는 최대 10자까지 입력 가능합니다',
     'any.required': '코스 코드는 필수 항목입니다',
