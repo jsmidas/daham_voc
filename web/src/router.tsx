@@ -43,6 +43,7 @@ const DeliverySchedulePage = lazy(() => import('@/pages/delivery-route/DeliveryS
 const DeliveryLogPage = lazy(() => import('@/pages/delivery-log/DeliveryLogPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const ContractListPage = lazy(() => import('@/pages/contract/ContractListPage'));
+const CustomerListPage = lazy(() => import('@/pages/customer/CustomerListPage'));
 
 // Lazy wrapper
 const L = ({ children }: { children: React.ReactNode }) => (
@@ -150,6 +151,10 @@ export const router = createBrowserRouter([
           { path: 'new', element: <L><StaffFormPage /></L> },
           { path: ':id/edit', element: <L><StaffFormPage /></L> },
         ],
+      },
+      {
+        path: 'customers',
+        element: <L><CustomerListPage /></L>,
       },
       {
         path: 'attendances',

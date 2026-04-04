@@ -110,6 +110,11 @@ export default function Sidebar() {
       label: <span>담당자 관리</span>,
     },
     {
+      key: '/customers',
+      icon: <UserOutlined />,
+      label: <span>고객 관리</span>,
+    },
+    {
       key: 'attendance-group',
       icon: <ClockCircleOutlined />,
       label: '근태 관리',
@@ -152,6 +157,7 @@ export default function Sidebar() {
     if (path.startsWith('/meal-counts')) return '/meal-counts';
     if (path.startsWith('/meal-menus')) return '/meal-menus';
     if (path.startsWith('/meal-photos')) return '/meal-photos';
+    if (path.startsWith('/customers')) return '/customers';
     return path;
   };
 
