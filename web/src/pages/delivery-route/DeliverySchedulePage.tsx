@@ -57,7 +57,7 @@ export default function DeliverySchedulePage() {
     queryFn: () => getStaffList({ role: 'DELIVERY_DRIVER', limit: 100 }),
   });
 
-  const { data: overridesData } = useQuery({
+  const { data: _overridesData } = useQuery({
     queryKey: ['delivery-overrides', overrideDate?.format('YYYY-MM-DD')],
     queryFn: () => getOverrides({ date: overrideDate?.format('YYYY-MM-DD') }),
     enabled: !!overrideDate,
