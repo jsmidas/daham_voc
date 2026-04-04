@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Table, Input, Button, Tag, Space, Card, Popconfirm, message, Modal, Form, Select } from 'antd';
+import { Table, Input, Button, Tag, Space, Card, Popconfirm, message, Modal } from 'antd';
 import { SearchOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStaffList, deleteStaff, resetStaffPassword } from '@/api/staff.api';
@@ -20,7 +20,7 @@ export default function CustomerListPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['customers', { search, page }],
-    queryFn: () => getStaffList({ role: 'CUSTOMER', search, page, limit: 20 }),
+    queryFn: () => getStaffList({ role: 'CUSTOMER' as any, search, page, limit: 20 }),
   });
 
   const items = (data as any)?.items || [];
