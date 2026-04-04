@@ -536,6 +536,7 @@ enum Role {
   SITE_STAFF
   DELIVERY_DRIVER
   CLIENT
+  CUSTOMER        // 일반 고객 (셀프 회원가입)
 }
 
 enum Division {

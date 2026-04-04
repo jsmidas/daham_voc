@@ -260,6 +260,7 @@ export default function StaffListPage() {
               <Select.Option value="SITE_STAFF">사업장 담당자</Select.Option>
               <Select.Option value="DELIVERY_DRIVER">배송 기사</Select.Option>
               <Select.Option value="CLIENT">고객사</Select.Option>
+              <Select.Option value="CUSTOMER">일반 고객</Select.Option>
             </Select>
           </Col>
           <Col xs={24} sm={12} md={8}>

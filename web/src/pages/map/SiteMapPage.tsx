@@ -483,22 +483,31 @@ export default function SiteMapPage() {
             site.longitude
           );
 
-          // 마커 색상 우선순위: 배송코스 > 그룹 > 사업장 유형
+          // 마커 모양: 부문+유형 기반, 색상: 배송코스 > 그룹 > 기본
           let markerColor: string;
           let markerShape: MarkerShape = 'CIRCLE';
 
-          // 부문에 따라 마커 모양 결정 (본사: 원형, 영남지사: 사각형)
-          markerShape = site.division === 'YEONGNAM' ? 'SQUARE' : 'CIRCLE';
+          // 부문+유형별 모양 결정
+          if (site.division === 'CONSIGNMENT') {
+            markerShape = 'TRIANGLE';  // 위탁사업장
+          } else if (site.division === 'YEONGNAM') {
+            markerShape = 'SQUARE';    // 영남
+          } else if (site.type === 'LUNCHBOX') {
+            markerShape = 'DIAMOND';   // 도시락
+          } else {
+            markerShape = 'CIRCLE';    // 본사 운반급식
+          }
 
+          // 색상: 배송코스 > 그룹 > 부문별 기본색
           if (site.routeStops && site.routeStops.length > 0) {
-            // 첫 번째 배송코스의 색상 사용
             markerColor = site.routeStops[0].route.color || '#1890ff';
           } else if (site.group) {
-            // 그룹의 마커 색상 사용 (모양은 부문으로 결정되므로 제외)
             markerColor = site.group.markerColor || '#999999';
           } else {
-            // 코스에 미등록된 사업장은 회색으로 표시
-            markerColor = '#999999';
+            // 부문별 기본 색상
+            if (site.division === 'CONSIGNMENT') markerColor = '#fa8c16'; // 주황
+            else if (site.division === 'YEONGNAM') markerColor = '#52c41a'; // 초록
+            else markerColor = '#1890ff'; // 파란 (본사)
           }
 
           const markerImage = createMarkerImage(markerShape, markerColor, window.kakao.maps);

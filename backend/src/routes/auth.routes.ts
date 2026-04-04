@@ -14,6 +14,9 @@ const controller = new AuthController();
 // POST /api/v1/auth/register - Register new user
 router.post('/register', validateRequest(registerSchema), controller.register);
 
+// POST /api/v1/auth/register-customer - 고객 셀프 회원가입
+router.post('/register-customer', controller.registerCustomer);
+
 // POST /api/v1/auth/login - Login
 router.post('/login', validateRequest(loginSchema), controller.login);
 

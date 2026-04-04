@@ -1,0 +1,2 @@
+-- AlterEnum: Role에 CUSTOMER 추가
+ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'CUSTOMER';

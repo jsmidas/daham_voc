@@ -201,6 +201,84 @@ export class AuthService {
   }
 
   /**
+   * 고객 셀프 회원가입 (사업장 코드 기반)
+   */
+  async registerCustomer(data: {
+    siteCode: string;
+    phone: string;
+    name: string;
+    password: string;
+  }): Promise<LoginResponse> {
+    // 사업장 코드 확인
+    const site = await prisma.site.findFirst({
+      where: { siteCode: data.siteCode, isActive: true, deletedAt: null },
+      select: { id: true, name: true, type: true, division: true },
+    });
+
+    if (!site) {
+      throw new Error('유효하지 않은 사업장 코드입니다');
+    }
+
+    // 전화번호 중복 확인
+    const existingUser = await prisma.user.findUnique({
+      where: { phone: data.phone },
+    });
+
+    if (existingUser) {
+      throw new Error('이미 등록된 전화번호입니다');
+    }
+
+    const hashedPassword = await hashPassword(data.password);
+
+    // Transaction: User + Staff + StaffSite 생성
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          phone: data.phone,
+          password: hashedPassword,
+          name: data.name,
+          role: Role.CUSTOMER,
+          division: site.division as any,
+        },
+      });
+
+      const staff = await tx.staff.create({
+        data: {
+          userId: user.id,
+        },
+      });
+
+      await tx.staffSite.create({
+        data: {
+          staffId: staff.id,
+          siteId: site.id,
+          isPrimary: true,
+        },
+      });
+
+      return user;
+    });
+
+    const token = generateToken({
+      userId: result.id,
+      email: result.phone,
+      role: result.role,
+      division: result.division || undefined,
+    });
+
+    const { password: _, ...userWithoutPassword } = result;
+
+    return {
+      user: {
+        ...userWithoutPassword,
+        staffSites: [site],
+        siteId: site.id,
+      } as any,
+      token,
+    };
+  }
+
+  /**
    * Get current user by ID
    */
   async getCurrentUser(userId: string): Promise<Omit<User, 'password'>> {

@@ -24,6 +24,26 @@ export class AuthController {
   };
 
   /**
+   * POST /api/v1/auth/register-customer
+   * 고객 셀프 회원가입 (사업장 코드 기반)
+   */
+  registerCustomer = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { siteCode, phone, name, password } = req.body;
+
+      if (!siteCode || !phone || !name || !password) {
+        res.status(400).json(errorResponse('사업장 코드, 전화번호, 이름, 비밀번호는 필수입니다', 'MISSING_FIELDS'));
+        return;
+      }
+
+      const result = await this.authService.registerCustomer({ siteCode, phone, name, password });
+      res.status(201).json(successResponse(result, '회원가입이 완료되었습니다'));
+    } catch (error: any) {
+      res.status(400).json(errorResponse(error.message, 'REGISTRATION_ERROR'));
+    }
+  };
+
+  /**
    * POST /api/v1/auth/login
    * Login user (using phone number)
    */
