@@ -29,9 +29,9 @@ const MEAL_TYPES = [
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 const WEEKDAY_GROUPS = [
-  { label: '평일 (월~금)', days: [1, 2, 3, 4, 5] },
-  { label: '토요일', days: [6] },
-  { label: '일요일', days: [0] },
+  { label: '평일 (월~금)', days: [1, 2, 3, 4, 5], scheduleType: 'WEEKDAY' },
+  { label: '토요일', days: [6], scheduleType: 'SATURDAY' },
+  { label: '일요일', days: [0], scheduleType: 'SUNDAY' },
 ];
 
 export default function DeliverySchedulePage() {
@@ -112,9 +112,15 @@ export default function DeliverySchedulePage() {
     },
   });
 
-  // 선택된 요일 그룹의 대표 요일
+  // 선택된 요일 그룹의 대표 요일 및 scheduleType
   const selectedDays = WEEKDAY_GROUPS[selectedDayGroup].days;
-  // 평일은 월요일(1) 기준
+  const selectedScheduleType = WEEKDAY_GROUPS[selectedDayGroup].scheduleType;
+
+  // 선택된 scheduleType에 맞는 코스만 필터
+  const filteredRoutes = useMemo(() => {
+    const allRoutes = Array.isArray(routes) ? routes : [];
+    return allRoutes.filter((r: any) => r.scheduleType === selectedScheduleType);
+  }, [routes, selectedScheduleType]);
 
   // 스케줄 데이터를 코스 x 끼니 격자로 변환
   const scheduleGrid = useMemo(() => {
@@ -249,7 +255,7 @@ export default function DeliverySchedulePage() {
                 </div>
 
                 <Table
-                  dataSource={Array.isArray(routes) ? routes : []}
+                  dataSource={filteredRoutes}
                   columns={columns}
                   rowKey="id"
                   pagination={false}

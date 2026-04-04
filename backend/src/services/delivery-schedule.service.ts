@@ -19,7 +19,16 @@ export async function getSchedules(filter?: { routeId?: string; driverId?: strin
   return prisma.deliverySchedule.findMany({
     where,
     include: {
-      route: { select: { id: true, name: true, code: true, division: true, color: true } },
+      route: {
+        select: {
+          id: true, name: true, code: true, division: true, color: true,
+          routeStops: {
+            where: { isActive: true },
+            include: { site: { select: { id: true, name: true, address: true } } },
+            orderBy: { stopNumber: 'asc' },
+          },
+        },
+      },
       driver: { select: { id: true, name: true, phone: true } },
     },
     orderBy: [{ routeId: 'asc' }, { dayOfWeek: 'asc' }, { mealType: 'asc' }],
