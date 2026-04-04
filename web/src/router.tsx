@@ -39,6 +39,7 @@ const MealCountListPage = lazy(() => import('@/pages/meal-count/MealCountListPag
 const MealMenuPage = lazy(() => import('@/pages/meal-menu/MealMenuPage'));
 const DeliveryRouteListPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteListPage'));
 const DeliveryRouteDetailPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteDetailPage'));
+const DeliverySchedulePage = lazy(() => import('@/pages/delivery-route/DeliverySchedulePage'));
 const DeliveryLogPage = lazy(() => import('@/pages/delivery-log/DeliveryLogPage'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
 const ContractListPage = lazy(() => import('@/pages/contract/ContractListPage'));
@@ -180,6 +181,7 @@ export const router = createBrowserRouter([
         path: 'delivery-routes',
         children: [
           { index: true, element: <L><DeliveryRouteListPage /></L> },
+          { path: 'schedule', element: <L><DeliverySchedulePage /></L> },
           { path: ':id', element: <L><DeliveryRouteDetailPage /></L> },
         ],
       },

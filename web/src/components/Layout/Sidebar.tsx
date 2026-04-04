@@ -55,6 +55,11 @@ export default function Sidebar() {
       label: <span>배송 코스 관리</span>,
     },
     {
+      key: '/delivery-routes/schedule',
+      icon: <CarOutlined />,
+      label: <span>배송 스케줄</span>,
+    },
+    {
       key: '/delivery-logs',
       icon: <CarOutlined />,
       label: <span>배송 이력</span>,
@@ -132,6 +137,7 @@ export default function Sidebar() {
     const path = location.pathname;
     // /sites/new, /sites/:id/edit 등도 /sites로 선택되도록
     if (path.startsWith('/sites')) return '/sites';
+    if (path === '/delivery-routes/schedule') return '/delivery-routes/schedule';
     if (path.startsWith('/delivery-routes')) return '/delivery-routes';
     if (path.startsWith('/delivery-logs')) return '/delivery-logs';
     if (path.startsWith('/attendances/dashboard')) return '/attendances/dashboard';
