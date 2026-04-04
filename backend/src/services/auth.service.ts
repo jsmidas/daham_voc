@@ -170,6 +170,31 @@ export class AuthService {
       assignedSites = individualSites;
     }
 
+    // 배송기사: 배송 코스에 포함된 사업장 추가
+    if (user.role === 'DELIVERY_DRIVER') {
+      const driverRoutes = await prisma.deliveryAssignment.findMany({
+        where: { driverId: user.id, isActive: true },
+        include: {
+          route: {
+            include: {
+              routeStops: {
+                include: {
+                  site: { select: siteSelect },
+                },
+                orderBy: { stopNumber: 'asc' },
+              },
+            },
+          },
+        },
+      });
+      const routeSites = driverRoutes.flatMap((dr: any) =>
+        dr.route.routeStops.map((stop: any) => stop.site)
+      );
+      const allSitesMap = new Map();
+      [...assignedSites, ...routeSites].forEach(site => allSitesMap.set(site.id, site));
+      assignedSites = Array.from(allSitesMap.values());
+    }
+
     // 웹에서 지정한 "부서(사업장)" 기반 기본 사업장 조회
     const departmentName = user.staff?.department;
     let departmentSite: any = null;
