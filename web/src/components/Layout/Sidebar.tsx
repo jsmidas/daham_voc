@@ -112,7 +112,7 @@ export default function Sidebar() {
     {
       key: '/customers',
       icon: <UserOutlined />,
-      label: <span>고객 관리</span>,
+      label: <span>일반고객</span>,
     },
     {
       key: 'attendance-group',

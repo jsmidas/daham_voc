@@ -1,10 +1,10 @@
 /**
- * 고객 관리 페이지
+ * 일반고객 관리 페이지
  * @description CUSTOMER 역할 사용자 관리 (셀프 회원가입 고객)
  */
 
 import { useState } from 'react';
-import { Table, Input, Button, Tag, Space, Card, Popconfirm, message, Modal } from 'antd';
+import { Table, Input, Button, Tag, Space, Card, Popconfirm, message, Modal, Select } from 'antd';
 import { SearchOutlined, DeleteOutlined, LockOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getStaffList, deleteStaff, resetStaffPassword } from '@/api/staff.api';
@@ -12,6 +12,7 @@ import { getStaffList, deleteStaff, resetStaffPassword } from '@/api/staff.api';
 export default function CustomerListPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [division, setDivision] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [resetModal, setResetModal] = useState(false);
   const [resetTargetId, setResetTargetId] = useState<string | null>(null);
@@ -19,8 +20,8 @@ export default function CustomerListPage() {
   const [newPassword, setNewPassword] = useState('');
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', { search, page }],
-    queryFn: () => getStaffList({ role: 'CUSTOMER' as any, search, page, limit: 20 }),
+    queryKey: ['customers', { search, division, page }],
+    queryFn: () => getStaffList({ role: 'CUSTOMER' as any, search, division: division as any, page, limit: 20 }),
   });
 
   const items = (data as any)?.items || [];
@@ -47,33 +48,53 @@ export default function CustomerListPage() {
     onError: () => message.error('비밀번호 초기화 실패'),
   });
 
+  const getDivisionLabel = (record: any) => {
+    const sites = record.staffSites?.filter((s: any) => !s.removedAt) || [];
+    if (sites.length === 0) return '-';
+    const div = sites[0]?.site?.division;
+    if (div === 'HQ') return '본사';
+    if (div === 'YEONGNAM') return '영남';
+    if (div === 'CONSIGNMENT') return '위탁';
+    return div || '-';
+  };
+
   const columns = [
+    {
+      title: '그룹구분',
+      key: 'division',
+      width: 90,
+      render: (_: any, record: any) => {
+        const label = getDivisionLabel(record);
+        const color = label === '본사' ? 'blue' : label === '영남' ? 'green' : label === '위탁' ? 'orange' : undefined;
+        return color ? <Tag color={color}>{label}</Tag> : <span style={{ color: '#999' }}>{label}</span>;
+      },
+    },
+    {
+      title: '사업장',
+      key: 'site',
+      render: (_: any, record: any) => {
+        const sites = record.staffSites?.filter((s: any) => !s.removedAt) || [];
+        return sites.length > 0
+          ? sites.map((s: any) => s.site?.name).join(', ')
+          : <span style={{ color: '#999' }}>없음</span>;
+      },
+    },
     {
       title: '성명',
       key: 'name',
+      width: 100,
       render: (_: any, record: any) => record.user?.name || record.name,
     },
     {
       title: '핸드폰번호',
       key: 'phone',
+      width: 130,
       render: (_: any, record: any) => record.user?.phone || record.phone,
-    },
-    {
-      title: '배정 사업장',
-      key: 'site',
-      render: (_: any, record: any) => {
-        const sites = record.staffSites?.filter((s: any) => !s.removedAt) || [];
-        return sites.length > 0
-          ? sites.map((s: any) => (
-              <Tag key={s.id} color="blue">{s.site?.name}</Tag>
-            ))
-          : <span style={{ color: '#999' }}>없음</span>;
-      },
     },
     {
       title: '상태',
       key: 'isActive',
-      width: 80,
+      width: 70,
       render: (_: any, record: any) => (
         <Tag color={(record.user?.isActive ?? record.isActive) ? 'green' : 'red'}>
           {(record.user?.isActive ?? record.isActive) ? '활성' : '비활성'}
@@ -83,7 +104,7 @@ export default function CustomerListPage() {
     {
       title: '가입일',
       key: 'createdAt',
-      width: 120,
+      width: 100,
       render: (_: any, record: any) => {
         const date = record.user?.createdAt || record.createdAt;
         return date ? new Date(date).toLocaleDateString('ko-KR') : '-';
@@ -127,23 +148,35 @@ export default function CustomerListPage() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>고객 관리</h2>
+        <h2 style={{ margin: 0 }}>일반고객</h2>
         <span style={{ color: '#999', fontSize: 13 }}>
-          앱에서 회원가입한 고객(CUSTOMER) 목록입니다
+          앱에서 회원가입한 고객 목록입니다
         </span>
       </div>
 
       <Card>
-        <div style={{ marginBottom: 16 }}>
+        <Space style={{ marginBottom: 16 }} wrap>
+          <Select
+            placeholder="부문 선택"
+            allowClear
+            value={division}
+            onChange={(v) => { setDivision(v); setPage(1); }}
+            style={{ width: 150 }}
+            options={[
+              { value: 'HQ', label: '본사' },
+              { value: 'YEONGNAM', label: '영남' },
+              { value: 'CONSIGNMENT', label: '위탁' },
+            ]}
+          />
           <Input
             placeholder="이름 또는 전화번호 검색"
             prefix={<SearchOutlined />}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: 300 }}
+            style={{ width: 250 }}
             allowClear
           />
-        </div>
+        </Space>
 
         <Table
           dataSource={items}
