@@ -154,6 +154,8 @@ export default function SiteListPage() {
       title: '사업장명',
       dataIndex: 'name',
       key: 'name',
+      width: 120,
+      ellipsis: true,
       render: (name: string, record: any) => (
         <span style={{ color: record.isActive ? 'inherit' : '#999' }}>
           {name}
@@ -171,14 +173,14 @@ export default function SiteListPage() {
       title: '부문',
       dataIndex: 'division',
       key: 'division',
-      width: 75,
+      width: 90,
       render: (division: any) => DivisionLabels[division as keyof typeof DivisionLabels] || division,
     },
     {
       title: '그룹',
       dataIndex: 'group',
       key: 'group',
-      width: 75,
+      width: 95,
       render: (group: any) => group?.name || '(미지정)',
     },
     {
@@ -360,11 +362,17 @@ export default function SiteListPage() {
         </Select>
       </Space>
 
+      <style>{`
+        .site-table .ant-table-cell { padding: 4px 8px !important; font-size: 13px; line-height: 1.3; }
+        .site-table .ant-tag { margin: 1px 2px; padding: 0 4px; font-size: 11px; line-height: 18px; }
+      `}</style>
       <Table
+        className="site-table"
         columns={columns}
         dataSource={sites?.data?.sites || []}
         loading={isLoading}
         rowKey="id"
+        size="small"
         rowClassName={(record: any) => record.isActive ? '' : 'inactive-row'}
         pagination={{
           current: page,
