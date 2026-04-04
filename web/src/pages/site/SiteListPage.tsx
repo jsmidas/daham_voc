@@ -179,10 +179,54 @@ export default function SiteListPage() {
       render: (group: any) => group?.name || '(미지정)',
     },
     {
+      title: '식단유형',
+      key: 'menuTypes',
+      width: 150,
+      render: (_: any, record: any) => {
+        const types = record.siteMenuTypes || [];
+        return types.length > 0
+          ? types.map((t: any) => (
+              <Tag key={t.menuType?.id} color="purple" style={{ fontSize: 11 }}>
+                {t.menuType?.name}
+              </Tag>
+            ))
+          : <span style={{ color: '#ccc' }}>-</span>;
+      },
+    },
+    {
+      title: '식수메뉴',
+      key: 'mealMenus',
+      width: 120,
+      render: (_: any, record: any) => {
+        const menus = record.siteMealMenus || [];
+        return menus.length > 0
+          ? menus.map((m: any) => (
+              <Tag key={m.mealMenu?.id} style={{ fontSize: 11 }}>
+                {m.mealMenu?.name}
+              </Tag>
+            ))
+          : <span style={{ color: '#ccc' }}>-</span>;
+      },
+    },
+    {
+      title: '단가',
+      key: 'price',
+      width: 80,
+      render: (_: any, record: any) => {
+        const types = record.siteMenuTypes || [];
+        if (types.length === 0) return <span style={{ color: '#ccc' }}>-</span>;
+        const prices = types
+          .filter((t: any) => t.menuType?.price)
+          .map((t: any) => Number(t.menuType.price));
+        if (prices.length === 0) return <span style={{ color: '#ccc' }}>-</span>;
+        return prices.map((p: number) => `${p.toLocaleString()}원`).join(', ');
+      },
+    },
+    {
       title: '거래상태',
       dataIndex: 'isActive',
       key: 'isActive',
-      width: 100,
+      width: 80,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>
           {isActive ? '거래중' : '거래중단'}

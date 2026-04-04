@@ -188,6 +188,20 @@ export class SiteService {
               stopNumber: 'asc',
             },
           },
+          siteMenuTypes: {
+            include: {
+              menuType: {
+                select: { id: true, name: true, price: true },
+              },
+            },
+          },
+          siteMealMenus: {
+            include: {
+              mealMenu: {
+                select: { id: true, name: true },
+              },
+            },
+          },
           _count: {
             select: {
               menus: true,
