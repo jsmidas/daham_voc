@@ -43,6 +43,8 @@ export default function AttendanceSettingsPage() {
   const { data: sitesRes } = useQuery({
     queryKey: ['sites-light'],
     queryFn: () => getSitesLight({ isActive: true }),
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const settings: AttendanceSetting[] = settingsRes?.data || [];
