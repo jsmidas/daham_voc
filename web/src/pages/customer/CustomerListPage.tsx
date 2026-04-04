@@ -12,6 +12,7 @@ import { getStaffList, deleteStaff, resetStaffPassword } from '@/api/staff.api';
 export default function CustomerListPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [siteSearch, setSiteSearch] = useState('');
   const [division, setDivision] = useState<string | undefined>(undefined);
   const [page, setPage] = useState(1);
   const [resetModal, setResetModal] = useState(false);
@@ -24,8 +25,15 @@ export default function CustomerListPage() {
     queryFn: () => getStaffList({ role: 'CUSTOMER' as any, search, division: division as any, page, limit: 20 }),
   });
 
-  const items = (data as any)?.items || [];
-  const total = (data as any)?.total || 0;
+  const rawItems = (data as any)?.items || [];
+  // 사업장명 프론트 필터
+  const items = siteSearch
+    ? rawItems.filter((r: any) => {
+        const sites = r.staffSites?.filter((s: any) => !s.removedAt) || [];
+        return sites.some((s: any) => s.site?.name?.includes(siteSearch));
+      })
+    : rawItems;
+  const total = siteSearch ? items.length : ((data as any)?.total || 0);
 
   const deleteMutation = useMutation({
     mutationFn: deleteStaff,
@@ -169,11 +177,19 @@ export default function CustomerListPage() {
             ]}
           />
           <Input
+            placeholder="사업장명 검색"
+            prefix={<SearchOutlined />}
+            value={siteSearch}
+            onChange={(e) => { setSiteSearch(e.target.value); setPage(1); }}
+            style={{ width: 200 }}
+            allowClear
+          />
+          <Input
             placeholder="이름 또는 전화번호 검색"
             prefix={<SearchOutlined />}
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            style={{ width: 250 }}
+            style={{ width: 200 }}
             allowClear
           />
         </Space>
