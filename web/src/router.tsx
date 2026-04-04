@@ -14,36 +14,51 @@ import MainLayout from '@/components/Layout/MainLayout';
 // Login (항상 로드 - 첫 화면)
 import LoginPage from '@/pages/auth/LoginPage';
 
+// 배포 후 JS 파일명 변경 시 자동 새로고침
+const lazyWithRetry = (importFn: () => Promise<any>) =>
+  lazy(() =>
+    importFn().catch(() => {
+      const lastReload = sessionStorage.getItem('lastChunkReload');
+      const now = Date.now();
+      if (lastReload && now - Number(lastReload) < 60000) {
+        return importFn();
+      }
+      sessionStorage.setItem('lastChunkReload', String(now));
+      window.location.reload();
+      return importFn();
+    })
+  );
+
 // Lazy loaded pages
-const ChangePasswordPage = lazy(() => import('@/pages/auth/ChangePasswordPage'));
-const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage'));
-const SiteListPage = lazy(() => import('@/pages/site/SiteListPage'));
-const SiteFormPage = lazy(() => import('@/pages/site/SiteFormPage'));
-const SiteGroupPage = lazy(() => import('@/pages/site/SiteGroupPage'));
-const SiteMapPage = lazy(() => import('@/pages/map/SiteMapPage'));
-const MenuTypePage = lazy(() => import('@/pages/menu-type/MenuTypePage'));
-const WeeklyMenuPage = lazy(() => import('@/pages/menu/WeeklyMenuPage'));
-const PhotoGalleryPage = lazy(() => import('@/pages/photo/PhotoGalleryPage'));
-const MealPhotoManagementPage = lazy(() => import('@/pages/meal-photo/MealPhotoManagementPage'));
-const FeedbackListPage = lazy(() => import('@/pages/feedback/FeedbackListPage'));
-const StaffListPage = lazy(() => import('@/pages/staff/StaffListPage'));
-const StaffFormPage = lazy(() => import('@/pages/staff/StaffFormPage'));
-const AttendanceListPage = lazy(() => import('@/pages/attendance/AttendanceListPage'));
-const AttendanceDashboardPage = lazy(() => import('@/pages/attendance/AttendanceDashboardPage'));
-const HolidayManagementPage = lazy(() => import('@/pages/attendance/HolidayManagementPage'));
-const AttendanceSettingsPage = lazy(() => import('@/pages/attendance/AttendanceSettingsPage'));
-const AttendanceMonthlyReportPage = lazy(() => import('@/pages/attendance/AttendanceMonthlyReportPage'));
-const StatsPage = lazy(() => import('@/pages/stats/StatsPage'));
-const MealCountSettingPage = lazy(() => import('@/pages/meal-count/MealCountSettingPage'));
-const MealCountListPage = lazy(() => import('@/pages/meal-count/MealCountListPage'));
-const MealMenuPage = lazy(() => import('@/pages/meal-menu/MealMenuPage'));
-const DeliveryRouteListPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteListPage'));
-const DeliveryRouteDetailPage = lazy(() => import('@/pages/delivery-route/DeliveryRouteDetailPage'));
-const DeliverySchedulePage = lazy(() => import('@/pages/delivery-route/DeliverySchedulePage'));
-const DeliveryLogPage = lazy(() => import('@/pages/delivery-log/DeliveryLogPage'));
-const PrivacyPolicyPage = lazy(() => import('@/pages/PrivacyPolicyPage'));
-const ContractListPage = lazy(() => import('@/pages/contract/ContractListPage'));
-const CustomerListPage = lazy(() => import('@/pages/customer/CustomerListPage'));
+const ChangePasswordPage = lazyWithRetry(() => import('@/pages/auth/ChangePasswordPage'));
+const DashboardPage = lazyWithRetry(() => import('@/pages/dashboard/DashboardPage'));
+const SiteListPage = lazyWithRetry(() => import('@/pages/site/SiteListPage'));
+const SiteFormPage = lazyWithRetry(() => import('@/pages/site/SiteFormPage'));
+const SiteGroupPage = lazyWithRetry(() => import('@/pages/site/SiteGroupPage'));
+const SiteMapPage = lazyWithRetry(() => import('@/pages/map/SiteMapPage'));
+const MenuTypePage = lazyWithRetry(() => import('@/pages/menu-type/MenuTypePage'));
+const WeeklyMenuPage = lazyWithRetry(() => import('@/pages/menu/WeeklyMenuPage'));
+const PhotoGalleryPage = lazyWithRetry(() => import('@/pages/photo/PhotoGalleryPage'));
+const MealPhotoManagementPage = lazyWithRetry(() => import('@/pages/meal-photo/MealPhotoManagementPage'));
+const FeedbackListPage = lazyWithRetry(() => import('@/pages/feedback/FeedbackListPage'));
+const StaffListPage = lazyWithRetry(() => import('@/pages/staff/StaffListPage'));
+const StaffFormPage = lazyWithRetry(() => import('@/pages/staff/StaffFormPage'));
+const AttendanceListPage = lazyWithRetry(() => import('@/pages/attendance/AttendanceListPage'));
+const AttendanceDashboardPage = lazyWithRetry(() => import('@/pages/attendance/AttendanceDashboardPage'));
+const HolidayManagementPage = lazyWithRetry(() => import('@/pages/attendance/HolidayManagementPage'));
+const AttendanceSettingsPage = lazyWithRetry(() => import('@/pages/attendance/AttendanceSettingsPage'));
+const AttendanceMonthlyReportPage = lazyWithRetry(() => import('@/pages/attendance/AttendanceMonthlyReportPage'));
+const StatsPage = lazyWithRetry(() => import('@/pages/stats/StatsPage'));
+const MealCountSettingPage = lazyWithRetry(() => import('@/pages/meal-count/MealCountSettingPage'));
+const MealCountListPage = lazyWithRetry(() => import('@/pages/meal-count/MealCountListPage'));
+const MealMenuPage = lazyWithRetry(() => import('@/pages/meal-menu/MealMenuPage'));
+const DeliveryRouteListPage = lazyWithRetry(() => import('@/pages/delivery-route/DeliveryRouteListPage'));
+const DeliveryRouteDetailPage = lazyWithRetry(() => import('@/pages/delivery-route/DeliveryRouteDetailPage'));
+const DeliverySchedulePage = lazyWithRetry(() => import('@/pages/delivery-route/DeliverySchedulePage'));
+const DeliveryLogPage = lazyWithRetry(() => import('@/pages/delivery-log/DeliveryLogPage'));
+const PrivacyPolicyPage = lazyWithRetry(() => import('@/pages/PrivacyPolicyPage'));
+const ContractListPage = lazyWithRetry(() => import('@/pages/contract/ContractListPage'));
+const CustomerListPage = lazyWithRetry(() => import('@/pages/customer/CustomerListPage'));
 
 // Lazy wrapper
 const L = ({ children }: { children: React.ReactNode }) => (
