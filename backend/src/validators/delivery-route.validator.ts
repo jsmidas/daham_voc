@@ -24,6 +24,7 @@ export const createDeliveryRouteSchema = Joi.object({
   color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).optional().messages({
     'string.pattern.base': '올바른 색상 코드를 입력해주세요 (예: #1890ff)',
   }),
+  scheduleType: Joi.string().valid('WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY').optional().default('WEEKDAY'),
 });
 
 /**
@@ -34,6 +35,7 @@ export const updateDeliveryRouteSchema = Joi.object({
   description: Joi.string().max(500).optional().allow(''),
   color: Joi.string().pattern(/^#[0-9A-Fa-f]{6}$/).optional(),
   isActive: Joi.boolean().optional(),
+  scheduleType: Joi.string().valid('WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY').optional(),
 });
 
 /**
@@ -109,4 +111,5 @@ export const getDeliveryRoutesQuerySchema = Joi.object({
   division: Joi.string().valid('HQ', 'YEONGNAM').optional(),
   isActive: Joi.boolean().optional(),
   search: Joi.string().max(100).optional(),
+  scheduleType: Joi.string().valid('WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY').optional(),
 });
