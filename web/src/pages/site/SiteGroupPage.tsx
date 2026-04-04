@@ -165,16 +165,17 @@ export default function SiteGroupPage() {
               key: `group-${group.id}`,
               selectable: false,
               children: group.sites.map((site: any) => {
-                // 담당자(ADMIN 제외)와 고객(CLIENT) 분리
-                const siteStaff = (site.staff || []).filter((s: any) => !s.role?.includes('ADMIN') && s.role !== 'CLIENT');
+                // 담당자(ADMIN/CUSTOMER 제외)와 고객(CLIENT), 일반고객(CUSTOMER) 분리
+                const siteStaff = (site.staff || []).filter((s: any) => !s.role?.includes('ADMIN') && s.role !== 'CLIENT' && s.role !== 'CUSTOMER');
                 const clients = (site.staff || []).filter((s: any) => s.role === 'CLIENT');
+                const customers = (site.staff || []).filter((s: any) => s.role === 'CUSTOMER');
 
-                // 고객 하위 노드
+                // 고객사(CLIENT) 하위 노드
                 const clientChildren = clients.length > 0
                   ? [{
                       title: (
                         <span style={{ fontSize: '12px', color: '#666' }}>
-                          👥 고객 ({clients.length}명)
+                          👥 고객사 ({clients.length}명)
                         </span>
                       ),
                       key: `clients-${site.id}`,
@@ -192,6 +193,32 @@ export default function SiteGroupPage() {
                       })),
                     }]
                   : [];
+
+                // 일반고객(CUSTOMER) 하위 노드
+                const customerChildren = customers.length > 0
+                  ? [{
+                      title: (
+                        <span style={{ fontSize: '12px', color: '#666' }}>
+                          🙋 일반고객 ({customers.length}명)
+                        </span>
+                      ),
+                      key: `customers-${site.id}`,
+                      selectable: false,
+                      children: customers.map((c: any) => ({
+                        title: (
+                          <Space>
+                            <UserOutlined style={{ color: '#13c2c2' }} />
+                            <span style={{ fontSize: '12px' }}>{c.name}</span>
+                            {c.phone && <span style={{ fontSize: '11px', color: '#999' }}>{c.phone}</span>}
+                          </Space>
+                        ),
+                        key: `customer-${site.id}-${c.id}`,
+                        isLeaf: true,
+                      })),
+                    }]
+                  : [];
+
+                const allChildren = [...clientChildren, ...customerChildren];
 
                 return {
                   title: (
@@ -216,13 +243,16 @@ export default function SiteGroupPage() {
                         </span>
                       )}
                       {clients.length > 0 && (
-                        <Tag color="orange" style={{ fontSize: 11 }}>고객 {clients.length}명</Tag>
+                        <Tag color="orange" style={{ fontSize: 11 }}>고객사 {clients.length}명</Tag>
+                      )}
+                      {customers.length > 0 && (
+                        <Tag color="cyan" style={{ fontSize: 11 }}>일반고객 {customers.length}명</Tag>
                       )}
                     </Space>
                   ),
                   key: `site-${site.id}`,
-                  isLeaf: clientChildren.length === 0,
-                  children: clientChildren.length > 0 ? clientChildren : undefined,
+                  isLeaf: allChildren.length === 0,
+                  children: allChildren.length > 0 ? allChildren : undefined,
                 };
               }),
             })) || []),
