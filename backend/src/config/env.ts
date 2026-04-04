@@ -34,7 +34,7 @@ export const env: EnvConfig = {
   GCP_KEY_FILE: process.env.GCP_KEY_FILE || '',
   MAX_IMAGE_SIZE: parseInt(process.env.MAX_IMAGE_SIZE || '10485760', 10),
   ALLOWED_IMAGE_TYPES: process.env.ALLOWED_IMAGE_TYPES || 'image/jpeg,image/png,image/webp',
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || 'https://admin.dahamvoc.co.kr,https://dahamvoc.co.kr,https://www.dahamvoc.co.kr,http://localhost:5173,http://localhost:5174',
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
 };
