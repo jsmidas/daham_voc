@@ -225,7 +225,14 @@ export default function MenuTypePage() {
   return (
     <div style={{ padding: '24px' }}>
       <Card
-        title="식단유형 관리"
+        title={
+          <div>
+            <div>식단유형 관리</div>
+            <div style={{ fontSize: 13, fontWeight: 'normal', color: '#888', marginTop: 4 }}>
+              사업장에서 제공하는 식단의 종류(예: 일반식, 다이어트식, 특식 등)와 단가를 등록합니다. 여기서 등록된 유형을 기준으로 주간 식단표를 작성합니다.
+            </div>
+          </div>
+        }
         extra={
           <Space>
             <Button

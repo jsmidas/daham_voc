@@ -333,7 +333,14 @@ export default function WeeklyMenuPage() {
   return (
     <div style={{ padding: '24px' }}>
       <Card
-        title="주간 식단표 관리"
+        title={
+          <div>
+            <div>주간 식단표 관리</div>
+            <div style={{ fontSize: 13, fontWeight: 'normal', color: '#888', marginTop: 4 }}>
+              식단유형별로 주간 식단표 이미지를 등록합니다. 등록된 식단표는 고객 및 담당자 앱에서 조회할 수 있습니다.
+            </div>
+          </div>
+        }
         extra={
           <Space>
             <Button
