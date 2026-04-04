@@ -112,19 +112,28 @@ export default function DeliverySchedulePage() {
     return allRoutes.filter((r: any) => r.scheduleType === selectedScheduleType);
   }, [routes, selectedScheduleType]);
 
-  // 코스 → 배정 기사 매핑 (코스당 1명)
+  // 코스 → 배정 기사 매핑 (스케줄 우선, 없으면 기존 배정에서 가져옴)
   const scheduleMap = useMemo(() => {
     const map: Record<string, any> = {};
+    // 1순위: DeliverySchedule (스케줄 관리)
     (Array.isArray(schedules) ? schedules : []).forEach((s: any) => {
       if (selectedDays.includes(s.dayOfWeek)) {
-        // 코스당 하나만 (먼저 나온 것 우선)
         if (!map[s.routeId]) {
           map[s.routeId] = s;
         }
       }
     });
+    // 2순위: DeliveryAssignment (코스 관리의 기존 배정) - 스케줄이 없는 코스만
+    (Array.isArray(filteredRoutes) ? filteredRoutes : []).forEach((route: any) => {
+      if (!map[route.id] && route.assignedDrivers?.length > 0) {
+        map[route.id] = {
+          driverId: route.assignedDrivers[0].id,
+          source: 'assignment', // 기존 배정에서 가져온 것 표시
+        };
+      }
+    });
     return map;
-  }, [schedules, selectedDays]);
+  }, [schedules, selectedDays, filteredRoutes]);
 
   // 기사 배정
   const handleDriverChange = (routeId: string, driverId: string) => {
@@ -173,25 +182,31 @@ export default function DeliverySchedulePage() {
     {
       title: '담당 기사',
       key: 'driver',
-      width: 280,
+      width: 320,
       render: (_: any, record: any) => {
         const schedule = scheduleMap[record.id];
+        const isFromAssignment = schedule?.source === 'assignment';
         return (
-          <Select
-            style={{ width: '100%' }}
-            placeholder="기사 선택"
-            allowClear
-            value={schedule?.driverId || undefined}
-            onChange={(value) => {
-              if (value) {
-                handleDriverChange(record.id, value);
-              } else {
-                handleDeleteSchedule(record.id);
-              }
-            }}
-            options={driverOptions}
-            size="small"
-          />
+          <Space>
+            <Select
+              style={{ width: 220 }}
+              placeholder="기사 선택"
+              allowClear
+              value={schedule?.driverId || undefined}
+              onChange={(value) => {
+                if (value) {
+                  handleDriverChange(record.id, value);
+                } else {
+                  handleDeleteSchedule(record.id);
+                }
+              }}
+              options={driverOptions}
+              size="small"
+            />
+            {isFromAssignment && (
+              <Tag color="orange" style={{ fontSize: 11 }}>기존</Tag>
+            )}
+          </Space>
         );
       },
     },
