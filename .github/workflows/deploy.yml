@@ -57,7 +57,8 @@ jobs:
 
             echo "🚀 Restarting services with PM2..."
             cd ~/daham_voc
-            pm2 restart ecosystem.config.js
+            pm2 delete all 2>/dev/null || true
+            pm2 start ecosystem.config.js
             pm2 save
 
             echo "✅ Checking service status..."
