@@ -52,6 +52,7 @@ export interface UpdateDeliveryRouteDto {
   description?: string;
   color?: string;
   isActive?: boolean;
+  scheduleType?: string;
 }
 
 export interface AddSiteToRouteDto {
