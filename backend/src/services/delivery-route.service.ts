@@ -175,6 +175,7 @@ export class DeliveryRouteService {
         division: data.division,
         description: data.description,
         color: data.color || '#1890ff',
+        scheduleType: (data as any).scheduleType || 'WEEKDAY',
       },
       include: {
         routeStops: true,
