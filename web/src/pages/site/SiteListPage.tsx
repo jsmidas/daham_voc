@@ -362,12 +362,7 @@ export default function SiteListPage() {
         </Select>
       </Space>
 
-      <style>{`
-        .site-table .ant-table-cell { padding: 4px 8px !important; font-size: 13px; line-height: 1.3; }
-        .site-table .ant-tag { margin: 1px 2px; padding: 0 4px; font-size: 11px; line-height: 18px; }
-      `}</style>
       <Table
-        className="site-table"
         columns={columns}
         dataSource={sites?.data?.sites || []}
         loading={isLoading}
