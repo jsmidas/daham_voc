@@ -28,6 +28,7 @@ import {
   CloseCircleOutlined,
   EditOutlined,
   DownloadOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getAttendances, updateAttendance } from '@/api/attendance.api';
@@ -408,6 +409,13 @@ export default function AttendanceListPage() {
           <Select.Option value="OUTSIDE_RANGE">범위 밖</Select.Option>
           <Select.Option value="ABSENT">결근</Select.Option>
         </Select>
+        <Button
+          type="primary"
+          icon={<SearchOutlined />}
+          onClick={() => queryClient.invalidateQueries({ queryKey: ['attendances'] })}
+        >
+          조회
+        </Button>
         <Button
           icon={<DownloadOutlined />}
           onClick={handleExcelDownload}

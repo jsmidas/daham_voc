@@ -272,7 +272,14 @@ export async function getAttendances(filter: AttendanceFilter): Promise<any[]> {
   if (filter.dateFrom || filter.dateTo) {
     where.checkInTime = {};
     if (filter.dateFrom) where.checkInTime.gte = filter.dateFrom;
-    if (filter.dateTo) where.checkInTime.lte = filter.dateTo;
+    if (filter.dateTo) {
+      // dateTo가 날짜만(YYYY-MM-DD)이면 해당일 23:59:59까지 포함
+      const endDate = new Date(filter.dateTo);
+      if (endDate.getHours() === 0 && endDate.getMinutes() === 0) {
+        endDate.setHours(23, 59, 59, 999);
+      }
+      where.checkInTime.lte = endDate;
+    }
   }
 
   // 조회
