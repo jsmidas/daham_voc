@@ -276,6 +276,10 @@ export default function StaffFormPage() {
     if (isEditMode) {
       // 수정 모드: password 제외하고 전송
       const { password, ...updateData } = values;
+      // Select에서 allowClear로 비운 필드는 undefined이거나 values에서 빠짐 → null로 변환
+      if (!updateData.department) updateData.department = null;
+      if (!updateData.position) updateData.position = null;
+      if (!updateData.managerId) updateData.managerId = null;
       updateMutation.mutate({ id, data: updateData });
     } else {
       // 생성 모드: 사업장 및 그룹 배정 포함

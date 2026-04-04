@@ -34,6 +34,7 @@ export interface FeedbackFilter {
   siteDivision?: string;
   authorId?: string;
   authorType?: FeedbackAuthorType;
+  authorTypes?: FeedbackAuthorType[];
   status?: FeedbackStatus;
   dateFrom?: Date;
   dateTo?: Date;
@@ -173,7 +174,9 @@ export async function getFeedbacks(filter: FeedbackFilter): Promise<any> {
     where.authorId = filter.authorId;
   }
 
-  if (filter.authorType) {
+  if (filter.authorTypes && filter.authorTypes.length > 0) {
+    where.authorType = { in: filter.authorTypes };
+  } else if (filter.authorType) {
     where.authorType = filter.authorType;
   }
 

@@ -325,9 +325,9 @@ export async function updateStaff(
     canViewMealPhotos?: boolean;
     canViewMealCounts?: boolean;
     // Staff 정보
-    department?: string;
-    position?: string;
-    managerId?: string;
+    department?: string | null;
+    position?: string | null;
+    managerId?: string | null;
   }
 ) {
   const staff = await prisma.staff.findFirst({
@@ -374,9 +374,9 @@ export async function updateStaff(
 
     // Staff 정보 수정
     const staffUpdateData: any = {};
-    if (data.department !== undefined) staffUpdateData.department = data.department;
-    if (data.position !== undefined) staffUpdateData.position = data.position;
-    if (data.managerId !== undefined) staffUpdateData.managerId = data.managerId;
+    if (data.department !== undefined) staffUpdateData.department = data.department || null;
+    if (data.position !== undefined) staffUpdateData.position = data.position || null;
+    if (data.managerId !== undefined) staffUpdateData.managerId = data.managerId || null;
 
     const updatedStaff = await tx.staff.update({
       where: { id: staffId },

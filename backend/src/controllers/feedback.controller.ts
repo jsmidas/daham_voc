@@ -78,6 +78,10 @@ export async function getFeedbacks(req: Request, res: Response): Promise<void> {
     if (siteDivision) filter.siteDivision = siteDivision as string;
     if (authorId) filter.authorId = authorId as string;
     if (authorType) filter.authorType = authorType as FeedbackAuthorType;
+    const authorTypes = req.query.authorTypes;
+    if (authorTypes) {
+      filter.authorTypes = (authorTypes as string).split(',') as FeedbackAuthorType[];
+    }
     if (status) filter.status = status as FeedbackStatus;
     if (dateFrom) filter.dateFrom = new Date(dateFrom as string);
     if (dateTo) filter.dateTo = new Date(dateTo as string);

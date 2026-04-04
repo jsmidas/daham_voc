@@ -76,6 +76,7 @@ export const updateStaff = async (req: Request, res: Response): Promise<void> =>
   try {
     const { id } = req.params;
     const data = req.body;
+    console.log('[Staff Update] id:', id, 'department:', JSON.stringify(data.department), 'typeof:', typeof data.department);
 
     const staff = await staffService.updateStaff(id, data);
     res.json(successResponse(staff, '담당자가 수정되었습니다'));
