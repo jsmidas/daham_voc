@@ -229,7 +229,7 @@ export default function SiteListPage() {
       title: '거래상태',
       dataIndex: 'isActive',
       key: 'isActive',
-      width: 80,
+      width: 118,
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>
           {isActive ? '거래중' : '거래중단'}
@@ -240,6 +240,7 @@ export default function SiteListPage() {
       title: '주소',
       dataIndex: 'address',
       key: 'address',
+      width: 200,
       ellipsis: true,
     },
     {
