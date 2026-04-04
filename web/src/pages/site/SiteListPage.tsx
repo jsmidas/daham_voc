@@ -164,18 +164,21 @@ export default function SiteListPage() {
       title: '유형',
       dataIndex: 'type',
       key: 'type',
+      width: 75,
       render: (type: any) => SiteTypeLabels[type as keyof typeof SiteTypeLabels] || type,
     },
     {
       title: '부문',
       dataIndex: 'division',
       key: 'division',
+      width: 75,
       render: (division: any) => DivisionLabels[division as keyof typeof DivisionLabels] || division,
     },
     {
       title: '그룹',
       dataIndex: 'group',
       key: 'group',
+      width: 75,
       render: (group: any) => group?.name || '(미지정)',
     },
     {
