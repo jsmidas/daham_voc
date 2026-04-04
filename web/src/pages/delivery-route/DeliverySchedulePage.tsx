@@ -57,7 +57,7 @@ export default function DeliverySchedulePage() {
     queryFn: () => getStaffList({ role: 'DELIVERY_DRIVER', limit: 100 }),
   });
 
-  const { data: overridesData, refetch: refetchOverrides } = useQuery({
+  const { data: overridesData } = useQuery({
     queryKey: ['delivery-overrides', overrideDate?.format('YYYY-MM-DD')],
     queryFn: () => getOverrides({ date: overrideDate?.format('YYYY-MM-DD') }),
     enabled: !!overrideDate,
@@ -71,8 +71,7 @@ export default function DeliverySchedulePage() {
 
   const schedules = schedulesData?.data || schedulesData || [];
   const routes = routesData?.data?.data || routesData?.data || [];
-  const drivers = driversData?.data?.staff || driversData?.staff || [];
-  const overrides = overridesData?.data || overridesData || [];
+  const drivers = (driversData as any)?.items || (driversData as any)?.data?.items || [];
   const todayAssigns = dateAssignments?.data || dateAssignments || [];
 
   // Mutations
@@ -115,7 +114,7 @@ export default function DeliverySchedulePage() {
 
   // 선택된 요일 그룹의 대표 요일
   const selectedDays = WEEKDAY_GROUPS[selectedDayGroup].days;
-  const representativeDay = selectedDays[0]; // 평일은 월요일(1) 기준
+  // 평일은 월요일(1) 기준
 
   // 스케줄 데이터를 코스 x 끼니 격자로 변환
   const scheduleGrid = useMemo(() => {
