@@ -150,7 +150,7 @@ export default function AttendanceDashboardPage() {
           dataSource={users}
           rowKey="userId"
           loading={isLoading}
-          pagination={false}
+          pagination={{ pageSize: 20 }}
           size="middle"
         />
       </Card>

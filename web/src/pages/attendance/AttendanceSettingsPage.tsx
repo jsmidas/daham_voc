@@ -179,7 +179,7 @@ export default function AttendanceSettingsPage() {
           dataSource={settings}
           rowKey="id"
           loading={isLoading}
-          pagination={false}
+          pagination={{ pageSize: 20 }}
           size="middle"
         />
       </Card>

@@ -186,7 +186,7 @@ export default function HolidayManagementPage() {
         dataSource={holidays?.data || []}
         loading={isLoading}
         rowKey="id"
-        pagination={false}
+        pagination={{ pageSize: 20 }}
         size="middle"
       />
 

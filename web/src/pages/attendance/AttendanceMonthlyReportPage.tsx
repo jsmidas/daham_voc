@@ -264,7 +264,7 @@ export default function AttendanceMonthlyReportPage() {
           dataSource={employees}
           rowKey={(record) => record.user.id}
           loading={isLoading}
-          pagination={false}
+          pagination={{ pageSize: 20 }}
           size="middle"
           expandable={{
             expandedRowRender: (record: MonthlyReportEmployee) => (
