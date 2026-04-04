@@ -36,6 +36,7 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
         color: route.color,
         description: route.description,
         isActive: route.isActive,
+        scheduleType: (route as any).scheduleType || 'WEEKDAY',
       });
     }
   }, [open, route, form]);
@@ -104,6 +105,15 @@ export default function EditDeliveryRouteModal({ open, onClose, onSuccess, route
             rows={3}
             maxLength={500}
           />
+        </Form.Item>
+
+        <Form.Item label="운영 유형" name="scheduleType" rules={[{ required: true }]}>
+          <Select placeholder="운영 유형 선택">
+            <Select.Option value="WEEKDAY">평일</Select.Option>
+            <Select.Option value="SATURDAY">토요일</Select.Option>
+            <Select.Option value="SUNDAY">일요일</Select.Option>
+            <Select.Option value="HOLIDAY">특별한 날</Select.Option>
+          </Select>
         </Form.Item>
 
         <Form.Item label="상태" name="isActive" rules={[{ required: true }]}>
