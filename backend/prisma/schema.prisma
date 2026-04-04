@@ -449,7 +449,8 @@ model DeliveryRoute {
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   deletedAt    DateTime?
-  markerShape  MarkerShape          @default(CIRCLE)
+  markerShape    MarkerShape          @default(CIRCLE)
+  scheduleType   ScheduleType         @default(WEEKDAY)
   assignments          DeliveryAssignment[]
   deliveryLogs         DeliveryLog[]
   routeStops           DeliveryRouteStop[]
@@ -585,6 +586,13 @@ enum Division {
   HQ
   YEONGNAM
   CONSIGNMENT
+}
+
+enum ScheduleType {
+  WEEKDAY
+  SATURDAY
+  SUNDAY
+  HOLIDAY
 }
 
 enum MarkerShape {

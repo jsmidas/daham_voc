@@ -18,6 +18,7 @@ export class DeliveryRouteService {
     division?: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
     isActive?: boolean;
     search?: string;
+    scheduleType?: string;
   }): Promise<DeliveryRouteResponse[]> {
     const where: Prisma.DeliveryRouteWhereInput = {
       deletedAt: null,
@@ -29,6 +30,10 @@ export class DeliveryRouteService {
 
     if (filters.isActive !== undefined) {
       where.isActive = filters.isActive;
+    }
+
+    if (filters.scheduleType) {
+      where.scheduleType = filters.scheduleType as any;
     }
 
     if (filters.search) {

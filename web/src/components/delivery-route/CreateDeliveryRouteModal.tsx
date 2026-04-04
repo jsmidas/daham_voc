@@ -89,6 +89,20 @@ export default function CreateDeliveryRouteModal({ open, onClose, onSuccess }: P
           </Select>
         </Form.Item>
 
+        <Form.Item
+          label="운영 유형"
+          name="scheduleType"
+          rules={[{ required: true, message: '운영 유형을 선택해주세요' }]}
+          initialValue="WEEKDAY"
+        >
+          <Select placeholder="운영 유형 선택">
+            <Select.Option value="WEEKDAY">평일</Select.Option>
+            <Select.Option value="SATURDAY">토요일</Select.Option>
+            <Select.Option value="SUNDAY">일요일</Select.Option>
+            <Select.Option value="HOLIDAY">특별한 날</Select.Option>
+          </Select>
+        </Form.Item>
+
         <Form.Item label="코스 색상" name="color">
           <Input type="color" />
         </Form.Item>

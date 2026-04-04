@@ -36,6 +36,7 @@ export default function DeliveryRouteListPage() {
   const [search, setSearch] = useState('');
   const [division, setDivision] = useState<string | undefined>();
   const [isActive, setIsActive] = useState<boolean | undefined>(true);
+  const [scheduleType, setScheduleType] = useState<string | undefined>('WEEKDAY');
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedRoute, setSelectedRoute] = useState<DeliveryRoute | null>(null);
@@ -43,8 +44,8 @@ export default function DeliveryRouteListPage() {
 
   // 배송 코스 목록 조회
   const { data: routesData, isLoading, refetch } = useQuery({
-    queryKey: ['delivery-routes', { division, isActive, search }],
-    queryFn: () => getDeliveryRoutes({ division, isActive, search }),
+    queryKey: ['delivery-routes', { division, isActive, search, scheduleType }],
+    queryFn: () => getDeliveryRoutes({ division, isActive, search, scheduleType }),
   });
 
   // 미배정 사업장 조회
@@ -111,6 +112,22 @@ export default function DeliveryRouteListPage() {
       key: 'stopsCount',
       width: 100,
       align: 'center' as const,
+    },
+    {
+      title: '유형',
+      dataIndex: 'scheduleType',
+      key: 'scheduleType',
+      width: 90,
+      render: (type: string) => {
+        const map: Record<string, { label: string; color: string }> = {
+          WEEKDAY: { label: '평일', color: 'blue' },
+          SATURDAY: { label: '토요일', color: 'green' },
+          SUNDAY: { label: '일요일', color: 'red' },
+          HOLIDAY: { label: '특별', color: 'purple' },
+        };
+        const info = map[type] || { label: type, color: 'default' };
+        return <Tag color={info.color}>{info.label}</Tag>;
+      },
     },
     {
       title: '배정 기사',
@@ -233,6 +250,26 @@ export default function DeliveryRouteListPage() {
             <Select.Option value={false}>비활성</Select.Option>
           </Select>
         </Space>
+        <div style={{ marginTop: 12 }}>
+          <Space>
+            {[
+              { value: 'WEEKDAY', label: '평일', color: '#1890ff' },
+              { value: 'SATURDAY', label: '토요일', color: '#52c41a' },
+              { value: 'SUNDAY', label: '일요일', color: '#ff4d4f' },
+              { value: 'HOLIDAY', label: '특별한 날', color: '#722ed1' },
+              { value: undefined, label: '전체', color: undefined },
+            ].map((item) => (
+              <Button
+                key={item.value || 'all'}
+                type={scheduleType === item.value ? 'primary' : 'default'}
+                style={scheduleType === item.value && item.color ? { backgroundColor: item.color, borderColor: item.color } : {}}
+                onClick={() => setScheduleType(item.value)}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </Space>
+        </div>
       </Card>
 
       <Card>

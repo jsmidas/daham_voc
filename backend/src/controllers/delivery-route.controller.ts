@@ -9,12 +9,13 @@ const deliveryRouteService = new DeliveryRouteService();
  */
 export async function getDeliveryRoutes(req: Request, res: Response, next: NextFunction) {
   try {
-    const { division, isActive, search } = req.query;
+    const { division, isActive, search, scheduleType } = req.query;
 
     const routes = await deliveryRouteService.getDeliveryRoutes({
       division: division as 'HQ' | 'YEONGNAM' | 'CONSIGNMENT' | undefined,
       isActive: isActive === 'true' ? true : isActive === 'false' ? false : undefined,
       search: search as string | undefined,
+      scheduleType: scheduleType as string | undefined,
     });
 
     res.json({

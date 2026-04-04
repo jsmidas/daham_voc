@@ -13,6 +13,7 @@ export async function getDeliveryRoutes(params?: {
   division?: string;
   isActive?: boolean;
   search?: string;
+  scheduleType?: string;
 }) {
   return apiClient.get('/delivery-routes', { params });
 }
