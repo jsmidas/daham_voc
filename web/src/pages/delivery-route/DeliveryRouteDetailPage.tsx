@@ -242,11 +242,13 @@ export default function DeliveryRouteDetailPage() {
   };
 
   // 어떤 코스에도 활성 배정이 없는 사업장 조회
-  // 전체 활성 사업장 조회 (코스에 이미 포함된 것 제외)
+  // 코스 부문에 맞는 활성 사업장 조회 (코스에 이미 포함된 것 제외)
   const { data: allSitesData } = useQuery({
-    queryKey: ['all-active-sites'],
+    queryKey: ['division-sites', route?.division],
     queryFn: async () => {
-      const res: any = await apiClient.get('/sites', { params: { isActive: true, limit: 500 } });
+      const res: any = await apiClient.get('/sites', {
+        params: { isActive: true, limit: 500, division: route?.division }
+      });
       return res?.data || res;
     },
     enabled: !!route,
