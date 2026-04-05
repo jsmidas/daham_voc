@@ -31,10 +31,11 @@
 
 **반드시 이 설정을 사용할 것** (2025-10-22 확정):
 ```bash
-# backend/.env 파일
-DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres
-DIRECT_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:cc956697%25%5E12@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres
+# backend/.env 파일 (실제 비밀번호는 .env 파일에서만 관리)
+DATABASE_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:<PASSWORD>@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres
+DIRECT_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:<PASSWORD>@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres
 ```
+⚠️ **실제 비밀번호는 절대 이 파일에 기록하지 말 것** (GitHub 공개 저장소 노출 위험)
 
 **포트 설명**:
 - **6543**: Transaction mode - 일반 연결용 (메인 사용)
