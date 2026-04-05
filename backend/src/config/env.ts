@@ -1,7 +1,9 @@
 import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from backend/.env (explicit path for PM2 compatibility)
+// Compiled file is at backend/dist/config/env.js, so .env is at ../../.env
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 export interface EnvConfig {
   NODE_ENV: 'development' | 'production' | 'test';
