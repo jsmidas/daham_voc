@@ -3,6 +3,7 @@ import { env, validateEnv } from './config/env';
 import { connectDatabase, disconnectDatabase } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
 import { initializeGCPStorage } from './config/gcp-storage';
+import { prisma } from './config/database';
 
 // Initialize server
 async function startServer() {
@@ -32,6 +33,16 @@ async function startServer() {
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log('=================================');
     });
+
+    // DB 연결 keep-alive: 5분마다 간단한 쿼리로 Supabase pooler 연결 유지
+    // (아침 첫 요청 시 cold start 방지)
+    setInterval(async () => {
+      try {
+        await prisma.$queryRaw`SELECT 1`;
+      } catch (e: any) {
+        console.error('Keep-alive query failed:', e.message);
+      }
+    }, 5 * 60 * 1000);
   } catch (error: any) {
     console.error('❌ Server startup failed:', error.message);
     process.exit(1);
