@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import path from 'path';
 import { env } from './config/env';
 
@@ -27,6 +28,31 @@ app.use(cors({
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Rate limiting
+// 로그인/회원가입: 15분에 10회 (brute force 방지)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '잠시 후 다시 시도해주세요' } },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// 일반 API: 15분에 500회 (정상 사용 범위)
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '요청이 너무 많습니다' } },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.path.startsWith('/api/v1/auth/'), // auth는 별도 제한
+});
+
+app.use('/api/v1/auth/login', authLimiter);
+app.use('/api/v1/auth/register', authLimiter);
+app.use('/api/v1/auth/register-customer', authLimiter);
+app.use('/api/v1', apiLimiter);
 
 // Mock storage (개발 환경) - 정적 파일 서빙
 app.use('/mock-images', express.static(path.join(process.cwd(), 'mock-images')));
