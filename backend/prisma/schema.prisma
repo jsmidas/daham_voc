@@ -29,6 +29,7 @@ model User {
   deletedAt           DateTime?
   attendances         Attendance[]
   feedbacks           CustomerFeedback[]
+  feedbackReplies     FeedbackReply[]    @relation("FeedbackReplyAuthor")
   mealCounts          MealCount[]
   mealPhotos          MealPhoto[]
   staff               Staff?
@@ -274,12 +275,28 @@ model CustomerFeedback {
   author       User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
   site         Site               @relation(fields: [siteId], references: [id], onDelete: Cascade)
   images       FeedbackImage[]
+  replies      FeedbackReply[]
 
   @@index([siteId, status])
   @@index([authorId])
   @@index([status])
   @@index([createdAt])
   @@index([feedbackDate])
+}
+
+model FeedbackReply {
+  id           String           @id @default(uuid())
+  feedbackId   String
+  authorId     String
+  content      String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
+  feedback     CustomerFeedback @relation(fields: [feedbackId], references: [id], onDelete: Cascade)
+  author       User             @relation("FeedbackReplyAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([feedbackId])
+  @@index([authorId])
 }
 
 model FeedbackImage {

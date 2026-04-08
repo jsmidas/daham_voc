@@ -134,7 +134,11 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
+          <Card
+            hoverable
+            onClick={() => navigate('/feedbacks?status=PENDING')}
+            style={{ cursor: 'pointer' }}
+          >
             <Statistic
               title="미처리 VOC (최근 2주)"
               value={summary?.data?.recentPendingFeedbacks || 0}

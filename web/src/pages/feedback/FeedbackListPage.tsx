@@ -9,10 +9,13 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFeedbacks, replyToFeedback, createFeedback } from '@/api/feedback.api';
 import { getSites } from '@/api/site.api';
 import { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import dayjs from 'dayjs';
 import type { UploadFile } from 'antd';
 
 export default function FeedbackListPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -21,9 +24,12 @@ export default function FeedbackListPage() {
   const [replyForm] = Form.useForm();
   const [createForm] = Form.useForm();
 
+  // URL 파라미터에서 상태 필터 (대시보드 미처리 VOC 클릭 시)
+  const statusFilter = searchParams.get('status');
+
   const { data: feedbacks, isLoading } = useQuery({
-    queryKey: ['feedbacks'],
-    queryFn: () => getFeedbacks(),
+    queryKey: ['feedbacks', statusFilter],
+    queryFn: () => getFeedbacks(statusFilter ? { status: statusFilter } : undefined),
     retry: false,
   });
 
@@ -224,10 +230,10 @@ export default function FeedbackListPage() {
       render: (_: any, record: any) => (
         <Button
           size="small"
-          onClick={() => handleRespond(record)}
-          disabled={record.status === 'CLOSED'}
+          type="link"
+          onClick={() => navigate(`/feedbacks/${record.id}`)}
         >
-          답변
+          상세
         </Button>
       ),
     },
@@ -249,6 +255,10 @@ export default function FeedbackListPage() {
         loading={isLoading}
         rowKey="id"
         pagination={{ pageSize: 10 }}
+        onRow={(record) => ({
+          onClick: () => navigate(`/feedbacks/${record.id}`),
+          style: { cursor: 'pointer' },
+        })}
       />
 
       {/* VOC 작성 모달 */}

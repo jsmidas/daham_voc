@@ -54,3 +54,13 @@ export async function createFeedback(data: {
 export async function updateFeedbackStatus(id: string, data: { status: string }) {
   return apiClient.patch(`/feedbacks/${id}/status`, data);
 }
+
+// VOC 답변 추가 (다중 답변)
+export async function addFeedbackReply(feedbackId: string, data: { content: string }) {
+  return apiClient.post(`/feedbacks/${feedbackId}/replies`, data);
+}
+
+// VOC 답변 삭제
+export async function deleteFeedbackReply(replyId: string) {
+  return apiClient.delete(`/feedbacks/replies/${replyId}`);
+}

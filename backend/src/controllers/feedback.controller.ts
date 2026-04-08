@@ -213,6 +213,46 @@ export async function updateFeedbackStatus(req: Request, res: Response): Promise
 }
 
 /**
+ * 답변 추가 (다중 답변)
+ * POST /api/v1/feedbacks/:id/replies
+ */
+export async function addReply(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    const userId = req.user!.userId;
+
+    if (!content) {
+      res.status(400).json(errorResponse('답변 내용을 입력해주세요'));
+      return;
+    }
+
+    const reply = await feedbackService.addReply(id, content, userId);
+    res.status(201).json(successResponse(reply, '답변이 등록되었습니다.'));
+  } catch (error: any) {
+    console.error('Add reply error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 답변 삭제
+ * DELETE /api/v1/feedbacks/replies/:replyId
+ */
+export async function deleteReply(req: Request, res: Response): Promise<void> {
+  try {
+    const { replyId } = req.params;
+    const userId = req.user!.userId;
+
+    await feedbackService.deleteReply(replyId, userId);
+    res.json(successResponse(null, '답변이 삭제되었습니다.'));
+  } catch (error: any) {
+    console.error('Delete reply error:', error);
+    res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
  * 피드백 통계
  * GET /api/v1/feedbacks/statistics
  */

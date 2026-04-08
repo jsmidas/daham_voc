@@ -41,6 +41,7 @@ const WeeklyMenuPage = lazyWithRetry(() => import('@/pages/menu/WeeklyMenuPage')
 const PhotoGalleryPage = lazyWithRetry(() => import('@/pages/photo/PhotoGalleryPage'));
 const MealPhotoManagementPage = lazyWithRetry(() => import('@/pages/meal-photo/MealPhotoManagementPage'));
 const FeedbackListPage = lazyWithRetry(() => import('@/pages/feedback/FeedbackListPage'));
+const FeedbackDetailPage = lazyWithRetry(() => import('@/pages/feedback/FeedbackDetailPage'));
 const StaffListPage = lazyWithRetry(() => import('@/pages/staff/StaffListPage'));
 const StaffFormPage = lazyWithRetry(() => import('@/pages/staff/StaffFormPage'));
 const AttendanceListPage = lazyWithRetry(() => import('@/pages/attendance/AttendanceListPage'));
@@ -158,6 +159,10 @@ export const router = createBrowserRouter([
       {
         path: 'feedbacks',
         element: <L><FeedbackListPage /></L>,
+      },
+      {
+        path: 'feedbacks/:id',
+        element: <L><FeedbackDetailPage /></L>,
       },
       {
         path: 'staff',

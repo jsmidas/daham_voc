@@ -245,10 +245,19 @@ export async function getFeedbackById(id: string): Promise<any> {
         select: { id: true, name: true, type: true, division: true },
       },
       author: {
-        select: { id: true, name: true, email: true, role: true },
+        select: { id: true, name: true, email: true, role: true, phone: true },
       },
       images: {
         orderBy: { sortOrder: 'asc' },
+      },
+      replies: {
+        where: { deletedAt: null },
+        include: {
+          author: {
+            select: { id: true, name: true, role: true, phone: true },
+          },
+        },
+        orderBy: { createdAt: 'asc' },
       },
     },
   });
@@ -393,7 +402,7 @@ export async function replyToFeedback(
 }
 
 /**
- * 피드백 상태 변경
+ * 피드백 상태 변경 (관리자 + 담당자 모두 가능)
  */
 export async function updateFeedbackStatus(
   feedbackId: string,
@@ -408,10 +417,11 @@ export async function updateFeedbackStatus(
     throw new Error('Feedback not found');
   }
 
-  // 관리자 권한 확인
+  // 관리자 또는 담당자 권한 확인
   const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user || !['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN'].includes(user.role)) {
-    throw new Error('Only administrators can change feedback status');
+  const allowedRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'GROUP_MANAGER', 'SITE_MANAGER', 'SITE_STAFF'];
+  if (!user || !allowedRoles.includes(user.role)) {
+    throw new Error('권한이 없습니다');
   }
 
   const updated = await prisma.customerFeedback.update({
@@ -431,6 +441,84 @@ export async function updateFeedbackStatus(
   await invalidateFeedbackCache(feedback.siteId);
 
   return updated;
+}
+
+/**
+ * 답변 추가 (관리자 + 담당자 모두 가능)
+ */
+export async function addReply(
+  feedbackId: string,
+  content: string,
+  userId: string
+): Promise<any> {
+  const feedback = await prisma.customerFeedback.findUnique({
+    where: { id: feedbackId },
+  });
+
+  if (!feedback || feedback.deletedAt) {
+    throw new Error('Feedback not found');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const allowedRoles = ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'GROUP_MANAGER', 'SITE_MANAGER', 'SITE_STAFF'];
+  if (!user || !allowedRoles.includes(user.role)) {
+    throw new Error('권한이 없습니다');
+  }
+
+  const reply = await prisma.feedbackReply.create({
+    data: {
+      feedbackId,
+      authorId: userId,
+      content,
+    },
+    include: {
+      author: {
+        select: { id: true, name: true, role: true, phone: true },
+      },
+    },
+  });
+
+  // 첫 답변이면 상태를 IN_PROGRESS로 변경
+  if (feedback.status === 'PENDING') {
+    await prisma.customerFeedback.update({
+      where: { id: feedbackId },
+      data: { status: 'IN_PROGRESS' },
+    });
+  }
+
+  await invalidateFeedbackCache(feedback.siteId);
+  return reply;
+}
+
+/**
+ * 답변 삭제 (작성자 또는 관리자)
+ */
+export async function deleteReply(
+  replyId: string,
+  userId: string
+): Promise<void> {
+  const reply = await prisma.feedbackReply.findUnique({
+    where: { id: replyId },
+    include: { feedback: true },
+  });
+
+  if (!reply || reply.deletedAt) {
+    throw new Error('Reply not found');
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const isAdmin = user && ['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN'].includes(user.role);
+
+  if (reply.authorId !== userId && !isAdmin) {
+    throw new Error('권한이 없습니다');
+  }
+
+  await prisma.feedbackReply.update({
+    where: { id: replyId },
+    data: { deletedAt: new Date() },
+  });
+
+  await invalidateFeedbackCache(reply.feedback.siteId);
 }
 
 /**

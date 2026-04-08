@@ -36,7 +36,7 @@ router.post(
   feedbackController.createFeedback
 );
 
-// POST /api/v1/feedbacks/:id/reply - 관리자 답변 (Admin only)
+// POST /api/v1/feedbacks/:id/reply - 관리자 답변 (기존 호환용, Admin only)
 router.post(
   '/:id/reply',
   authMiddleware,
@@ -45,12 +45,24 @@ router.post(
   feedbackController.replyToFeedback
 );
 
-// PATCH /api/v1/feedbacks/:id/status - 피드백 상태 변경 (Admin only)
+// POST /api/v1/feedbacks/:id/replies - 다중 답변 추가 (관리자 + 담당자)
+router.post(
+  '/:id/replies',
+  authMiddleware,
+  feedbackController.addReply
+);
+
+// DELETE /api/v1/feedbacks/replies/:replyId - 답변 삭제 (작성자 또는 관리자)
+router.delete(
+  '/replies/:replyId',
+  authMiddleware,
+  feedbackController.deleteReply
+);
+
+// PATCH /api/v1/feedbacks/:id/status - 피드백 상태 변경 (관리자 + 담당자)
 router.patch(
   '/:id/status',
   authMiddleware,
-  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
-  validateRequest(updateStatusSchema),
   feedbackController.updateFeedbackStatus
 );
 
