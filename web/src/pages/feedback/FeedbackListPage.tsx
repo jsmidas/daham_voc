@@ -66,11 +66,6 @@ export default function FeedbackListPage() {
     },
   });
 
-  const handleRespond = (record: any) => {
-    setSelectedFeedback(record);
-    setIsReplyModalOpen(true);
-  };
-
   const handleCreate = () => {
     setIsCreateModalOpen(true);
   };
@@ -255,7 +250,7 @@ export default function FeedbackListPage() {
         loading={isLoading}
         rowKey="id"
         pagination={{ pageSize: 10 }}
-        onRow={(record) => ({
+        onRow={(record: any) => ({
           onClick: () => navigate(`/feedbacks/${record.id}`),
           style: { cursor: 'pointer' },
         })}
