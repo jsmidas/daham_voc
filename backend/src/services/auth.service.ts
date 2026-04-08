@@ -304,13 +304,24 @@ export class AuthService {
   }
 
   /**
-   * Get current user by ID
+   * Get current user by ID (login과 동일한 수준의 정보 반환)
    */
-  async getCurrentUser(userId: string): Promise<Omit<User, 'password'>> {
+  async getCurrentUser(userId: string): Promise<any> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        staff: true,
+        staff: {
+          include: {
+            staffSites: {
+              where: { removedAt: null },
+              select: { site: { select: { id: true, name: true, type: true, division: true, address: true, latitude: true, longitude: true, group: { select: { id: true, name: true, division: true } } } } },
+            },
+            staffSiteGroups: {
+              where: { removedAt: null },
+              select: { siteGroup: { select: { id: true, name: true, division: true } } },
+            },
+          },
+        },
       },
     });
 
@@ -318,10 +329,52 @@ export class AuthService {
       throw new Error('사용자를 찾을 수 없습니다');
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
+    // login과 동일한 사업장 목록 구성
+    const individualSites = user.staff?.staffSites?.map(ss => ss.site) || [];
+    const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
+    const groupIds = assignedSiteGroups.map(g => g.id);
 
-    return userWithoutPassword as any;
+    const siteSelect = {
+      id: true, name: true, type: true, division: true,
+      address: true, latitude: true, longitude: true,
+      group: { select: { id: true, name: true, division: true } },
+    };
+
+    let assignedSites: any[];
+    if (groupIds.length > 0) {
+      const groupSites = await prisma.site.findMany({
+        where: { groupId: { in: groupIds }, deletedAt: null },
+        select: siteSelect,
+      });
+      const allSitesMap = new Map();
+      [...individualSites, ...groupSites].forEach(site => allSitesMap.set(site.id, site));
+      assignedSites = Array.from(allSitesMap.values());
+    } else {
+      assignedSites = individualSites;
+    }
+
+    // 부서 사업장
+    const departmentName = user.staff?.department;
+    let departmentSite: any = null;
+    if (departmentName) {
+      departmentSite = await prisma.site.findFirst({
+        where: { name: departmentName, deletedAt: null },
+        select: siteSelect,
+      });
+      if (departmentSite && !assignedSites.some((s: any) => s.id === departmentSite.id)) {
+        assignedSites.unshift(departmentSite);
+      }
+    }
+
+    const primarySiteId = departmentSite?.id || assignedSites[0]?.id || null;
+    const { password: _, staff, ...userWithoutPassword } = user;
+
+    return {
+      ...userWithoutPassword,
+      staffSites: assignedSites,
+      staffSiteGroups: assignedSiteGroups,
+      siteId: primarySiteId,
+    };
   }
 
   /**
