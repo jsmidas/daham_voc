@@ -6,7 +6,7 @@
 import { Table, Tag, Button, Modal, Form, Input, message, Upload, Image, Rate, Select } from 'antd';
 import { PlusOutlined, PictureOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getFeedbacks, replyToFeedback, createFeedback } from '@/api/feedback.api';
+import { getFeedbacks, createFeedback } from '@/api/feedback.api';
 import { getSites } from '@/api/site.api';
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -17,11 +17,8 @@ export default function FeedbackListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
-  const [replyForm] = Form.useForm();
   const [createForm] = Form.useForm();
 
   // URL 파라미터에서 상태 필터 (대시보드 미처리 VOC 클릭 시)
@@ -37,19 +34,6 @@ export default function FeedbackListPage() {
     queryKey: ['sites'],
     queryFn: () => getSites(),
     retry: false,
-  });
-
-  const respondMutation = useMutation({
-    mutationFn: ({ id, data }: any) => replyToFeedback(id, data),
-    onSuccess: () => {
-      message.success('답변이 등록되었습니다');
-      setIsReplyModalOpen(false);
-      replyForm.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['feedbacks'] });
-    },
-    onError: (error: any) => {
-      message.error(error.message || '답변 등록 실패');
-    },
   });
 
   const createMutation = useMutation({
@@ -68,13 +52,6 @@ export default function FeedbackListPage() {
 
   const handleCreate = () => {
     setIsCreateModalOpen(true);
-  };
-
-  const onReplyFinish = (values: any) => {
-    respondMutation.mutate({
-      id: selectedFeedback.id,
-      data: values,
-    });
   };
 
   const onCreateFinish = (values: any) => {
@@ -345,66 +322,6 @@ export default function FeedbackListPage() {
         </Form>
       </Modal>
 
-      {/* VOC 답변 모달 */}
-      <Modal
-        title="VOC 답변"
-        open={isReplyModalOpen}
-        onCancel={() => setIsReplyModalOpen(false)}
-        footer={null}
-        width={600}
-      >
-        <div style={{ marginBottom: 16, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
-          <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
-            <strong>작성자:</strong> {selectedFeedback?.author?.name}
-          </p>
-          <p style={{ margin: '8px 0 0 0' }}>
-            <strong>내용:</strong> {selectedFeedback?.content}
-          </p>
-          {selectedFeedback?.images && selectedFeedback.images.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <strong>첨부 이미지:</strong>
-              <Image.PreviewGroup>
-                <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  {selectedFeedback.images.map((img: any, index: number) => (
-                    <Image
-                      key={index}
-                      src={img.thumbnailUrl}
-                      alt={`이미지 ${index + 1}`}
-                      width={60}
-                      height={60}
-                      style={{ objectFit: 'cover', borderRadius: 4 }}
-                      preview={{
-                        src: img.imageUrl,
-                      }}
-                    />
-                  ))}
-                </div>
-              </Image.PreviewGroup>
-            </div>
-          )}
-        </div>
-
-        <Form form={replyForm} layout="vertical" onFinish={onReplyFinish}>
-          <Form.Item
-            label="관리자 답변"
-            name="adminReply"
-            rules={[{ required: true, message: '답변을 입력하세요' }]}
-          >
-            <Input.TextArea rows={4} placeholder="고객님의 의견에 대한 답변을 입력해주세요" />
-          </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              loading={respondMutation.isPending}
-            >
-              답변 등록
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 }
