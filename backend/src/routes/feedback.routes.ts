@@ -10,7 +10,6 @@ import { validateRequest } from '../middlewares/validator.middleware';
 import { uploadFeedbackImages } from '../middlewares/upload.middleware';
 import {
   replyFeedbackSchema,
-  updateStatusSchema,
   updateFeedbackSchema,
 } from '../validators/feedback.validator';
 
