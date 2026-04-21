@@ -148,6 +148,7 @@ export default function SiteListPage() {
       dataIndex: 'siteCode',
       key: 'siteCode',
       width: 80,
+      sorter: (a: any, b: any) => (a.siteCode || '').localeCompare(b.siteCode || ''),
       render: (code: string) => code ? <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{code}</span> : '-',
     },
     {
@@ -156,6 +157,7 @@ export default function SiteListPage() {
       key: 'name',
       width: 120,
       ellipsis: true,
+      sorter: (a: any, b: any) => (a.name || '').localeCompare(b.name || ''),
       render: (name: string, record: any) => (
         <span style={{ color: record.isActive ? 'inherit' : '#999' }}>
           {name}
@@ -167,6 +169,7 @@ export default function SiteListPage() {
       dataIndex: 'type',
       key: 'type',
       width: 75,
+      sorter: (a: any, b: any) => (a.type || '').localeCompare(b.type || ''),
       render: (type: any) => SiteTypeLabels[type as keyof typeof SiteTypeLabels] || type,
     },
     {
@@ -174,6 +177,7 @@ export default function SiteListPage() {
       dataIndex: 'division',
       key: 'division',
       width: 90,
+      sorter: (a: any, b: any) => (a.division || '').localeCompare(b.division || ''),
       render: (division: any) => DivisionLabels[division as keyof typeof DivisionLabels] || division,
     },
     {
@@ -181,12 +185,18 @@ export default function SiteListPage() {
       dataIndex: 'group',
       key: 'group',
       width: 95,
+      sorter: (a: any, b: any) => (a.group?.name || '').localeCompare(b.group?.name || ''),
       render: (group: any) => group?.name || '(미지정)',
     },
     {
       title: '식단유형',
       key: 'menuTypes',
       width: 188,
+      sorter: (a: any, b: any) => {
+        const aName = a.siteMenuTypes?.[0]?.menuType?.name || '';
+        const bName = b.siteMenuTypes?.[0]?.menuType?.name || '';
+        return aName.localeCompare(bName);
+      },
       render: (_: any, record: any) => {
         const types = record.siteMenuTypes || [];
         return types.length > 0
@@ -202,6 +212,11 @@ export default function SiteListPage() {
       title: '식수메뉴',
       key: 'mealMenus',
       width: 158,
+      sorter: (a: any, b: any) => {
+        const aName = a.siteMealMenus?.[0]?.mealMenu?.name || '';
+        const bName = b.siteMealMenus?.[0]?.mealMenu?.name || '';
+        return aName.localeCompare(bName);
+      },
       render: (_: any, record: any) => {
         const menus = record.siteMealMenus || [];
         return menus.length > 0
@@ -217,6 +232,11 @@ export default function SiteListPage() {
       title: '단가',
       key: 'price',
       width: 118,
+      sorter: (a: any, b: any) => {
+        const aPrice = Number(a.siteMenuTypes?.[0]?.menuType?.price || 0);
+        const bPrice = Number(b.siteMenuTypes?.[0]?.menuType?.price || 0);
+        return aPrice - bPrice;
+      },
       render: (_: any, record: any) => {
         const types = record.siteMenuTypes || [];
         if (types.length === 0) return <span style={{ color: '#ccc' }}>-</span>;
@@ -232,6 +252,7 @@ export default function SiteListPage() {
       dataIndex: 'isActive',
       key: 'isActive',
       width: 118,
+      sorter: (a: any, b: any) => Number(b.isActive) - Number(a.isActive),
       render: (isActive: boolean) => (
         <Tag color={isActive ? 'green' : 'red'}>
           {isActive ? '거래중' : '거래중단'}
@@ -244,6 +265,7 @@ export default function SiteListPage() {
       key: 'address',
       width: 200,
       ellipsis: true,
+      sorter: (a: any, b: any) => (a.address || '').localeCompare(b.address || ''),
     },
     {
       title: '작업',
