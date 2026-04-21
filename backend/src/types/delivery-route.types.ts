@@ -9,6 +9,7 @@ export interface CreateDeliveryRouteDto {
   division: 'HQ' | 'YEONGNAM' | 'CONSIGNMENT';
   description?: string;
   color?: string;
+  scheduleType?: 'WEEKDAY' | 'SATURDAY' | 'SUNDAY' | 'HOLIDAY';
 }
 
 /**

@@ -14,8 +14,8 @@ export const createDeliveryRouteSchema = Joi.object({
     'string.max': '코스 코드는 최대 10자까지 입력 가능합니다',
     'any.required': '코스 코드는 필수 항목입니다',
   }),
-  division: Joi.string().valid('HQ', 'YEONGNAM').required().messages({
-    'any.only': '유효한 부문을 선택해주세요 (본사/영남지사)',
+  division: Joi.string().valid('HQ', 'YEONGNAM', 'CONSIGNMENT').required().messages({
+    'any.only': '유효한 부문을 선택해주세요 (본사/영남지사/위탁사업장)',
     'any.required': '부문은 필수 항목입니다',
   }),
   description: Joi.string().max(500).optional().allow('').messages({
@@ -108,7 +108,7 @@ export const createDeliveryLogSchema = Joi.object({
  * 쿼리 파라미터 검증
  */
 export const getDeliveryRoutesQuerySchema = Joi.object({
-  division: Joi.string().valid('HQ', 'YEONGNAM').optional(),
+  division: Joi.string().valid('HQ', 'YEONGNAM', 'CONSIGNMENT').optional(),
   isActive: Joi.boolean().optional(),
   search: Joi.string().max(100).optional(),
   scheduleType: Joi.string().valid('WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY').optional(),

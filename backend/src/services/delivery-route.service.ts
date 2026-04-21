@@ -184,52 +184,65 @@ export class DeliveryRouteService {
    * 배송 코스 생성
    */
   async createDeliveryRoute(data: CreateDeliveryRouteDto): Promise<DeliveryRouteResponse> {
-    // 중복 검사
-    const existingRoute = await prisma.deliveryRoute.findFirst({
-      where: {
-        OR: [{ name: data.name }, { code: data.code }],
-        deletedAt: null,
-      },
-    });
+    const scheduleType = data.scheduleType || 'WEEKDAY';
 
-    if (existingRoute) {
-      throw new Error('이미 존재하는 코스명 또는 코드입니다');
-    }
+    try {
+      // 중복 검사 (name/code 글로벌 unique)
+      const existingRoute = await prisma.deliveryRoute.findFirst({
+        where: {
+          OR: [{ name: data.name }, { code: data.code }],
+          deletedAt: null,
+        },
+        select: { id: true, name: true, code: true, scheduleType: true },
+      });
 
-    const route = await prisma.deliveryRoute.create({
-      data: {
-        name: data.name,
-        code: data.code,
-        division: data.division,
-        description: data.description,
-        color: data.color || '#1890ff',
-        scheduleType: (data as any).scheduleType || 'WEEKDAY',
-      },
-      include: {
-        routeStops: true,
-        assignments: {
-          include: {
-            driver: {
-              select: { id: true, name: true, phone: true },
+      if (existingRoute) {
+        const conflict = existingRoute.name === data.name ? `코스명 "${data.name}"` : `코스 코드 "${data.code}"`;
+        throw new Error(`${conflict}(${existingRoute.scheduleType})이(가) 이미 사용 중입니다. 다른 이름/코드를 사용해주세요.`);
+      }
+
+      const route = await prisma.deliveryRoute.create({
+        data: {
+          name: data.name,
+          code: data.code,
+          division: data.division,
+          description: data.description,
+          color: data.color || '#1890ff',
+          scheduleType,
+        },
+        include: {
+          routeStops: true,
+          assignments: {
+            include: {
+              driver: {
+                select: { id: true, name: true, phone: true },
+              },
             },
           },
         },
-      },
-    });
+      });
 
-    return {
-      id: route.id,
-      name: route.name,
-      code: route.code,
-      division: route.division,
-      description: route.description || undefined,
-      color: route.color,
-      isActive: route.isActive,
-      createdAt: route.createdAt,
-      updatedAt: route.updatedAt,
-      stopsCount: 0,
-      assignedDrivers: [],
-    };
+      return {
+        id: route.id,
+        name: route.name,
+        code: route.code,
+        division: route.division,
+        description: route.description || undefined,
+        color: route.color,
+        isActive: route.isActive,
+        createdAt: route.createdAt,
+        updatedAt: route.updatedAt,
+        stopsCount: 0,
+        assignedDrivers: [],
+      };
+    } catch (error: any) {
+      // Prisma 중복 제약 에러 처리 (race condition 대응)
+      if (error.code === 'P2002') {
+        const target = error.meta?.target?.join?.(',') || 'name/code';
+        throw new Error(`이미 존재하는 ${target === 'name' ? '코스명' : target === 'code' ? '코드' : '코스명 또는 코드'}입니다. 다른 값을 사용해주세요.`);
+      }
+      throw error;
+    }
   }
 
   /**
