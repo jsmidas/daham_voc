@@ -30,10 +30,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rate limiting
-// 로그인/회원가입: 15분에 10회 (brute force 방지)
+// 로그인/회원가입: 15분에 100회 (IP당, 성공한 로그인은 카운트 제외)
+// 공유 네트워크(회사/카페)에서 여러 사용자가 사용하는 경우 대응
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 100,
+  skipSuccessfulRequests: true, // 성공한 로그인은 카운트 안 함
   message: { success: false, error: { code: 'RATE_LIMIT', message: '잠시 후 다시 시도해주세요' } },
   standardHeaders: true,
   legacyHeaders: false,
