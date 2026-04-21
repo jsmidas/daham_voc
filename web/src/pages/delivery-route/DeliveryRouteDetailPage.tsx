@@ -254,9 +254,19 @@ export default function DeliveryRouteDetailPage() {
     enabled: !!route,
   });
 
-  const availableSites = (allSitesData?.sites || []).filter(
+  const [availableSearch, setAvailableSearch] = useState('');
+
+  const availableSitesAll = (allSitesData?.sites || []).filter(
     (site: any) => !route?.stops.some((stop: any) => stop.site.id === site.id)
   );
+
+  const availableSites = availableSearch.trim()
+    ? availableSitesAll.filter((site: any) =>
+        (site.name || '').toLowerCase().includes(availableSearch.trim().toLowerCase()) ||
+        (site.address || '').toLowerCase().includes(availableSearch.trim().toLowerCase()) ||
+        (site.siteCode || '').toLowerCase().includes(availableSearch.trim().toLowerCase())
+      )
+    : availableSitesAll;
 
   // 사업장 추가 핸들러
   const handleAddSite = async () => {
@@ -514,7 +524,24 @@ export default function DeliveryRouteDetailPage() {
         />
       </Card>
 
-      <Card title="코스에 포함되지 않은 사업장" style={{ marginBottom: 16 }}>
+      <Card
+        title={
+          <Space>
+            <span>코스에 포함되지 않은 사업장</span>
+            <Tag>{availableSitesAll.length}개</Tag>
+          </Space>
+        }
+        extra={
+          <Input.Search
+            placeholder="사업장명/주소/코드 검색"
+            allowClear
+            value={availableSearch}
+            onChange={(e) => setAvailableSearch(e.target.value)}
+            style={{ width: 280 }}
+          />
+        }
+        style={{ marginBottom: 16 }}
+      >
         <Table
           columns={availableSitesColumns}
           dataSource={availableSites}
