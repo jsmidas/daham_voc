@@ -270,11 +270,14 @@ export class DeliveryLogService {
    * Get driver's today delivery logs
    */
   async getDriverTodayLogs(driverId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // KST(한국시간) 기준 "오늘" 범위 계산
+    // deliveryDate는 "KST 오늘 자정"을 저장 → UTC로는 "어제 15:00"로 표현됨
+    // 서버가 UTC여도 한국 사용자의 "오늘"을 정확히 매칭하기 위함
+    const now = new Date();
+    const kstOffsetMs = 9 * 60 * 60 * 1000;
+    const kstNow = new Date(now.getTime() + kstOffsetMs);
+    const today = new Date(Date.UTC(kstNow.getUTCFullYear(), kstNow.getUTCMonth(), kstNow.getUTCDate()) - kstOffsetMs);
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
 
     return prisma.deliveryLog.findMany({
       where: {
