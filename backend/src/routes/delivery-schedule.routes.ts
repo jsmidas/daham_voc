@@ -9,10 +9,10 @@ router.use(authMiddleware);
 // 오늘의 배정 (기사용) - 가장 먼저 매칭
 router.get('/today', controller.getTodayAssignments);
 
-// 특정 날짜 배정 (관리자용)
+// 특정 날짜 배정 (관리자 + 기사 - 컨트롤러에서 기사면 본인 것만으로 강제)
 router.get(
   '/date/:date',
-  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN']),
+  roleMiddleware(['SUPER_ADMIN', 'HQ_ADMIN', 'YEONGNAM_ADMIN', 'DELIVERY_DRIVER']),
   controller.getAssignmentsForDate
 );
 

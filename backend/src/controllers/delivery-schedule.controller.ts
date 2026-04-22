@@ -160,12 +160,18 @@ export async function getTodayAssignments(req: Request, res: Response): Promise<
   }
 }
 
-/** GET /delivery-schedules/date/:date - 특정 날짜 배정 (관리자용) */
+/** GET /delivery-schedules/date/:date - 특정 날짜 배정 */
 export async function getAssignmentsForDate(req: Request, res: Response): Promise<void> {
   try {
     const { date } = req.params;
-    const { driverId } = req.query;
-    const result = await scheduleService.getAssignmentsForDate(date, driverId as string);
+    let driverId = req.query.driverId as string | undefined;
+
+    // 기사가 요청하면 다른 기사의 배정을 볼 수 없도록 본인 ID로 강제
+    if (req.user!.role === 'DELIVERY_DRIVER') {
+      driverId = req.user!.userId;
+    }
+
+    const result = await scheduleService.getAssignmentsForDate(date, driverId);
     res.json(successResponse(result));
   } catch (error: any) {
     res.status(500).json(errorResponse(error.message));
