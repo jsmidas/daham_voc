@@ -516,22 +516,22 @@ model DeliveryAssignment {
   @@map("delivery_assignments")
 }
 
-/// 요일별 기본 배송 스케줄 (평일/토/일 코스 템플릿)
+/// 시점별 기본 배송 스케줄 (평일/토/일/특별 코스 템플릿)
 model DeliverySchedule {
-  id        String        @id @default(uuid())
-  routeId   String
-  driverId  String
-  dayOfWeek Int           // 0=일, 1=월, 2=화, ..., 6=토
-  mealType  MealType      // BREAKFAST, LUNCH, DINNER, SUPPER
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  route     DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  driver    User          @relation("deliverySchedules", fields: [driverId], references: [id], onDelete: Cascade)
+  id           String        @id @default(uuid())
+  routeId      String
+  driverId     String
+  scheduleType ScheduleType  // WEEKDAY(평일) / SATURDAY / SUNDAY / HOLIDAY(특별한날)
+  mealType     MealType      // BREAKFAST, LUNCH, DINNER, SUPPER
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  route        DeliveryRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  driver       User          @relation("deliverySchedules", fields: [driverId], references: [id], onDelete: Cascade)
 
-  @@unique([routeId, dayOfWeek, mealType])
+  @@unique([routeId, scheduleType, mealType])
   @@index([driverId])
   @@index([routeId])
-  @@index([dayOfWeek])
+  @@index([scheduleType])
   @@map("delivery_schedules")
 }
 

@@ -23,10 +23,11 @@ import dayjs from 'dayjs';
 const DEFAULT_MEAL = 'LUNCH';
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
-const WEEKDAY_GROUPS = [
-  { label: '평일 (월~금)', days: [1, 2, 3, 4, 5], scheduleType: 'WEEKDAY' },
-  { label: '토요일', days: [6], scheduleType: 'SATURDAY' },
-  { label: '일요일', days: [0], scheduleType: 'SUNDAY' },
+const SCHEDULE_GROUPS = [
+  { label: '평일 (월~금)', scheduleType: 'WEEKDAY' as const },
+  { label: '토요일',       scheduleType: 'SATURDAY' as const },
+  { label: '일요일',       scheduleType: 'SUNDAY' as const },
+  { label: '특별한날',      scheduleType: 'HOLIDAY' as const },
 ];
 
 export default function DeliverySchedulePage() {
@@ -103,8 +104,7 @@ export default function DeliverySchedulePage() {
     },
   });
 
-  const selectedDays = WEEKDAY_GROUPS[selectedDayGroup].days;
-  const selectedScheduleType = WEEKDAY_GROUPS[selectedDayGroup].scheduleType;
+  const selectedScheduleType = SCHEDULE_GROUPS[selectedDayGroup].scheduleType;
 
   // 선택된 scheduleType에 맞는 코스만 필터
   const filteredRoutes = useMemo(() => {
@@ -115,12 +115,10 @@ export default function DeliverySchedulePage() {
   // 코스 → 배정 기사 매핑 (스케줄 우선, 없으면 기존 배정에서 가져옴)
   const scheduleMap = useMemo(() => {
     const map: Record<string, any> = {};
-    // 1순위: DeliverySchedule (스케줄 관리)
+    // 1순위: DeliverySchedule (현재 선택된 시점)
     (Array.isArray(schedules) ? schedules : []).forEach((s: any) => {
-      if (selectedDays.includes(s.dayOfWeek)) {
-        if (!map[s.routeId]) {
-          map[s.routeId] = s;
-        }
+      if (s.scheduleType === selectedScheduleType && !map[s.routeId]) {
+        map[s.routeId] = s;
       }
     });
     // 2순위: DeliveryAssignment (코스 관리의 기존 배정) - 스케줄이 없는 코스만
@@ -128,24 +126,22 @@ export default function DeliverySchedulePage() {
       if (!map[route.id] && route.assignedDrivers?.length > 0) {
         map[route.id] = {
           driverId: route.assignedDrivers[0].id,
-          source: 'assignment', // 기존 배정에서 가져온 것 표시
+          source: 'assignment',
         };
       }
     });
     return map;
-  }, [schedules, selectedDays, filteredRoutes]);
+  }, [schedules, selectedScheduleType, filteredRoutes]);
 
-  // 기사 배정
+  // 기사 배정 (scheduleType 단위 1회)
   const handleDriverChange = (routeId: string, driverId: string) => {
-    for (const day of selectedDays) {
-      upsertMutation.mutate({ routeId, driverId, dayOfWeek: day, mealType: DEFAULT_MEAL });
-    }
+    upsertMutation.mutate({ routeId, driverId, scheduleType: selectedScheduleType, mealType: DEFAULT_MEAL });
   };
 
   // 배정 해제
   const handleDeleteSchedule = (routeId: string) => {
     const items = (Array.isArray(schedules) ? schedules : []).filter(
-      (s: any) => s.routeId === routeId && selectedDays.includes(s.dayOfWeek)
+      (s: any) => s.routeId === routeId && s.scheduleType === selectedScheduleType
     );
     items.forEach((item: any) => deleteMutation.mutate(item.id));
   };
@@ -256,7 +252,7 @@ export default function DeliverySchedulePage() {
               <Card>
                 <div style={{ marginBottom: 16 }}>
                   <Space>
-                    {WEEKDAY_GROUPS.map((group, i) => (
+                    {SCHEDULE_GROUPS.map((group, i) => (
                       <Button
                         key={i}
                         type={selectedDayGroup === i ? 'primary' : 'default'}

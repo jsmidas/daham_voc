@@ -1,20 +1,45 @@
 /**
  * Delivery Schedule Service
- * @description 배송 스케줄 관리 (요일별 기본 배정 + 일별 오버라이드)
+ * @description 배송 스케줄 관리 (시점별 기본 배정 + 일별 오버라이드)
+ *              시점: WEEKDAY(평일) / SATURDAY / SUNDAY / HOLIDAY(특별한날)
  */
 
-import { PrismaClient, MealType } from '@prisma/client';
+import { PrismaClient, MealType, ScheduleType } from '@prisma/client';
+import { isHoliday } from './holiday.service';
 
 const prisma = new PrismaClient();
 
-// ============ 요일별 기본 스케줄 ============
+// ============ 유틸 ============
+
+/** 날짜 → scheduleType 판별 (공휴일 > 요일) */
+export async function resolveScheduleType(date: Date): Promise<ScheduleType> {
+  if (await isHoliday(date)) return 'HOLIDAY';
+  const day = date.getDay();
+  if (day === 0) return 'SUNDAY';
+  if (day === 6) return 'SATURDAY';
+  return 'WEEKDAY';
+}
+
+/** dayOfWeek (0-6) → scheduleType (하위 호환용) */
+export function dayOfWeekToScheduleType(day: number): ScheduleType {
+  if (day === 0) return 'SUNDAY';
+  if (day === 6) return 'SATURDAY';
+  if (day >= 1 && day <= 5) return 'WEEKDAY';
+  throw new Error(`Invalid dayOfWeek: ${day}`);
+}
+
+// ============ 시점별 기본 스케줄 ============
 
 /** 스케줄 목록 조회 (코스별, 또는 전체) */
-export async function getSchedules(filter?: { routeId?: string; driverId?: string; dayOfWeek?: number }) {
+export async function getSchedules(filter?: {
+  routeId?: string;
+  driverId?: string;
+  scheduleType?: ScheduleType;
+}) {
   const where: any = {};
   if (filter?.routeId) where.routeId = filter.routeId;
   if (filter?.driverId) where.driverId = filter.driverId;
-  if (filter?.dayOfWeek !== undefined) where.dayOfWeek = filter.dayOfWeek;
+  if (filter?.scheduleType) where.scheduleType = filter.scheduleType;
 
   return prisma.deliverySchedule.findMany({
     where,
@@ -31,7 +56,7 @@ export async function getSchedules(filter?: { routeId?: string; driverId?: strin
       },
       driver: { select: { id: true, name: true, phone: true } },
     },
-    orderBy: [{ routeId: 'asc' }, { dayOfWeek: 'asc' }, { mealType: 'asc' }],
+    orderBy: [{ routeId: 'asc' }, { scheduleType: 'asc' }, { mealType: 'asc' }],
   });
 }
 
@@ -39,14 +64,14 @@ export async function getSchedules(filter?: { routeId?: string; driverId?: strin
 export async function upsertSchedule(data: {
   routeId: string;
   driverId: string;
-  dayOfWeek: number;
+  scheduleType: ScheduleType;
   mealType: MealType;
 }) {
   return prisma.deliverySchedule.upsert({
     where: {
-      routeId_dayOfWeek_mealType: {
+      routeId_scheduleType_mealType: {
         routeId: data.routeId,
-        dayOfWeek: data.dayOfWeek,
+        scheduleType: data.scheduleType,
         mealType: data.mealType,
       },
     },
@@ -59,11 +84,11 @@ export async function upsertSchedule(data: {
   });
 }
 
-/** 스케줄 일괄 저장 (코스 + 요일 단위) */
+/** 스케줄 일괄 저장 */
 export async function bulkUpsertSchedules(schedules: Array<{
   routeId: string;
   driverId: string;
-  dayOfWeek: number;
+  scheduleType: ScheduleType;
   mealType: MealType;
 }>) {
   const results = [];
@@ -79,10 +104,10 @@ export async function deleteSchedule(id: string) {
   return prisma.deliverySchedule.delete({ where: { id } });
 }
 
-/** 코스의 특정 요일 스케줄 전체 삭제 */
-export async function deleteSchedulesByRouteDay(routeId: string, dayOfWeek: number) {
+/** 코스의 특정 시점 스케줄 전체 삭제 */
+export async function deleteSchedulesByRouteType(routeId: string, scheduleType: ScheduleType) {
   return prisma.deliverySchedule.deleteMany({
-    where: { routeId, dayOfWeek },
+    where: { routeId, scheduleType },
   });
 }
 
@@ -141,15 +166,14 @@ export async function deleteOverride(id: string) {
   return prisma.dailyDriverOverride.delete({ where: { id } });
 }
 
-// ============ 오늘의 배정 조회 (핵심 로직) ============
+// ============ 특정 날짜의 실제 배정 조회 (핵심 로직) ============
 
 /**
- * 특정 날짜의 실제 배정 조회
- * 우선순위: DailyDriverOverride > DeliverySchedule > DeliveryAssignment(기존)
+ * 우선순위: DailyDriverOverride > DeliverySchedule(해당 날짜의 scheduleType)
  */
 export async function getAssignmentsForDate(date: string, driverId?: string) {
   const targetDate = new Date(date);
-  const dayOfWeek = targetDate.getDay(); // 0=일, 1=월, ..., 6=토
+  const scheduleType = await resolveScheduleType(targetDate);
 
   // 1. 해당 날짜의 오버라이드 조회
   const overrideWhere: any = { date: targetDate };
@@ -172,8 +196,8 @@ export async function getAssignmentsForDate(date: string, driverId?: string) {
     },
   });
 
-  // 2. 해당 요일의 기본 스케줄 조회
-  const scheduleWhere: any = { dayOfWeek };
+  // 2. 해당 시점(scheduleType)의 기본 스케줄 조회
+  const scheduleWhere: any = { scheduleType };
   if (driverId) scheduleWhere.driverId = driverId;
 
   const schedules = await prisma.deliverySchedule.findMany({
@@ -193,7 +217,7 @@ export async function getAssignmentsForDate(date: string, driverId?: string) {
     },
   });
 
-  // 3. 오버라이드가 있는 코스+끼니는 오버라이드 사용, 없으면 스케줄 사용
+  // 3. 오버라이드 우선, 없으면 스케줄 사용
   const overrideKeys = new Set(
     overrides.map((o) => `${o.routeId}_${o.mealType}`)
   );

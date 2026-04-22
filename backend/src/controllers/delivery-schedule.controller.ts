@@ -1,9 +1,11 @@
 /**
  * Delivery Schedule Controller
  * @description 배송 스케줄 관리 컨트롤러
+ *              구 클라이언트 호환: dayOfWeek(0-6) → scheduleType 자동 변환
  */
 
 import { Request, Response } from 'express';
+import { ScheduleType } from '@prisma/client';
 import * as scheduleService from '../services/delivery-schedule.service';
 
 const successResponse = (data: any, message?: string) => ({
@@ -17,16 +19,32 @@ const errorResponse = (message: string, code?: string) => ({
   error: { message, code },
 });
 
+const VALID_TYPES: ScheduleType[] = ['WEEKDAY', 'SATURDAY', 'SUNDAY', 'HOLIDAY'];
+
+/** body/query 입력을 scheduleType으로 정규화 (구 dayOfWeek도 허용) */
+function normalizeScheduleType(input: any): ScheduleType | undefined {
+  if (input.scheduleType) {
+    const t = String(input.scheduleType).toUpperCase() as ScheduleType;
+    return VALID_TYPES.includes(t) ? t : undefined;
+  }
+  if (input.dayOfWeek !== undefined && input.dayOfWeek !== null && input.dayOfWeek !== '') {
+    const n = typeof input.dayOfWeek === 'string' ? parseInt(input.dayOfWeek) : input.dayOfWeek;
+    if (Number.isInteger(n)) return scheduleService.dayOfWeekToScheduleType(n);
+  }
+  return undefined;
+}
+
 // ============ 스케줄 ============
 
 /** GET /delivery-schedules */
 export async function getSchedules(req: Request, res: Response): Promise<void> {
   try {
-    const { routeId, driverId, dayOfWeek } = req.query;
+    const { routeId, driverId } = req.query;
+    const scheduleType = normalizeScheduleType(req.query);
     const result = await scheduleService.getSchedules({
       routeId: routeId as string,
       driverId: driverId as string,
-      dayOfWeek: dayOfWeek !== undefined ? parseInt(dayOfWeek as string) : undefined,
+      scheduleType,
     });
     res.json(successResponse(result));
   } catch (error: any) {
@@ -37,7 +55,17 @@ export async function getSchedules(req: Request, res: Response): Promise<void> {
 /** POST /delivery-schedules */
 export async function upsertSchedule(req: Request, res: Response): Promise<void> {
   try {
-    const result = await scheduleService.upsertSchedule(req.body);
+    const scheduleType = normalizeScheduleType(req.body);
+    if (!scheduleType) {
+      res.status(400).json(errorResponse('scheduleType 또는 dayOfWeek가 필요합니다'));
+      return;
+    }
+    const result = await scheduleService.upsertSchedule({
+      routeId: req.body.routeId,
+      driverId: req.body.driverId,
+      mealType: req.body.mealType,
+      scheduleType,
+    });
     res.json(successResponse(result, '스케줄이 저장되었습니다'));
   } catch (error: any) {
     res.status(400).json(errorResponse(error.message));
@@ -48,7 +76,23 @@ export async function upsertSchedule(req: Request, res: Response): Promise<void>
 export async function bulkUpsertSchedules(req: Request, res: Response): Promise<void> {
   try {
     const { schedules } = req.body;
-    const result = await scheduleService.bulkUpsertSchedules(schedules);
+    if (!Array.isArray(schedules)) {
+      res.status(400).json(errorResponse('schedules 배열이 필요합니다'));
+      return;
+    }
+    const normalized = schedules.map((s: any) => {
+      const scheduleType = normalizeScheduleType(s);
+      if (!scheduleType) {
+        throw new Error('각 스케줄에 scheduleType 또는 dayOfWeek가 필요합니다');
+      }
+      return {
+        routeId: s.routeId,
+        driverId: s.driverId,
+        mealType: s.mealType,
+        scheduleType,
+      };
+    });
+    const result = await scheduleService.bulkUpsertSchedules(normalized);
     res.json(successResponse(result, `${result.length}개 스케줄이 저장되었습니다`));
   } catch (error: any) {
     res.status(400).json(errorResponse(error.message));

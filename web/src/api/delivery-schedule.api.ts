@@ -1,10 +1,12 @@
 import { apiClient } from '../utils/axios';
 
+export type ScheduleType = 'WEEKDAY' | 'SATURDAY' | 'SUNDAY' | 'HOLIDAY';
+
 export interface DeliveryScheduleItem {
   id: string;
   routeId: string;
   driverId: string;
-  dayOfWeek: number;
+  scheduleType: ScheduleType;
   mealType: string;
   route: { id: string; name: string; code: string; division: string; color: string };
   driver: { id: string; name: string; phone: string };
@@ -22,17 +24,17 @@ export interface DailyDriverOverrideItem {
 }
 
 // 스케줄 CRUD
-export async function getSchedules(params?: { routeId?: string; driverId?: string; dayOfWeek?: number }) {
+export async function getSchedules(params?: { routeId?: string; driverId?: string; scheduleType?: ScheduleType }) {
   const response = await apiClient.get('/delivery-schedules', { params });
   return response.data;
 }
 
-export async function upsertSchedule(data: { routeId: string; driverId: string; dayOfWeek: number; mealType: string }) {
+export async function upsertSchedule(data: { routeId: string; driverId: string; scheduleType: ScheduleType; mealType: string }) {
   const response = await apiClient.post('/delivery-schedules', data);
   return response.data;
 }
 
-export async function bulkUpsertSchedules(schedules: Array<{ routeId: string; driverId: string; dayOfWeek: number; mealType: string }>) {
+export async function bulkUpsertSchedules(schedules: Array<{ routeId: string; driverId: string; scheduleType: ScheduleType; mealType: string }>) {
   const response = await apiClient.post('/delivery-schedules/bulk', { schedules });
   return response.data;
 }
