@@ -1,9 +1,7 @@
 -- Delivery schedule: dayOfWeek (0-6) -> scheduleType (WEEKDAY/SATURDAY/SUNDAY/HOLIDAY)
--- 평일(월-금)을 WEEKDAY로 묶어 관리하고, 특별한날(HOLIDAY)은 기본 비워두고 오버라이드로 투입
+-- Prisma migrate가 자체 트랜잭션으로 감싸므로 BEGIN/COMMIT 사용 금지
 
-BEGIN;
-
--- 1) scheduleType 컬럼 추가 (일시 nullable)
+-- 1) scheduleType 컬럼 추가
 ALTER TABLE "delivery_schedules"
   ADD COLUMN "scheduleType" "ScheduleType";
 
@@ -14,7 +12,7 @@ UPDATE "delivery_schedules" SET "scheduleType" = CASE
   WHEN "dayOfWeek" = 0             THEN 'SUNDAY'::"ScheduleType"
 END;
 
--- 3) 평일 묶음 후 중복이 남을 경우 최신(id max) 1건만 유지
+-- 3) 평일 묶음 후 중복이 남는 경우 최신(id max) 1건만 유지
 DELETE FROM "delivery_schedules" a
 USING "delivery_schedules" b
 WHERE a."routeId"      = b."routeId"
@@ -26,9 +24,9 @@ WHERE a."routeId"      = b."routeId"
 ALTER TABLE "delivery_schedules"
   ALTER COLUMN "scheduleType" SET NOT NULL;
 
--- 5) unique 제약 교체
+-- 5) unique 제약 교체 (기존 이름이 다를 가능성 대비 IF EXISTS)
 ALTER TABLE "delivery_schedules"
-  DROP CONSTRAINT "delivery_schedules_routeId_dayOfWeek_mealType_key";
+  DROP CONSTRAINT IF EXISTS "delivery_schedules_routeId_dayOfWeek_mealType_key";
 ALTER TABLE "delivery_schedules"
   ADD CONSTRAINT "delivery_schedules_routeId_scheduleType_mealType_key"
   UNIQUE ("routeId", "scheduleType", "mealType");
@@ -40,5 +38,3 @@ CREATE INDEX "delivery_schedules_scheduleType_idx"
 
 -- 7) 옛 컬럼 제거
 ALTER TABLE "delivery_schedules" DROP COLUMN "dayOfWeek";
-
-COMMIT;
