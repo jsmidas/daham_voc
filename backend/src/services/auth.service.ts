@@ -145,9 +145,8 @@ export class AuthService {
     // 사업장 목록 구성
     const individualSites = user.staff?.staffSites?.map(ss => ss.site) || [];
     const assignedSiteGroups = user.staff?.staffSiteGroups?.map(sg => sg.siteGroup) || [];
-
-    // 그룹 소속 사이트 확장 (웹에서 배정한 사업장만 반환)
     const groupIds = assignedSiteGroups.map(g => g.id);
+    const departmentName = user.staff?.department;
 
     const siteSelect = {
       id: true, name: true, type: true, division: true,
@@ -155,58 +154,54 @@ export class AuthService {
       group: { select: { id: true, name: true, division: true } },
     };
 
-    let assignedSites: any[];
-
-    if (groupIds.length > 0) {
-      // 그룹 소속 사이트 확장
-      const groupSites = await prisma.site.findMany({
-        where: { groupId: { in: groupIds }, deletedAt: null },
-        select: siteSelect,
-      });
-      const allSitesMap = new Map();
-      [...individualSites, ...groupSites].forEach(site => allSitesMap.set(site.id, site));
-      assignedSites = Array.from(allSitesMap.values());
-    } else {
-      assignedSites = individualSites;
-    }
-
-    // 배송기사: 배송 코스에 포함된 사업장 추가
-    if (user.role === 'DELIVERY_DRIVER') {
-      const driverRoutes = await prisma.deliveryAssignment.findMany({
-        where: { driverId: user.id, isActive: true },
-        include: {
-          route: {
+    // 서로 독립적인 3개 부가 쿼리를 병렬 실행 (네트워크 왕복 합산 제거)
+    const [groupSites, driverRoutes, departmentSite] = await Promise.all([
+      groupIds.length > 0
+        ? prisma.site.findMany({
+            where: { groupId: { in: groupIds }, deletedAt: null },
+            select: siteSelect,
+          })
+        : Promise.resolve([] as any[]),
+      user.role === 'DELIVERY_DRIVER'
+        ? prisma.deliveryAssignment.findMany({
+            where: { driverId: user.id, isActive: true },
             include: {
-              routeStops: {
+              route: {
                 include: {
-                  site: { select: siteSelect },
+                  routeStops: {
+                    include: { site: { select: siteSelect } },
+                    orderBy: { stopNumber: 'asc' },
+                  },
                 },
-                orderBy: { stopNumber: 'asc' },
               },
             },
-          },
-        },
-      });
+          })
+        : Promise.resolve([] as any[]),
+      departmentName
+        ? prisma.site.findFirst({
+            where: { name: departmentName, deletedAt: null },
+            select: siteSelect,
+          })
+        : Promise.resolve(null as any),
+    ]);
+
+    // 개인 배정 + 그룹 확장 사이트 병합
+    const allSitesMap = new Map<string, any>();
+    [...individualSites, ...groupSites].forEach(site => allSitesMap.set(site.id, site));
+
+    // 배송기사: 코스에 포함된 사업장 추가
+    if (driverRoutes.length > 0) {
       const routeSites = driverRoutes.flatMap((dr: any) =>
         dr.route.routeStops.map((stop: any) => stop.site)
       );
-      const allSitesMap = new Map();
-      [...assignedSites, ...routeSites].forEach(site => allSitesMap.set(site.id, site));
-      assignedSites = Array.from(allSitesMap.values());
+      routeSites.forEach((site: any) => allSitesMap.set(site.id, site));
     }
 
-    // 웹에서 지정한 "부서(사업장)" 기반 기본 사업장 조회
-    const departmentName = user.staff?.department;
-    let departmentSite: any = null;
-    if (departmentName) {
-      departmentSite = await prisma.site.findFirst({
-        where: { name: departmentName, deletedAt: null },
-        select: siteSelect,
-      });
-      // 부서 사업장이 assignedSites에 없으면 추가
-      if (departmentSite && !assignedSites.some((s: any) => s.id === departmentSite.id)) {
-        assignedSites.unshift(departmentSite);
-      }
+    let assignedSites = Array.from(allSitesMap.values());
+
+    // 부서 사업장이 있으면 맨 앞에 추가(중복 시 기존 위치 유지)
+    if (departmentSite && !assignedSites.some((s: any) => s.id === departmentSite.id)) {
+      assignedSites.unshift(departmentSite);
     }
 
     // 기본 사업장: 부서 사업장 우선, 없으면 첫 번째 배정 사업장

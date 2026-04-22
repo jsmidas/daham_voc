@@ -34,18 +34,18 @@ async function startServer() {
       console.log('=================================');
     });
 
-    // DB 연결 keep-alive: 새벽 5~8시(KST)에만 10분마다 예열
-    // (사용자가 몰려오기 전에 Supabase pooler 연결을 미리 유지)
+    // DB 연결 keep-alive: KST 05~22시 업무시간대에 4분마다 예열
+    // Supabase pooler idle timeout으로 발생하는 첫 요청 콜드 스타트(~500ms) 제거
     setInterval(async () => {
       const kstHour = (new Date().getUTCHours() + 9) % 24;
-      if (kstHour >= 5 && kstHour < 8) {
+      if (kstHour >= 5 && kstHour < 22) {
         try {
           await prisma.$queryRaw`SELECT 1`;
         } catch (e: any) {
           console.error('Keep-alive query failed:', e.message);
         }
       }
-    }, 10 * 60 * 1000);
+    }, 4 * 60 * 1000);
   } catch (error: any) {
     console.error('❌ Server startup failed:', error.message);
     process.exit(1);
