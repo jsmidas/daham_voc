@@ -286,6 +286,7 @@ export class DeliveryLogService {
           gte: today,
           lt: tomorrow,
         },
+        site: { deletedAt: null, isActive: true },
       },
       include: {
         route: {
