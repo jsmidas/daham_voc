@@ -321,7 +321,10 @@ export class DeliveryLogService {
       where: { id: routeId },
       include: {
         routeStops: {
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            site: { deletedAt: null, isActive: true },
+          },
           include: { site: true },
           orderBy: { stopNumber: 'asc' },
         },

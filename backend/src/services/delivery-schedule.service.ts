@@ -48,7 +48,10 @@ export async function getSchedules(filter?: {
         select: {
           id: true, name: true, code: true, division: true, color: true,
           routeStops: {
-            where: { isActive: true },
+            where: {
+              isActive: true,
+              site: { deletedAt: null, isActive: true },
+            },
             include: { site: { select: { id: true, name: true, address: true } } },
             orderBy: { stopNumber: 'asc' },
           },
@@ -186,7 +189,10 @@ export async function getAssignmentsForDate(date: string, driverId?: string) {
         select: {
           id: true, name: true, code: true, division: true, color: true,
           routeStops: {
-            where: { isActive: true },
+            where: {
+              isActive: true,
+              site: { deletedAt: null, isActive: true },
+            },
             include: { site: { select: { id: true, name: true, address: true } } },
             orderBy: { stopNumber: 'asc' },
           },
@@ -207,7 +213,10 @@ export async function getAssignmentsForDate(date: string, driverId?: string) {
         select: {
           id: true, name: true, code: true, division: true, color: true,
           routeStops: {
-            where: { isActive: true },
+            where: {
+              isActive: true,
+              site: { deletedAt: null, isActive: true },
+            },
             include: { site: { select: { id: true, name: true, address: true } } },
             orderBy: { stopNumber: 'asc' },
           },

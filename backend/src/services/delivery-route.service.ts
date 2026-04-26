@@ -48,7 +48,10 @@ export class DeliveryRouteService {
       where,
       include: {
         routeStops: {
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            site: { deletedAt: null, isActive: true },
+          },
           include: {
             site: { select: { id: true, name: true, address: true } },
           },
@@ -123,7 +126,10 @@ export class DeliveryRouteService {
       where: { id },
       include: {
         routeStops: {
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            site: { deletedAt: null, isActive: true },
+          },
           include: {
             site: {
               select: {
@@ -257,7 +263,10 @@ export class DeliveryRouteService {
       data,
       include: {
         routeStops: {
-          where: { isActive: true },
+          where: {
+            isActive: true,
+            site: { deletedAt: null, isActive: true },
+          },
         },
         assignments: {
           where: { isActive: true },
@@ -529,7 +538,10 @@ export class DeliveryRouteService {
         route: {
           include: {
             routeStops: {
-              where: { isActive: true },
+              where: {
+                isActive: true,
+                site: { deletedAt: null, isActive: true },
+              },
               include: {
                 site: {
                   select: {
