@@ -15,7 +15,8 @@ export type Role =
   | 'SITE_MANAGER'
   | 'SITE_STAFF'
   | 'DELIVERY_DRIVER'
-  | 'CLIENT';
+  | 'CLIENT'
+  | 'CUSTOMER';
 
 // Role 한글 레이블
 export const RoleLabels: Record<Role, string> = {
@@ -27,6 +28,7 @@ export const RoleLabels: Record<Role, string> = {
   SITE_STAFF: '사업장 담당자',
   DELIVERY_DRIVER: '배송 기사',
   CLIENT: '고객사',
+  CUSTOMER: '일반 고객',
 };
 
 // Division 한글 레이블
