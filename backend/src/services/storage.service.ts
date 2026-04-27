@@ -164,27 +164,31 @@ function chunkArray<T>(array: T[], size: number): T[][] {
 /**
  * 이미지 삭제 (원본 + 썸네일)
  * @description GCP Storage에서 이미지와 썸네일을 삭제합니다
+ * @returns 성공 여부 (호출자가 실패를 감지하고 재시도/롤백할 수 있도록)
  */
 export async function deleteImage(
   originalPath: string,
   thumbnailPath: string
-): Promise<void> {
+): Promise<boolean> {
   try {
     const bucket = getBucket();
     if (bucket) {
       // 실제 GCP 삭제
       await Promise.all([
         bucket.file(originalPath).delete({ ignoreNotFound: true }),
-        bucket.file(thumbnailPath).delete({ ignoreNotFound: true }),
+        thumbnailPath
+          ? bucket.file(thumbnailPath).delete({ ignoreNotFound: true })
+          : Promise.resolve(),
       ]);
     } else {
       // Mock storage (개발 환경) - 로컬 파일 삭제
       deleteFromLocal(originalPath);
-      deleteFromLocal(thumbnailPath);
+      if (thumbnailPath) deleteFromLocal(thumbnailPath);
     }
+    return true;
   } catch (error) {
     console.error('Image deletion failed:', error);
-    // 삭제 실패 시에도 계속 진행 (파일이 이미 없을 수 있음)
+    return false;
   }
 }
 

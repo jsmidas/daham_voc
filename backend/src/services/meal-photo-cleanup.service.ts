@@ -17,11 +17,13 @@ import { deleteImage, extractPathFromUrl } from './storage.service';
 const SOFT_DELETE_DAYS = 90;
 const HARD_DELETE_AFTER_SOFT_DAYS = 90; // soft delete 후 추가로 90일 (총 180일)
 const HARD_DELETE_BATCH_LIMIT = 500;
+const HARD_DELETE_PARALLELISM = 8; // 한 번에 처리할 GCS 삭제 동시성
 
 export interface CleanupResult {
   softDeletedCount: number;
   hardDeletedCount: number;
-  hardDeleteFailures: number;
+  hardDeleteGcsFailures: number; // GCS 삭제 실패 (DB row는 보존, 다음 실행에 재시도)
+  hardDeleteDbFailures: number; // DB 삭제 실패
   dryRun: boolean;
   softCutoff: string;
   hardCutoff: string;
@@ -69,8 +71,10 @@ export async function runCleanup(options: { dryRun?: boolean } = {}): Promise<Cl
   // === 2단계: HARD DELETE ===
   // soft delete된 지 90일 이상 지난 사진 → GCS 파일 + DB row 삭제
   // 안전을 위해 한 번에 HARD_DELETE_BATCH_LIMIT 만큼만 처리
+  // GCS 삭제 실패 시 DB row를 보존 → 다음 실행에 재시도되도록 함 (orphan GCS 파일 방지)
   let hardDeletedCount = 0;
-  let hardDeleteFailures = 0;
+  let hardDeleteGcsFailures = 0;
+  let hardDeleteDbFailures = 0;
 
   const candidates = await prisma.mealPhoto.findMany({
     where: {
@@ -87,23 +91,44 @@ export async function runCleanup(options: { dryRun?: boolean } = {}): Promise<Cl
   if (dryRun) {
     hardDeletedCount = candidates.length;
   } else {
-    for (const photo of candidates) {
-      try {
-        // GCS 파일 삭제 (실패해도 DB row는 삭제 진행)
-        if (photo.imageUrl) {
-          const path = extractPathFromUrl(photo.imageUrl);
-          const thumbPath = photo.thumbnailUrl
-            ? extractPathFromUrl(photo.thumbnailUrl)
-            : '';
-          if (path) {
-            await deleteImage(path, thumbPath || '');
+    // HARD_DELETE_PARALLELISM 만큼씩 청크로 병렬 처리 (Supabase pooler 타임아웃 방지)
+    const chunks: typeof candidates[] = [];
+    for (let i = 0; i < candidates.length; i += HARD_DELETE_PARALLELISM) {
+      chunks.push(candidates.slice(i, i + HARD_DELETE_PARALLELISM));
+    }
+
+    for (const chunk of chunks) {
+      const results = await Promise.allSettled(
+        chunk.map(async (photo) => {
+          // 1. GCS 삭제 시도
+          let gcsOk = true;
+          if (photo.imageUrl) {
+            const path = extractPathFromUrl(photo.imageUrl);
+            const thumbPath = photo.thumbnailUrl
+              ? extractPathFromUrl(photo.thumbnailUrl)
+              : '';
+            if (path) {
+              gcsOk = await deleteImage(path, thumbPath || '');
+            }
           }
+          // 2. GCS가 실패하면 DB는 건드리지 않음 (orphan 방지, 다음 실행에서 재시도됨)
+          if (!gcsOk) {
+            return { id: photo.id, status: 'gcs-failed' as const };
+          }
+          // 3. DB row 삭제
+          await prisma.mealPhoto.delete({ where: { id: photo.id } });
+          return { id: photo.id, status: 'ok' as const };
+        })
+      );
+
+      for (const r of results) {
+        if (r.status === 'fulfilled') {
+          if (r.value.status === 'ok') hardDeletedCount += 1;
+          else if (r.value.status === 'gcs-failed') hardDeleteGcsFailures += 1;
+        } else {
+          hardDeleteDbFailures += 1;
+          console.error('[meal-photo-cleanup] hard delete chunk error:', r.reason);
         }
-        await prisma.mealPhoto.delete({ where: { id: photo.id } });
-        hardDeletedCount += 1;
-      } catch (err) {
-        hardDeleteFailures += 1;
-        console.error(`[meal-photo-cleanup] hard delete failed for ${photo.id}:`, err);
       }
     }
   }
@@ -111,7 +136,8 @@ export async function runCleanup(options: { dryRun?: boolean } = {}): Promise<Cl
   const result: CleanupResult = {
     softDeletedCount,
     hardDeletedCount,
-    hardDeleteFailures,
+    hardDeleteGcsFailures,
+    hardDeleteDbFailures,
     dryRun,
     softCutoff: softCutoff.toISOString(),
     hardCutoff: hardCutoff.toISOString(),
@@ -119,9 +145,10 @@ export async function runCleanup(options: { dryRun?: boolean } = {}): Promise<Cl
   };
 
   console.log(
-    `[meal-photo-cleanup] ${dryRun ? '[DRY RUN]' : ''} ` +
+    `[meal-photo-cleanup] ${dryRun ? '[DRY RUN] ' : ''}` +
       `soft=${softDeletedCount}, hard=${hardDeletedCount}, ` +
-      `failures=${hardDeleteFailures}, duration=${result.durationMs}ms`
+      `gcsFail=${hardDeleteGcsFailures}, dbFail=${hardDeleteDbFailures}, ` +
+      `duration=${result.durationMs}ms`
   );
 
   return result;

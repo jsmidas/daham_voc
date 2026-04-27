@@ -59,8 +59,8 @@ export async function bulkCreateMealPhotos(req: Request, res: Response): Promise
       return;
     }
 
-    if (images.length > 6) {
-      res.status(400).json(errorResponse('최대 6개의 이미지만 업로드할 수 있습니다'));
+    if (images.length > 20) {
+      res.status(400).json(errorResponse('한 번에 최대 20장까지 업로드할 수 있습니다'));
       return;
     }
 

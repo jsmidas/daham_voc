@@ -72,6 +72,17 @@ export default function NoticeListPage() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isGroupManager = user?.role === 'GROUP_MANAGER';
+
+  // 권한별 선택 가능한 대상 유형
+  // - SUPER_ADMIN: 전부
+  // - HQ/영남 관리자: ALL 제외 (DIVISION/ROLE/USER)
+  // - GROUP_MANAGER: ROLE/USER만
+  const allowedTargetOptions = useMemo(() => {
+    if (isSuperAdmin) return TARGET_OPTIONS;
+    if (isGroupManager) return TARGET_OPTIONS.filter((o) => o.value === 'ROLE' || o.value === 'USER');
+    return TARGET_OPTIONS.filter((o) => o.value !== 'ALL');
+  }, [isSuperAdmin, isGroupManager]);
 
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
@@ -142,11 +153,22 @@ export default function NoticeListPage() {
   const openCreate = () => {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({
-      targetType: 'ALL',
+    // 기본값: 슈퍼관리자=ALL, HQ/영남=DIVISION, 그 외=ROLE (각자 작성 가능 범위)
+    const defaultTargetType: NoticeTarget = isSuperAdmin
+      ? 'ALL'
+      : user?.role === 'HQ_ADMIN' || user?.role === 'YEONGNAM_ADMIN'
+        ? 'DIVISION'
+        : 'ROLE';
+    const defaults: Record<string, unknown> = {
+      targetType: defaultTargetType,
       isPinned: false,
       saveAsDraft: false,
-    });
+    };
+    // HQ/영남 관리자 작성 시 본인 부문 자동 선택
+    if (defaultTargetType === 'DIVISION' && user?.division) {
+      defaults.targetDivisions = [user.division];
+    }
+    form.setFieldsValue(defaults);
     setModalOpen(true);
   };
 
@@ -404,7 +426,7 @@ export default function NoticeListPage() {
                 name="targetType"
                 rules={[{ required: true, message: '대상을 선택하세요' }]}
               >
-                <Select options={TARGET_OPTIONS} disabled={!isSuperAdmin && watchTargetType === 'ALL'} />
+                <Select options={allowedTargetOptions} />
               </Form.Item>
             </Col>
             <Col span={12}>

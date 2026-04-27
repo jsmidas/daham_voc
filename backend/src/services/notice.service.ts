@@ -76,10 +76,42 @@ function assertCanWrite(role: Role) {
   }
 }
 
+// 비관리자에게 공지를 보낼 수 있는 역할 (GROUP_MANAGER가 SUPER_ADMIN/HQ_ADMIN을 타겟팅하는 권한 escalation 방지)
+const GROUP_MANAGER_TARGETABLE_ROLES: Role[] = [
+  'SITE_MANAGER',
+  'SITE_STAFF',
+  'DELIVERY_DRIVER',
+  'CLIENT',
+  'CUSTOMER',
+];
+
+/**
+ * 타겟 입력 정합성 검증 (배열 비어있는지)
+ */
+function assertTargetPayloadValid(input: CreateInput | UpdateInput) {
+  if (input.targetType === 'DIVISION') {
+    if (!input.targetDivisions || input.targetDivisions.length === 0) {
+      throw new Error('부문을 1개 이상 선택해야 합니다');
+    }
+  }
+  if (input.targetType === 'ROLE') {
+    if (!input.targetRoles || input.targetRoles.length === 0) {
+      throw new Error('역할을 1개 이상 선택해야 합니다');
+    }
+  }
+  if (input.targetType === 'USER') {
+    if (!input.targetUserIds || input.targetUserIds.length === 0) {
+      throw new Error('대상자를 1명 이상 선택해야 합니다');
+    }
+  }
+}
+
 /**
  * 관리자가 작성/수정 시 본인 권한 범위 내 대상만 지정 가능한지 검증
  */
 function assertTargetAllowed(viewer: ViewerContext, input: CreateInput | UpdateInput) {
+  assertTargetPayloadValid(input);
+
   if (viewer.role === 'SUPER_ADMIN') return;
 
   // HQ/YEONGNAM 관리자는 본인 division만 지정 가능
@@ -96,10 +128,19 @@ function assertTargetAllowed(viewer: ViewerContext, input: CreateInput | UpdateI
     }
   }
 
-  // GROUP_MANAGER는 ROLE/USER만 가능 (DIVISION/ALL 불가)
+  // GROUP_MANAGER는 ROLE/USER만 가능 (DIVISION/ALL 불가) + 타겟팅 가능 역할 제한
   if (viewer.role === 'GROUP_MANAGER') {
     if (input.targetType === 'ALL' || input.targetType === 'DIVISION') {
       throw new Error('해당 범위의 공지는 작성할 수 없습니다');
+    }
+    if (input.targetType === 'ROLE') {
+      const targets = input.targetRoles || [];
+      const disallowed = targets.filter((r) => !GROUP_MANAGER_TARGETABLE_ROLES.includes(r));
+      if (disallowed.length > 0) {
+        throw new Error(
+          `다음 역할에는 공지를 보낼 수 없습니다: ${disallowed.join(', ')}`
+        );
+      }
     }
   }
 }
@@ -292,8 +333,23 @@ export async function update(viewer: ViewerContext, id: string, input: UpdateInp
     throw new Error('본인이 작성한 공지만 수정할 수 있습니다');
   }
 
-  if (input.targetType) {
-    assertTargetAllowed(viewer, input);
+  // targetType 또는 어느 target 배열이라도 변경된다면 권한 재검증
+  // (existing 값과 input 값을 합쳐서 최종 상태로 검증)
+  if (
+    input.targetType !== undefined ||
+    input.targetDivisions !== undefined ||
+    input.targetRoles !== undefined ||
+    input.targetUserIds !== undefined
+  ) {
+    const merged: CreateInput = {
+      title: existing.title,
+      content: existing.content,
+      targetType: (input.targetType ?? existing.targetType) as NoticeTarget,
+      targetDivisions: (input.targetDivisions ?? existing.targetDivisions) as Division[],
+      targetRoles: (input.targetRoles ?? existing.targetRoles) as Role[],
+      targetUserIds: input.targetUserIds ?? existing.targetUserIds,
+    };
+    assertTargetAllowed(viewer, merged);
   }
 
   return prisma.notice.update({

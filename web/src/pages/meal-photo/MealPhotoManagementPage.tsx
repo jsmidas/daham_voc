@@ -34,7 +34,6 @@ export default function MealPhotoManagementPage() {
   const [selectedDate, setSelectedDate] = useState<Dayjs>(dayjs());
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<MealType>('BREAKFAST');
-  const [previewOpen, setPreviewOpen] = useState(false);
 
   // 필터 상태
   const [mealTypeFilter, setMealTypeFilter] = useState<MealType | 'ALL'>('ALL');
@@ -1019,38 +1018,43 @@ export default function MealPhotoManagementPage() {
               groups={siteGroups}
               loading={isLoadingPhotos}
               mealTypeFilter={mealTypeFilter}
+              statusFilter={statusFilter}
+              checkedFilter={checkedFilter}
               onOpenPreview={openSitePreview}
             />
           )}
       </Card>
 
-      {/* 갤러리 프리뷰 (사업장의 모든 사진을 antd Image.PreviewGroup 으로 확대 표시) */}
-      <div style={{ display: 'none' }}>
-        {siteGroups.map((g) => (
-          <Image.PreviewGroup
-            key={g.siteId}
-            preview={{
-              visible: previewState.visible && previewState.siteId === g.siteId,
-              current: previewState.current,
-              onVisibleChange: (vis) =>
-                setPreviewState((s) => ({ ...s, visible: vis })),
-              onChange: (current) =>
-                setPreviewState((s) => ({ ...s, current })),
-              countRender: (current, total) => {
-                const photo = g.photos[current - 1];
-                if (!photo) return `${current} / ${total}`;
-                const meal = getMealTypeLabel(photo.mealType);
-                const ptype = photo.photoType === 'SERVING' ? '배식준비' : '잔반';
-                return `${g.site?.name || ''} · ${meal} · ${ptype}  (${current} / ${total})`;
-              },
-            }}
-          >
-            {g.photos.map((p: any) => (
-              <Image key={p.id} src={p.imageUrl} />
-            ))}
-          </Image.PreviewGroup>
-        ))}
-      </div>
+      {/* 갤러리 프리뷰 — 현재 선택된 사업장 그룹만 PreviewGroup 렌더 (eager 이미지 로딩 방지) */}
+      {previewState.siteId && (() => {
+        const g = siteGroups.find((s) => s.siteId === previewState.siteId);
+        if (!g) return null;
+        return (
+          <div style={{ display: 'none' }}>
+            <Image.PreviewGroup
+              preview={{
+                visible: previewState.visible,
+                current: previewState.current,
+                onVisibleChange: (vis) =>
+                  setPreviewState((s) => ({ ...s, visible: vis })),
+                onChange: (current) =>
+                  setPreviewState((s) => ({ ...s, current })),
+                countRender: (current, total) => {
+                  const photo = g.photos[current - 1];
+                  if (!photo) return `${current} / ${total}`;
+                  const meal = getMealTypeLabel(photo.mealType);
+                  const ptype = photo.photoType === 'SERVING' ? '배식준비' : '잔반';
+                  return `${g.site?.name || ''} · ${meal} · ${ptype}  (${current} / ${total})`;
+                },
+              }}
+            >
+              {g.photos.map((p: any) => (
+                <Image key={p.id} src={p.imageUrl} />
+              ))}
+            </Image.PreviewGroup>
+          </div>
+        );
+      })()}
 
       {/* 끼니별 업로드 탭 (사업장 선택 시에만 표시) */}
       {selectedSiteId && (
@@ -1082,17 +1086,6 @@ export default function MealPhotoManagementPage() {
         </Card>
       )}
 
-      {/* 이미지 미리보기 모달 */}
-      {previewOpen && (
-        <Modal
-          open={previewOpen}
-          title="사진 미리보기"
-          footer={null}
-          onCancel={() => setPreviewOpen(false)}
-        >
-          <div>미리보기</div>
-        </Modal>
-      )}
     </div>
   );
 }
@@ -1117,15 +1110,59 @@ interface SiteGalleryProps {
   groups: any[];
   loading: boolean;
   mealTypeFilter: string;
+  statusFilter: string;
+  checkedFilter: string;
   onOpenPreview: (siteId: string, photoId?: string) => void;
 }
 
-function SiteGallery({ groups, loading, mealTypeFilter, onOpenPreview }: SiteGalleryProps) {
-  // 끼니 필터에 맞는 사진이 한 장이라도 있는 사업장만 보이도록
+function SiteGallery({
+  groups,
+  loading,
+  mealTypeFilter,
+  statusFilter,
+  checkedFilter,
+  onOpenPreview,
+}: SiteGalleryProps) {
+  // 모든 필터를 사업장 단위로 적용:
+  //  - mealTypeFilter: 해당 끼니 사진이 1장 이상
+  //  - statusFilter (COMPLETE/PARTIAL/PENDING): 사업장 내 어떤 끼니든 조건 만족
+  //  - checkedFilter (CHECKED/UNCHECKED): 사업장 내 해당 상태 사진이 1장 이상
   const visibleGroups = useMemo(() => {
-    if (mealTypeFilter === 'ALL') return groups;
-    return groups.filter((g) => g.byMeal[mealTypeFilter]?.count > 0);
-  }, [groups, mealTypeFilter]);
+    return groups.filter((g) => {
+      // mealType 필터
+      if (mealTypeFilter !== 'ALL' && !(g.byMeal[mealTypeFilter]?.count > 0)) {
+        return false;
+      }
+
+      // status 필터: 끼니별 슬롯 단위로 평가 (mealType 필터가 있으면 그 끼니만)
+      if (statusFilter !== 'ALL') {
+        const mealsToCheck =
+          mealTypeFilter !== 'ALL'
+            ? [mealTypeFilter]
+            : ['BREAKFAST', 'LUNCH', 'DINNER', 'SUPPER'];
+        const matched = mealsToCheck.some((m) => {
+          const slot = g.byMeal[m];
+          if (!slot) return false;
+          const hasS = !!slot.serving;
+          const hasL = !!slot.leftover;
+          if (statusFilter === 'COMPLETE') return hasS && hasL;
+          if (statusFilter === 'PARTIAL') return hasS !== hasL;
+          if (statusFilter === 'PENDING') return !hasS && !hasL;
+          return true;
+        });
+        if (!matched) return false;
+      }
+
+      // checked 필터: 사업장 내 해당 상태 사진이 1장 이상 있어야 표시
+      if (checkedFilter !== 'ALL') {
+        const wantChecked = checkedFilter === 'CHECKED';
+        const has = g.photos.some((p: any) => !!p.isChecked === wantChecked);
+        if (!has) return false;
+      }
+
+      return true;
+    });
+  }, [groups, mealTypeFilter, statusFilter, checkedFilter]);
 
   if (loading) {
     return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>불러오는 중...</div>;
