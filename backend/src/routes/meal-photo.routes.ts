@@ -94,4 +94,12 @@ router.patch(
   mealPhotoController.toggleCheckStatus
 );
 
+// POST /api/v1/meal-photos/cleanup - 배식사진 자동 정리 수동 실행 (슈퍼관리자만)
+router.post(
+  '/cleanup',
+  authMiddleware,
+  roleMiddleware(['SUPER_ADMIN']),
+  mealPhotoController.triggerCleanup
+);
+
 export default router;

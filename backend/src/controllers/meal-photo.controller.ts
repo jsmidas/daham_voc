@@ -5,6 +5,7 @@
 
 import { Request, Response } from 'express';
 import * as mealPhotoService from '../services/meal-photo.service';
+import { runCleanup } from '../services/meal-photo-cleanup.service';
 import { successResponse, errorResponse } from '../utils/api-response.util';
 import { MealType, PhotoType } from '@prisma/client';
 
@@ -353,5 +354,23 @@ export async function toggleCheckStatus(req: Request, res: Response): Promise<vo
   } catch (error: any) {
     console.error('Toggle check status error:', error);
     res.status(400).json(errorResponse(error.message));
+  }
+}
+
+/**
+ * 배식사진 자동 정리 수동 실행 (슈퍼관리자 전용)
+ * POST /api/v1/meal-photos/cleanup        — 실제 실행
+ * POST /api/v1/meal-photos/cleanup?dry=1  — dry-run (영향 받는 건수만)
+ *
+ * 정책: 90일 → soft delete, 180일 → hard delete (GCS 파일 + DB row)
+ */
+export async function triggerCleanup(req: Request, res: Response): Promise<void> {
+  try {
+    const dryRun = req.query.dry === '1' || req.query.dry === 'true';
+    const result = await runCleanup({ dryRun });
+    res.json(successResponse(result, dryRun ? 'dry-run 완료' : '정리 완료'));
+  } catch (error: any) {
+    console.error('Cleanup error:', error);
+    res.status(500).json(errorResponse(error.message));
   }
 }

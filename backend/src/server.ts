@@ -4,6 +4,7 @@ import { connectDatabase, disconnectDatabase } from './config/database';
 import { connectRedis, disconnectRedis } from './config/redis';
 import { initializeGCPStorage } from './config/gcp-storage';
 import { prisma } from './config/database';
+import { startScheduler } from './jobs/scheduler';
 
 // Initialize server
 async function startServer() {
@@ -33,6 +34,9 @@ async function startServer() {
       console.log(`🔗 Health check: http://localhost:${PORT}/health`);
       console.log('=================================');
     });
+
+    // 정기 실행 작업 등록 (배식사진 자동 정리 등)
+    startScheduler();
 
     // DB 연결 keep-alive: KST 05~22시 업무시간대에 4분마다 예열
     // Supabase pooler idle timeout으로 발생하는 첫 요청 콜드 스타트(~500ms) 제거
