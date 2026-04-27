@@ -17,6 +17,7 @@ import {
   AppstoreOutlined,
   CarOutlined,
   FileTextOutlined,
+  NotificationOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import type { MenuProps } from 'antd';
@@ -70,6 +71,7 @@ export default function Sidebar() {
     },
     { key: '/meal-photos', icon: <CameraOutlined />, label: '배식사진 관리' },
     { key: '/feedbacks', icon: <MessageOutlined />, label: 'VOC 관리' },
+    { key: '/notices', icon: <NotificationOutlined />, label: '공지' },
     { key: '/contracts', icon: <FileTextOutlined />, label: '전자계약서' },
     {
       key: 'user-group',
@@ -125,6 +127,7 @@ export default function Sidebar() {
     if (path.startsWith('/attendances/report')) return '/attendances/report';
     if (path === '/attendances') return '/attendances';
     if (path.startsWith('/contracts')) return '/contracts';
+    if (path.startsWith('/notices')) return '/notices';
     if (path.startsWith('/menu-types')) return '/menu-types';
     if (path.startsWith('/weekly-menus')) return '/weekly-menus';
     if (path.startsWith('/meal-count-settings')) return '/meal-count-settings';

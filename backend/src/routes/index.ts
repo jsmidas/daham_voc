@@ -17,6 +17,7 @@ import deliveryLogRoutes from './delivery-log.routes';
 import deliveryScheduleRoutes from './delivery-schedule.routes';
 import contractRoutes from './contract.routes';
 import holidayRoutes from './holiday.routes';
+import noticeRoutes from './notice.routes';
 
 const router = Router();
 
@@ -43,6 +44,7 @@ router.get('/', (_req, res) => {
       deliveryRoutes: '/delivery-routes',
       deliveryLogs: '/delivery-logs',
       contracts: '/contracts',
+      notices: '/notices',
     },
   });
 });
@@ -66,6 +68,7 @@ router.use('/delivery-logs', deliveryLogRoutes);
 router.use('/delivery-schedules', deliveryScheduleRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/holidays', holidayRoutes);
+router.use('/notices', noticeRoutes);
 
 // Future routes will be added here:
 // router.use('/stats', statsRoutes);

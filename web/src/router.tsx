@@ -60,6 +60,7 @@ const DeliveryLogPage = lazyWithRetry(() => import('@/pages/delivery-log/Deliver
 const PrivacyPolicyPage = lazyWithRetry(() => import('@/pages/PrivacyPolicyPage'));
 const ContractListPage = lazyWithRetry(() => import('@/pages/contract/ContractListPage'));
 const CustomerListPage = lazyWithRetry(() => import('@/pages/customer/CustomerListPage'));
+const NoticeListPage = lazyWithRetry(() => import('@/pages/notice/NoticeListPage'));
 
 // Lazy wrapper
 const L = ({ children }: { children: React.ReactNode }) => (
@@ -217,6 +218,10 @@ export const router = createBrowserRouter([
       {
         path: 'contracts',
         element: <L><ContractListPage /></L>,
+      },
+      {
+        path: 'notices',
+        element: <L><NoticeListPage /></L>,
       },
     ],
   },

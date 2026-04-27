@@ -39,6 +39,8 @@ model User {
   dailyDriverOverrides DailyDriverOverride[]    @relation("dailyDriverOverrides")
   contractAssignments ContractAssignment[]
   workSchedules       UserWorkSchedule[]
+  notices             Notice[]             @relation("NoticeAuthor")
+  noticeReads         NoticeRead[]
 
   @@index([phone])
   @@index([email])
@@ -769,6 +771,54 @@ model Holiday {
   @@unique([date])
   @@index([year])
   @@index([date])
+}
+
+// ========================================
+// 공지
+// ========================================
+
+model Notice {
+  id              String        @id @default(uuid())
+  title           String
+  content         String        @db.Text
+  targetType      NoticeTarget  @default(ALL)
+  targetDivisions Division[]    @default([])
+  targetRoles     Role[]        @default([])
+  targetUserIds   String[]      @default([])
+  isPinned        Boolean       @default(false)
+  publishedAt     DateTime?     // null = 임시저장
+  expiresAt       DateTime?
+  authorId        String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+  author          User          @relation("NoticeAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  reads           NoticeRead[]
+
+  @@index([publishedAt])
+  @@index([targetType])
+  @@index([authorId])
+  @@index([isPinned])
+}
+
+model NoticeRead {
+  id       String   @id @default(uuid())
+  noticeId String
+  userId   String
+  readAt   DateTime @default(now())
+  notice   Notice   @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, userId])
+  @@index([userId])
+  @@index([noticeId])
+}
+
+enum NoticeTarget {
+  ALL
+  DIVISION
+  ROLE
+  USER
 }
 
 model UserWorkSchedule {
