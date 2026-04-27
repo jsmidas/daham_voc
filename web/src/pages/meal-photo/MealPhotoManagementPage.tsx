@@ -148,11 +148,11 @@ export default function MealPhotoManagementPage() {
     mealType: MealType,
     photoType: PhotoType
   ) => {
-    // 6개 초과 시 6개로 제한
+    // 한 번에 최대 20장으로 제한 (반복 업로드는 가능)
     let limitedFileList = fileList;
-    if (fileList.length > 6) {
-      message.warning('최대 6개까지 업로드할 수 있습니다');
-      limitedFileList = fileList.slice(0, 6);
+    if (fileList.length > 20) {
+      message.warning('한 번에 최대 20장까지 업로드할 수 있습니다');
+      limitedFileList = fileList.slice(0, 20);
     }
 
     setPhotos((prev) => ({
@@ -425,14 +425,14 @@ export default function MealPhotoManagementPage() {
             fileList={photos[mealType][photoType]}
             onChange={(info) => handleUploadChange(info, mealType, photoType)}
             beforeUpload={() => false}
-            maxCount={6}
+            maxCount={20}
             multiple
             accept="image/*"
           >
-            {photos[mealType][photoType].length >= 6 ? null : uploadButton}
+            {photos[mealType][photoType].length >= 20 ? null : uploadButton}
           </Upload>
           <div style={{ marginTop: 8, color: '#999', fontSize: '12px' }}>
-            * 최대 6개까지 업로드 가능 (각 10MB 이하)
+            * 한 번에 최대 20장까지 업로드 가능 (각 10MB 이하, 추가 업로드는 반복 가능)
           </div>
 
           {photos[mealType][photoType].length > 0 && (

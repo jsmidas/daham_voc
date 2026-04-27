@@ -61,16 +61,16 @@ export const uploadFeedbackImages = multer({
 }).array('images', 6);
 
 /**
- * 배식 사진 업로드 (필드명: photos, 최대 6개)
+ * 배식 사진 업로드 (필드명: photos, 최대 20개)
  */
 export const uploadMealPhotos = multer({
   storage,
   fileFilter,
   limits: {
     fileSize: parseInt(process.env.MAX_IMAGE_SIZE || '20971520'), // 20MB
-    files: 6,
+    files: 20,
   },
-}).array('photos', 6);
+}).array('photos', 20);
 
 /**
  * 계약서 페이지 이미지 업로드 (필드명: pages, 최대 20개)
