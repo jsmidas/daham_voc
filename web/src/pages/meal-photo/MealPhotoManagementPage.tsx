@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table, Checkbox } from 'antd';
-import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { DatePicker, Select, Tabs, Upload, Button, message, Card, Image, Badge, Tag, Modal, Table, Checkbox, Segmented, Empty } from 'antd';
+import { PlusOutlined, CheckCircleOutlined, ClockCircleOutlined, DeleteOutlined, CheckOutlined, DownloadOutlined, LeftOutlined, RightOutlined, AppstoreOutlined, TableOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getSites } from '@/api/site.api';
 import {
@@ -43,6 +43,16 @@ export default function MealPhotoManagementPage() {
 
   // 일괄 선택 상태
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+
+  // 보기 모드 (갤러리/테이블)
+  const [viewMode, setViewMode] = useState<'gallery' | 'table'>('gallery');
+
+  // 사업장 갤러리 프리뷰 상태
+  const [previewState, setPreviewState] = useState<{
+    visible: boolean;
+    siteId: string | null;
+    current: number;
+  }>({ visible: false, siteId: null, current: 0 });
 
   // 각 끼니별 사진 상태 관리
   const [photos, setPhotos] = useState<Record<MealType, PhotoState>>({
@@ -475,6 +485,68 @@ export default function MealPhotoManagementPage() {
     return Object.values(groups);
   }, [dailyPhotos]);
 
+  // 사업장 단위 그룹핑 (갤러리 뷰용) - 끼니별 대표 사진 + 전체 사진 보존
+  const siteGroups = React.useMemo(() => {
+    const photos = Array.isArray(dailyPhotos) ? dailyPhotos : [];
+    const map = new Map<string, {
+      siteId: string;
+      site: any;
+      photos: any[];
+      byMeal: Record<MealType, { serving?: any; leftover?: any; count: number }>;
+      uncheckedCount: number;
+    }>();
+
+    photos.forEach((p: any) => {
+      const sid = p.siteId;
+      if (!map.has(sid)) {
+        map.set(sid, {
+          siteId: sid,
+          site: p.site,
+          photos: [],
+          byMeal: {
+            BREAKFAST: { count: 0 },
+            LUNCH: { count: 0 },
+            DINNER: { count: 0 },
+            SUPPER: { count: 0 },
+          },
+          uncheckedCount: 0,
+        });
+      }
+      const g = map.get(sid)!;
+      g.photos.push(p);
+      const meal = p.mealType as MealType;
+      if (g.byMeal[meal]) {
+        g.byMeal[meal].count += 1;
+        if (p.photoType === 'SERVING' && !g.byMeal[meal].serving) g.byMeal[meal].serving = p;
+        if (p.photoType === 'LEFTOVER' && !g.byMeal[meal].leftover) g.byMeal[meal].leftover = p;
+      }
+      if (!p.isChecked) g.uncheckedCount += 1;
+    });
+
+    // 끼니/촬영 시각 순으로 photos 정렬 (프리뷰 일관성)
+    const mealOrder: Record<MealType, number> = { BREAKFAST: 0, LUNCH: 1, DINNER: 2, SUPPER: 3 };
+    map.forEach((g) => {
+      g.photos.sort((a: any, b: any) => {
+        const ma = mealOrder[a.mealType as MealType] ?? 9;
+        const mb = mealOrder[b.mealType as MealType] ?? 9;
+        if (ma !== mb) return ma - mb;
+        if (a.photoType !== b.photoType) return a.photoType === 'SERVING' ? -1 : 1;
+        return new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime();
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      (a.site?.name || '').localeCompare(b.site?.name || '', 'ko')
+    );
+  }, [dailyPhotos]);
+
+  const openSitePreview = (siteId: string, photoId?: string) => {
+    const group = siteGroups.find((g) => g.siteId === siteId);
+    if (!group || group.photos.length === 0) return;
+    const idx = photoId ? Math.max(0, group.photos.findIndex((p: any) => p.id === photoId)) : 0;
+    setPreviewState({ visible: true, siteId, current: idx });
+  };
+
   // 필터링된 데이터
   const filteredData = React.useMemo(() => {
     return groupedData.filter((item: any) => {
@@ -870,6 +942,14 @@ export default function MealPhotoManagementPage() {
           }
           extra={
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <Segmented
+                value={viewMode}
+                onChange={(v) => setViewMode(v as 'gallery' | 'table')}
+                options={[
+                  { label: '갤러리', value: 'gallery', icon: <AppstoreOutlined /> },
+                  { label: '테이블', value: 'table', icon: <TableOutlined /> },
+                ]}
+              />
               <Select
                 style={{ width: 120 }}
                 value={mealTypeFilter}
@@ -923,17 +1003,54 @@ export default function MealPhotoManagementPage() {
           }
           style={{ marginBottom: 24 }}
         >
-          <Table
-            columns={columns}
-            dataSource={filteredData}
-            rowKey="key"
-            loading={isLoadingPhotos}
-            pagination={{ pageSize: 10 }}
-            locale={{
-              emptyText: '업로드된 사진이 없습니다.',
-            }}
-          />
+          {viewMode === 'table' ? (
+            <Table
+              columns={columns}
+              dataSource={filteredData}
+              rowKey="key"
+              loading={isLoadingPhotos}
+              pagination={{ pageSize: 10 }}
+              locale={{
+                emptyText: '업로드된 사진이 없습니다.',
+              }}
+            />
+          ) : (
+            <SiteGallery
+              groups={siteGroups}
+              loading={isLoadingPhotos}
+              mealTypeFilter={mealTypeFilter}
+              onOpenPreview={openSitePreview}
+            />
+          )}
       </Card>
+
+      {/* 갤러리 프리뷰 (사업장의 모든 사진을 antd Image.PreviewGroup 으로 확대 표시) */}
+      <div style={{ display: 'none' }}>
+        {siteGroups.map((g) => (
+          <Image.PreviewGroup
+            key={g.siteId}
+            preview={{
+              visible: previewState.visible && previewState.siteId === g.siteId,
+              current: previewState.current,
+              onVisibleChange: (vis) =>
+                setPreviewState((s) => ({ ...s, visible: vis })),
+              onChange: (current) =>
+                setPreviewState((s) => ({ ...s, current })),
+              countRender: (current, total) => {
+                const photo = g.photos[current - 1];
+                if (!photo) return `${current} / ${total}`;
+                const meal = getMealTypeLabel(photo.mealType);
+                const ptype = photo.photoType === 'SERVING' ? '배식준비' : '잔반';
+                return `${g.site?.name || ''} · ${meal} · ${ptype}  (${current} / ${total})`;
+              },
+            }}
+          >
+            {g.photos.map((p: any) => (
+              <Image key={p.id} src={p.imageUrl} />
+            ))}
+          </Image.PreviewGroup>
+        ))}
+      </div>
 
       {/* 끼니별 업로드 탭 (사업장 선택 시에만 표시) */}
       {selectedSiteId && (
@@ -976,6 +1093,209 @@ export default function MealPhotoManagementPage() {
           <div>미리보기</div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+// ====================================
+// 사업장 갤러리 카드 뷰
+// ====================================
+const MEAL_LABEL: Record<string, string> = {
+  BREAKFAST: '조식',
+  LUNCH: '중식',
+  DINNER: '석식',
+  SUPPER: '야식',
+};
+const MEAL_ORDER: Array<'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER'> = [
+  'BREAKFAST',
+  'LUNCH',
+  'DINNER',
+  'SUPPER',
+];
+
+interface SiteGalleryProps {
+  groups: any[];
+  loading: boolean;
+  mealTypeFilter: string;
+  onOpenPreview: (siteId: string, photoId?: string) => void;
+}
+
+function SiteGallery({ groups, loading, mealTypeFilter, onOpenPreview }: SiteGalleryProps) {
+  // 끼니 필터에 맞는 사진이 한 장이라도 있는 사업장만 보이도록
+  const visibleGroups = useMemo(() => {
+    if (mealTypeFilter === 'ALL') return groups;
+    return groups.filter((g) => g.byMeal[mealTypeFilter]?.count > 0);
+  }, [groups, mealTypeFilter]);
+
+  if (loading) {
+    return <div style={{ padding: 40, textAlign: 'center', color: '#999' }}>불러오는 중...</div>;
+  }
+
+  if (visibleGroups.length === 0) {
+    return <Empty description="업로드된 사진이 없습니다" />;
+  }
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+        gap: 16,
+      }}
+    >
+      {visibleGroups.map((g) => (
+        <SiteGalleryCard key={g.siteId} group={g} onOpenPreview={onOpenPreview} />
+      ))}
+    </div>
+  );
+}
+
+function SiteGalleryCard({
+  group,
+  onOpenPreview,
+}: {
+  group: any;
+  onOpenPreview: (siteId: string, photoId?: string) => void;
+}) {
+  const totalPhotos = group.photos.length;
+
+  return (
+    <div
+      style={{
+        border: '1px solid #f0f0f0',
+        borderRadius: 8,
+        background: '#fff',
+        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      {/* 헤더 */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <Tag color={group.site?.division === 'HQ' ? 'blue' : 'green'}>
+            {group.site?.division === 'HQ' ? '본사' : '영남'}
+          </Tag>
+          <span
+            style={{
+              fontWeight: 600,
+              fontSize: 15,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+            title={group.site?.name}
+          >
+            {group.site?.name}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          {group.uncheckedCount > 0 && (
+            <Tag color="orange">미확인 {group.uncheckedCount}</Tag>
+          )}
+          <Tag>총 {totalPhotos}장</Tag>
+        </div>
+      </div>
+
+      {/* 끼니별 4장 */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: 6,
+        }}
+      >
+        {MEAL_ORDER.map((meal) => {
+          const slot = group.byMeal[meal];
+          const repPhoto = slot?.serving || slot?.leftover;
+          const has = !!repPhoto;
+          return (
+            <div
+              key={meal}
+              onClick={() => has && onOpenPreview(group.siteId, repPhoto.id)}
+              style={{
+                position: 'relative',
+                aspectRatio: '1 / 1',
+                background: has ? '#000' : '#fafafa',
+                borderRadius: 6,
+                overflow: 'hidden',
+                cursor: has ? 'pointer' : 'default',
+                border: has ? '1px solid transparent' : '1px dashed #d9d9d9',
+              }}
+            >
+              {has ? (
+                <>
+                  <img
+                    src={repPhoto.thumbnailUrl || repPhoto.imageUrl}
+                    alt={MEAL_LABEL[meal]}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 4,
+                      left: 4,
+                      background: 'rgba(0,0,0,0.6)',
+                      color: '#fff',
+                      fontSize: 11,
+                      padding: '1px 6px',
+                      borderRadius: 4,
+                    }}
+                  >
+                    {MEAL_LABEL[meal]}
+                  </div>
+                  {slot.count > 1 && (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        right: 4,
+                        background: 'rgba(0,0,0,0.6)',
+                        color: '#fff',
+                        fontSize: 11,
+                        padding: '1px 6px',
+                        borderRadius: 10,
+                      }}
+                    >
+                      +{slot.count - 1}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#bfbfbf',
+                    fontSize: 12,
+                  }}
+                >
+                  {MEAL_LABEL[meal]}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 푸터: 클릭 안내 */}
+      <Button block onClick={() => onOpenPreview(group.siteId)} disabled={totalPhotos === 0}>
+        전체 사진 크게 보기 ({totalPhotos}장)
+      </Button>
     </div>
   );
 }
