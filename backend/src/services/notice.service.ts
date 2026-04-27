@@ -5,6 +5,7 @@
 
 import { prisma } from '../config/database';
 import { Prisma, Division, Role, NoticeTarget } from '@prisma/client';
+import * as pushSendService from './push-send.service';
 
 const ADMIN_ROLES: Role[] = [
   'SUPER_ADMIN',
@@ -31,6 +32,7 @@ interface CreateInput {
   isPinned?: boolean;
   publishedAt?: Date | null;
   expiresAt?: Date | null;
+  sendPush?: boolean; // 등록 즉시 푸시 알림도 함께 발송 (publishedAt 이 즉시 발행일 때만 동작)
 }
 
 type UpdateInput = Partial<CreateInput>;
@@ -299,7 +301,10 @@ export async function create(viewer: ViewerContext, input: CreateInput) {
   if (!input.title?.trim()) throw new Error('제목은 필수입니다');
   if (!input.content?.trim()) throw new Error('내용은 필수입니다');
 
-  return prisma.notice.create({
+  const publishedAt =
+    input.publishedAt === undefined ? new Date() : input.publishedAt;
+
+  const notice = await prisma.notice.create({
     data: {
       title: input.title.trim(),
       content: input.content,
@@ -308,13 +313,75 @@ export async function create(viewer: ViewerContext, input: CreateInput) {
       targetRoles: input.targetRoles || [],
       targetUserIds: input.targetUserIds || [],
       isPinned: input.isPinned ?? false,
-      publishedAt: input.publishedAt === undefined ? new Date() : input.publishedAt,
+      publishedAt,
       expiresAt: input.expiresAt ?? null,
       authorId: viewer.userId,
     },
     include: {
       author: { select: { id: true, name: true, role: true } },
     },
+  });
+
+  // 즉시 발행 + sendPush=true 인 경우 푸시 발송 (await 하지 않음 — 응답 지연 방지)
+  // 임시저장(publishedAt=null) 또는 미래 발행은 발송하지 않음
+  if (input.sendPush && publishedAt && publishedAt.getTime() <= Date.now()) {
+    void sendPushForNotice(notice).catch((err) =>
+      console.error('[notice] push send failed:', err)
+    );
+  }
+
+  return notice;
+}
+
+/**
+ * 공지 대상자에게 푸시 발송
+ */
+async function sendPushForNotice(notice: {
+  id: string;
+  title: string;
+  content: string;
+  targetType: NoticeTarget;
+  targetDivisions: Division[];
+  targetRoles: Role[];
+  targetUserIds: string[];
+}) {
+  // 가시성 규칙으로 대상 사용자 ID 추출 → 그 사용자들의 활성 푸시 토큰 조회
+  const userWhere: Prisma.UserWhereInput[] = [];
+  if (notice.targetType === 'ALL') {
+    userWhere.push({ isActive: true });
+  } else if (notice.targetType === 'DIVISION') {
+    userWhere.push({ isActive: true, division: { in: notice.targetDivisions } });
+  } else if (notice.targetType === 'ROLE') {
+    userWhere.push({ isActive: true, role: { in: notice.targetRoles } });
+  } else if (notice.targetType === 'USER') {
+    userWhere.push({ isActive: true, id: { in: notice.targetUserIds } });
+  } else {
+    return;
+  }
+
+  const users = await prisma.user.findMany({
+    where: { AND: userWhere },
+    select: { id: true },
+  });
+  if (users.length === 0) return;
+
+  const tokens = await prisma.pushToken.findMany({
+    where: {
+      userId: { in: users.map((u) => u.id) },
+      isActive: true,
+    },
+    select: { token: true },
+  });
+  if (tokens.length === 0) {
+    console.log(`[notice] no active push tokens for notice ${notice.id}`);
+    return;
+  }
+
+  await pushSendService.sendPush({
+    tokens: tokens.map((t) => t.token),
+    title: notice.title,
+    body: notice.content.slice(0, 120), // 본문 너무 길면 자름
+    data: { type: 'notice', noticeId: notice.id },
   });
 }
 

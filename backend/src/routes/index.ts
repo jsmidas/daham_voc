@@ -18,6 +18,7 @@ import deliveryScheduleRoutes from './delivery-schedule.routes';
 import contractRoutes from './contract.routes';
 import holidayRoutes from './holiday.routes';
 import noticeRoutes from './notice.routes';
+import pushTokenRoutes from './push-token.routes';
 
 const router = Router();
 
@@ -69,6 +70,7 @@ router.use('/delivery-schedules', deliveryScheduleRoutes);
 router.use('/contracts', contractRoutes);
 router.use('/holidays', holidayRoutes);
 router.use('/notices', noticeRoutes);
+router.use('/push-tokens', pushTokenRoutes);
 
 // Future routes will be added here:
 // router.use('/stats', statsRoutes);

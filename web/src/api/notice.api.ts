@@ -53,6 +53,7 @@ export interface NoticeUpsertInput {
   isPinned?: boolean;
   publishedAt?: string | null;
   expiresAt?: string | null;
+  sendPush?: boolean;
 }
 
 export async function getMyNotices(params?: { page?: number; limit?: number; search?: string }) {

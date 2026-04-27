@@ -163,6 +163,7 @@ export default function NoticeListPage() {
       targetType: defaultTargetType,
       isPinned: false,
       saveAsDraft: false,
+      sendPush: true, // 기본값: 푸시도 함께 발송
     };
     // HQ/영남 관리자 작성 시 본인 부문 자동 선택
     if (defaultTargetType === 'DIVISION' && user?.division) {
@@ -206,6 +207,7 @@ export default function NoticeListPage() {
         isPinned: !!values.isPinned,
         expiresAt: values.expiresAt ? (values.expiresAt as Dayjs).toISOString() : null,
         publishedAt: values.saveAsDraft ? null : new Date().toISOString(),
+        sendPush: !values.saveAsDraft && !!values.sendPush, // 임시저장 시엔 푸시 안 보냄
       };
 
       if (editing) {
@@ -505,6 +507,17 @@ export default function NoticeListPage() {
               </Form.Item>
             </Col>
           </Row>
+
+          {!editing && (
+            <Form.Item
+              label="푸시 알림도 함께 발송"
+              name="sendPush"
+              valuePropName="checked"
+              extra="앱이 설치된 사용자에게 OS 알림을 보냅니다 (임시저장 시 발송 안 됨)"
+            >
+              <Switch />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
 

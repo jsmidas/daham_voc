@@ -41,6 +41,7 @@ model User {
   workSchedules       UserWorkSchedule[]
   notices             Notice[]             @relation("NoticeAuthor")
   noticeReads         NoticeRead[]
+  pushTokens          PushToken[]
 
   @@index([phone])
   @@index([email])
@@ -819,6 +820,27 @@ enum NoticeTarget {
   DIVISION
   ROLE
   USER
+}
+
+// ========================================
+// 푸시 알림 토큰
+// ========================================
+
+model PushToken {
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique // Expo Push Token (ExponentPushToken[xxx])
+  platform    String   // 'android' | 'ios'
+  deviceName  String?
+  appVersion  String?
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isActive])
 }
 
 model UserWorkSchedule {

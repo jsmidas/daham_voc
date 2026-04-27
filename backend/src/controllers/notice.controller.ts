@@ -91,6 +91,7 @@ export async function create(req: Request, res: Response): Promise<void> {
       isPinned,
       publishedAt,
       expiresAt,
+      sendPush,
     } = req.body ?? {};
 
     const notice = await noticeService.create(viewer, {
@@ -103,6 +104,7 @@ export async function create(req: Request, res: Response): Promise<void> {
       isPinned,
       publishedAt: parseDate(publishedAt),
       expiresAt: parseDate(expiresAt),
+      sendPush: !!sendPush,
     });
     res.status(201).json(successResponse(notice, '공지가 등록되었습니다'));
   } catch (error: any) {
