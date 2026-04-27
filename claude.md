@@ -172,6 +172,62 @@ GCP 프로젝트 ID: `daham-food` (표시 이름: 다함 VOC)
 
 ---
 
+## 🔥 Firebase (FCM 푸시 알림 전용)
+
+### 사용 목적
+Firebase는 **Android 푸시 알림(FCM) 발송 용도로만 사용**합니다.
+- DB는 Supabase, 사진 저장은 GCS, 인증은 자체 JWT — Firebase가 제공하는 다른 서비스(Firestore/Auth/Hosting)는 사용하지 않음
+- **Android 푸시는 FCM이 강제** (구글 정책) → 백엔드를 어디에 호스팅하든 FCM 등록은 필수
+- iOS 푸시는 추후 활성화 예정 (APNs 인증서 별도 발급 필요)
+
+### Firebase 프로젝트 정보
+- **프로젝트 ID**: `daham-food` (표시 이름: `daham-voc`)
+- 같은 GCP 프로젝트(`daham-food`)에 Firebase 기능을 추가한 형태
+- Firebase 콘솔: https://console.firebase.google.com/project/daham-food
+- Android 패키지명: `com.daham.voc`
+
+### 필수 자격증명 파일
+| 파일 | 위치 | git | 용도 |
+|---|---|---|---|
+| `google-services.json` | [mobile/google-services.json](mobile/google-services.json) | ✅ 커밋 | 클라이언트 설정 (api_key는 packageName+SHA-1 제한이라 공개 안전) |
+| `fcm-key.json` (Firebase Admin SDK private key) | mobile/ 또는 sample/ | ❌ gitignore | Expo Push Service 가 FCM 호출할 때 사용. **EAS credentials 에 업로드** |
+
+### EAS credentials 설정 (이미 완료)
+```bash
+cd mobile
+eas credentials
+# Android → production → Google Service Account
+# → Manage your Google Service Account Key for Push Notifications (FCM V1)
+# → Set up → fcm-key.json 선택
+```
+새 키 발급 위치: https://console.firebase.google.com/project/daham-food/settings/serviceaccounts/adminsdk
+
+### 푸시 발송 흐름
+```
+[웹/관리자 공지 작성]
+    ↓ POST /notices (sendPush=true)
+[GCP VM 백엔드]
+    ↓ pushTokenService 로 대상자 활성 토큰 조회
+    ↓ pushSendService → fetch('https://exp.host/--/api/v2/push/send')
+[Expo Push Service]
+    ↓ FCM v1 API 로 forwarding (등록된 fcm-key.json 사용)
+[Firebase FCM]
+    ↓
+[Android 폰] → OS 알림센터에 표시
+```
+
+### 푸시 관련 코드 위치
+- 모바일: [usePushNotifications.ts](mobile/src/hooks/usePushNotifications.ts) (토큰 발급/등록 + 알림 탭 시 공지 상세 이동)
+- 백엔드: [push-token.service.ts](backend/src/services/push-token.service.ts), [push-send.service.ts](backend/src/services/push-send.service.ts)
+- 공지 등록 시 자동 발송: [notice.service.ts](backend/src/services/notice.service.ts) `sendPushForNotice()`
+
+### 주의사항
+- 푸시 코드 자체(JS/TSX)는 OTA 가능, 다만 **expo-notifications 모듈 자체는 1.0.4 빌드부터 포함**
+- 1.0.3 이하 사용자는 앱 업데이트해야 푸시 받을 수 있음 (자동 업데이트 ON 사용자는 며칠 내 마이그)
+- `fcm-key.json` 누설 시 즉시 Firebase 콘솔에서 키 폐기 후 재발급 → EAS credentials 재등록
+
+---
+
 ## 📱 모바일 앱 역할별 메뉴 정의
 
 ### 역할 계층
