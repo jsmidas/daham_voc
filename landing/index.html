@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e40af" />
+  <meta name="description" content="다함푸드 VOC — 현장과 본사를 잇는 급식 운영 통합 플랫폼. 배식 사진, 식수/식단표, 배송 코스, VOC, 출퇴근, 계약서를 모바일 앱 하나로 관리합니다." />
+  <meta name="keywords" content="다함푸드, 다함 VOC, 급식, 식수 관리, 식단표, 배송 코스, VOC, 사업장 관리, 단체급식, 출퇴근" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="다함푸드 VOC — 현장과 본사를 잇는 급식 운영 플랫폼" />
+  <meta property="og:description" content="배식 사진, 식수/식단표, 배송 코스, VOC, 출퇴근까지. 다함푸드의 현장 운영을 모바일 앱 하나로." />
+  <meta property="og:url" content="https://dahamvoc.co.kr" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:site_name" content="다함푸드 VOC" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="다함푸드 VOC" />
+  <meta name="twitter:description" content="현장과 본사를 잇는 급식 운영 통합 플랫폼" />
+
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="canonical" href="https://dahamvoc.co.kr/" />
+
+  <title>다함푸드 VOC — 현장과 본사를 잇는 급식 운영 플랫폼</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef4ff',
+              100: '#dae6ff',
+              500: '#1890ff',
+              600: '#1e40af',
+              700: '#1d3d8c',
+              900: '#0f2351',
+            },
+            accent: {
+              500: '#f59e0b',
+              600: '#d97706',
+            },
+          },
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', '"Helvetica Neue"', '"Apple SD Gothic Neo"', '"Malgun Gothic"', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendard-variable-dynamic-subset.css" />
+
+  <style>
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+    .gradient-hero {
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(24,144,255,0.18), transparent 60%),
+        radial-gradient(900px 500px at -10% 30%, rgba(245,158,11,0.10), transparent 60%),
+        linear-gradient(180deg, #f8fafc 0%, #ffffff 60%);
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2">
+        <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-600 text-white font-bold">다</span>
+        <span class="font-bold text-slate-900 text-lg">다함푸드 VOC</span>
+      </a>
+      <nav class="hidden md:flex items-center gap-7 text-sm font-medium text-slate-600">
+        <a href="#features" class="hover:text-brand-600">주요 기능</a>
+        <a href="#users" class="hover:text-brand-600">사용 대상</a>
+        <a href="#download" class="hover:text-brand-600">다운로드</a>
+        <a href="#contact" class="hover:text-brand-600">문의</a>
+      </nav>
+      <a href="https://admin.dahamvoc.co.kr" class="hidden md:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold text-brand-600 border border-brand-600 hover:bg-brand-50">관리자 로그인</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="gradient-hero">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div>
+          <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 text-brand-700 text-xs font-semibold mb-6">
+            <span class="w-1.5 h-1.5 rounded-full bg-brand-500"></span>
+            (주)다함푸드 운영 통합 플랫폼
+          </span>
+          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
+            현장과 본사를 잇는<br />
+            <span class="text-brand-600">급식 운영 플랫폼</span>
+          </h1>
+          <p class="mt-6 text-lg text-slate-600 leading-relaxed max-w-xl">
+            배식 사진, 식수와 식단표, 배송 코스, 고객의 소리(VOC), 출퇴근, 계약서까지.
+            사업장 운영에 필요한 모든 작업을 모바일 앱 하나로 처리합니다.
+          </p>
+          <div id="download" class="mt-8 flex flex-wrap gap-3">
+            <a href="https://play.google.com/store/apps/details?id=com.daham.voc"
+               class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 transition">
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.5 2.6c-.3.3-.5.7-.5 1.2v16.4c0 .5.2.9.5 1.2L13 12 3.5 2.6Zm10.6 8.7 2.5-2.5L4.6 1.5l9.5 9.8Zm0 1.4L4.6 22.5l12-7.3-2.5-2.5ZM20.6 9.3l-2.7-1.5-3 3 3 3 2.7-1.5c1.1-.6 1.1-2.4 0-3Z"/></svg>
+              Google Play 다운로드
+            </a>
+            <a href="#"
+               class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-slate-900 font-semibold border border-slate-300 hover:border-slate-400 transition"
+               data-app-store-placeholder>
+              <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.36 1.43c-.06 1.16-.49 2.27-1.22 3.05-.71.78-1.85 1.4-2.95 1.31-.07-1.13.41-2.27 1.13-3.04.78-.83 2.07-1.43 3.04-1.32ZM20.5 17.5c-.49 1.14-.73 1.65-1.36 2.66-.88 1.4-2.13 3.14-3.67 3.16-1.37.02-1.72-.89-3.58-.88-1.86.01-2.25.9-3.62.88-1.55-.02-2.73-1.6-3.61-3-2.46-3.95-2.71-8.59-1.2-11.06.94-1.55 2.42-2.46 3.92-2.46 1.5 0 2.45.82 3.69.82 1.21 0 1.95-.82 3.69-.82 1.34 0 2.76.73 3.78 2-3.32 1.82-2.78 6.56.96 8.7Z"/></svg>
+              <span>App Store <span class="text-xs font-normal text-slate-500">(심사 중)</span></span>
+            </a>
+          </div>
+          <p class="mt-4 text-xs text-slate-500">
+            * iOS 버전은 App Store 심사 완료 후 다운로드 가능합니다.
+          </p>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -inset-6 bg-gradient-to-tr from-brand-500/10 via-transparent to-accent-500/10 rounded-3xl blur-2xl"></div>
+          <div class="relative bg-white rounded-3xl shadow-xl border border-slate-200 p-6 lg:p-8">
+            <div class="grid grid-cols-2 gap-3">
+              <div class="aspect-[9/19] bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-xs">앱 스크린샷 1</div>
+              <div class="aspect-[9/19] bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 text-xs mt-6">앱 스크린샷 2</div>
+            </div>
+            <p class="mt-4 text-center text-xs text-slate-400">스크린샷은 추후 업데이트됩니다</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="py-20 lg:py-28 bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto">
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900">현장에 필요한 모든 것</h2>
+        <p class="mt-4 text-slate-600">사업장, 배송, 본사가 같은 데이터로 일합니다. 종이 일지와 흩어진 메신저는 이제 그만.</p>
+      </div>
+
+      <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">📸</div>
+          <h3 class="text-lg font-bold text-slate-900">배식 사진 입력/조회</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">현장 담당자가 배식 사진을 일별로 등록하고, 본사·관리자는 실시간으로 확인할 수 있습니다.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">🍽️</div>
+          <h3 class="text-lg font-bold text-slate-900">식수·식단 관리</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">식사 인원수를 사업장에서 직접 입력하고 식단표를 모바일로 즉시 조회합니다. 본사 집계가 자동.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">🚚</div>
+          <h3 class="text-lg font-bold text-slate-900">배송 코스 추적</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">배송 기사의 동선과 사업장별 도착 시각을 GPS로 기록. 정시 배송 점검이 한눈에.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">💬</div>
+          <h3 class="text-lg font-bold text-slate-900">VOC 통합 관리</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">고객의 소리를 사업장·고객사·본사가 함께 보고 처리. 빠짐없이 응대하고 이력으로 남깁니다.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">📋</div>
+          <h3 class="text-lg font-bold text-slate-900">계약서 전자 관리</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">사업장별 계약서를 디지털로 보관하고 만료 시점을 자동 알림. 갱신 누락을 방지합니다.</p>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 p-6 hover:shadow-lg hover:border-brand-200 transition">
+          <div class="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center text-2xl mb-4">⏱️</div>
+          <h3 class="text-lg font-bold text-slate-900">출퇴근 기록</h3>
+          <p class="mt-2 text-sm text-slate-600 leading-relaxed">사업장별 직원 근태를 GPS 기반으로 정확하게 기록. 근무자 확인과 정산이 간편해집니다.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Users -->
+  <section id="users" class="py-20 lg:py-28 bg-slate-50">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="text-center max-w-2xl mx-auto">
+        <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900">누가 사용하나요?</h2>
+        <p class="mt-4 text-slate-600">역할에 맞는 화면과 권한이 자동으로 제공됩니다.</p>
+      </div>
+
+      <div class="mt-14 grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">본사 / 영남 / 그룹 관리자</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">관리 지역 전체 운영 현황</h3>
+          <p class="mt-2 text-sm text-slate-600">관리 지역의 사업장 운영 상태, VOC, 식수, 배송, 계약 현황을 한 화면에서 확인합니다.</p>
+        </div>
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">사업장 관리자 · 담당자</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">매일의 사업장 운영</h3>
+          <p class="mt-2 text-sm text-slate-600">오늘의 근무, 식수 입력, 배식 사진, 출퇴근까지 현장에서 바로 처리합니다.</p>
+        </div>
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">배송 기사</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">코스 사업장 동선 관리</h3>
+          <p class="mt-2 text-sm text-slate-600">담당 코스의 사업장 순서와 도착 사진, 식수 확인을 GPS로 기록합니다.</p>
+        </div>
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">고객사</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">우리 사업장 현황 · VOC</h3>
+          <p class="mt-2 text-sm text-slate-600">담당 사업장의 식단표, 배식 사진, VOC 처리 상황을 직접 확인합니다.</p>
+        </div>
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">고객</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">식사유무 · VOC 등록</h3>
+          <p class="mt-2 text-sm text-slate-600">사업장 코드로 셀프 가입 후 본인의 식사 여부와 VOC를 직접 등록합니다.</p>
+        </div>
+        <div class="rounded-2xl bg-white p-6 border border-slate-200">
+          <div class="text-sm font-semibold text-brand-600">슈퍼관리자</div>
+          <h3 class="mt-1 text-lg font-bold text-slate-900">전체 권한 · 마스터 데이터</h3>
+          <p class="mt-2 text-sm text-slate-600">사업장, 메뉴, 사용자, 그룹을 직접 관리하고 모든 운영 데이터를 점검합니다.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 bg-brand-600">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h2 class="text-3xl sm:text-4xl font-extrabold text-white">지금 바로 시작하세요</h2>
+      <p class="mt-4 text-brand-100">이미 (주)다함푸드의 모든 사업장에서 사용하고 있는 운영 플랫폼입니다.</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        <a href="https://play.google.com/store/apps/details?id=com.daham.voc"
+           class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white text-slate-900 font-semibold hover:bg-slate-50">
+          Google Play 다운로드
+        </a>
+        <a href="#" data-app-store-placeholder
+           class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-brand-700 text-white font-semibold border border-brand-500 hover:bg-brand-700/80">
+          App Store (심사 중)
+        </a>
+        <a href="https://admin.dahamvoc.co.kr"
+           class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-transparent text-white font-semibold border border-white/40 hover:bg-white/10">
+          관리자 웹 로그인
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contact / Footer -->
+  <footer id="contact" class="bg-slate-900 text-slate-300">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div class="grid md:grid-cols-3 gap-10">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-600 text-white font-bold">다</span>
+            <span class="font-bold text-white text-lg">다함푸드 VOC</span>
+          </div>
+          <p class="mt-4 text-sm leading-relaxed">
+            현장과 본사를 잇는 급식 운영 통합 플랫폼.<br />
+            (주)다함푸드의 모든 사업장이 함께 사용합니다.
+          </p>
+        </div>
+
+        <div>
+          <h4 class="text-white font-semibold text-sm">회사 정보</h4>
+          <ul class="mt-4 space-y-2 text-sm">
+            <li>주식회사 다함푸드 (Daham Food Co., Ltd.)</li>
+            <li>대표이사: 손정수</li>
+            <li>대구광역시 달서구 성서공단로 332-10, 2층 (42722)</li>
+            <li>전화: <a href="tel:+82537217784" class="hover:text-white">053-721-7784</a></li>
+            <li>이메일: <a href="mailto:dahamfood@dahamfood.co.kr" class="hover:text-white">dahamfood@dahamfood.co.kr</a></li>
+            <li>사업자등록번호: <span data-todo="biz-reg">000-00-00000</span></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="text-white font-semibold text-sm">바로가기</h4>
+          <ul class="mt-4 space-y-2 text-sm">
+            <li><a href="/privacy.html" class="hover:text-white">개인정보 처리방침</a></li>
+            <li><a href="/terms.html" class="hover:text-white">이용약관</a></li>
+            <li><a href="https://admin.dahamvoc.co.kr" class="hover:text-white">관리자 로그인</a></li>
+            <li><a href="https://dahamfood.co.kr" class="hover:text-white" rel="noopener">(주)다함푸드 회사 사이트</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="mt-10 pt-6 border-t border-slate-800 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs text-slate-400">
+        <p>© <span id="copyright-year">2026</span> Daham Food Co., Ltd. All rights reserved.</p>
+        <p>Made with care for our 사업장 partners.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('copyright-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
