@@ -46,6 +46,12 @@ jobs:
             npm install
             npm run build
 
+            echo "🌐 Deploying landing page..."
+            sudo mkdir -p /var/www/landing/assets
+            sudo cp ~/daham_voc/landing/index.html ~/daham_voc/landing/privacy.html ~/daham_voc/landing/terms.html /var/www/landing/
+            sudo cp -r ~/daham_voc/landing/assets/. /var/www/landing/assets/
+            sudo chown -R www-data:www-data /var/www/landing
+
             echo "🔧 Updating nginx config..."
             sudo cp ~/daham_voc/nginx-dahamvoc.conf /etc/nginx/sites-available/dahamvoc
             sudo ln -sf /etc/nginx/sites-available/dahamvoc /etc/nginx/sites-enabled/dahamvoc
