@@ -15,6 +15,14 @@ sample/*.jpg
 sample/*.png
 sample/*.JPG
 sample/*.PNG
+sample/**/*.jpg
+sample/**/*.png
+sample/**/*.JPG
+sample/**/*.PNG
+sample/**/*.jpeg
+sample/**/*.JPEG
+sample/**/*.heic
+sample/**/*.HEIC
 .credentials/
 
 # Database Backups
