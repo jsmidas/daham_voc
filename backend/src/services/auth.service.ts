@@ -405,4 +405,47 @@ export class AuthService {
       data: { password: hashedPassword },
     });
   }
+
+  /**
+   * 회원 탈퇴 (Apple Guideline 5.1.1(v) 대응)
+   * - soft delete + PII 익명화 + 푸시 토큰 정리
+   * - VOC/식수/배식사진 등 비즈니스 데이터는 유지하되 작성자만 익명화 표시
+   */
+  async deleteAccount(userId: string, password: string): Promise<void> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+
+    if (!user) {
+      throw new Error('사용자를 찾을 수 없습니다');
+    }
+
+    if (user.deletedAt) {
+      throw new Error('이미 탈퇴 처리된 계정입니다');
+    }
+
+    const isPasswordValid = await comparePassword(password, user.password);
+    if (!isPasswordValid) {
+      throw new Error('비밀번호가 올바르지 않습니다');
+    }
+
+    // 무작위 해시로 password 무효화 (재로그인 차단)
+    const scrambledPassword = await hashPassword(
+      crypto.randomBytes(32).toString('hex')
+    );
+
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          deletedAt: new Date(),
+          isActive: false,
+          name: '탈퇴한 사용자',
+          email: null,
+          phone: `__deleted_${userId}`,
+          password: scrambledPassword,
+        },
+      });
+
+      await tx.pushToken.deleteMany({ where: { userId } });
+    });
+  }
 }

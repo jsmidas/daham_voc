@@ -101,4 +101,27 @@ export class AuthController {
       res.status(400).json(errorResponse(error.message, 'PASSWORD_CHANGE_ERROR'));
     }
   };
+
+  /**
+   * DELETE /api/v1/auth/account
+   * 회원 탈퇴 (본인 계정만)
+   */
+  deleteAccount = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const userId = (req as any).user?.userId;
+
+      if (!userId) {
+        res.status(401).json(errorResponse('인증되지 않은 사용자입니다', 'UNAUTHORIZED'));
+        return;
+      }
+
+      const { password } = req.body;
+
+      await this.authService.deleteAccount(userId, password);
+
+      res.json(successResponse(null, '회원 탈퇴가 완료되었습니다'));
+    } catch (error: any) {
+      res.status(400).json(errorResponse(error.message, 'ACCOUNT_DELETE_ERROR'));
+    }
+  };
 }

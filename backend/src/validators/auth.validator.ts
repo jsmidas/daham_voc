@@ -54,3 +54,12 @@ export const changePasswordSchema = Joi.object({
     'any.required': '새 비밀번호는 필수 항목입니다',
   }),
 });
+
+/**
+ * Delete account validation schema
+ */
+export const deleteAccountSchema = Joi.object({
+  password: Joi.string().required().messages({
+    'any.required': '비밀번호는 필수 항목입니다',
+  }),
+});

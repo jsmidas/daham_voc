@@ -6,6 +6,7 @@ import {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  deleteAccountSchema,
 } from '../validators/auth.validator';
 
 const router = Router();
@@ -29,6 +30,14 @@ router.put(
   authMiddleware,
   validateRequest(changePasswordSchema),
   controller.changePassword
+);
+
+// DELETE /api/v1/auth/account - 회원 탈퇴 (Apple Guideline 5.1.1(v))
+router.delete(
+  '/account',
+  authMiddleware,
+  validateRequest(deleteAccountSchema),
+  controller.deleteAccount
 );
 
 export default router;
