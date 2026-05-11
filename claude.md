@@ -137,21 +137,54 @@ DIRECT_URL=postgresql://postgres.iyussgoqhgzogjvpuxnb:<PASSWORD>@aws-1-ap-northe
 - 웹 관리자: `https://admin.dahamvoc.co.kr`
 
 ### 모바일 앱 (수동 빌드)
+
+#### Android (Google Play)
+
 ```bash
 cd mobile
 
-# 테스트용 APK 빌드
+# 테스트용 APK
 eas build --platform android --profile preview
-
-# 운영 빌드 (Google Play AAB)
-eas build --platform android --profile production
 
 # 운영 빌드 + Google Play 자동 제출
 eas build --platform android --profile production --auto-submit
 ```
-- 빌드 프로필: `preview`(APK 테스트), `production`(Google Play), `production-apk`(운영 APK)
-- 앱 재빌드 시 Google Play 재제출 필요 → 백엔드만 변경 시 앱 빌드 불필요
+
+- 빌드 프로필: `preview`(APK 테스트), `production`(Google Play AAB), `production-apk`(운영 APK 검수용)
+
+#### iOS (App Store)
+
+```bash
+cd mobile
+
+# 운영 빌드 + App Store 자동 제출
+eas build --platform ios --profile production --auto-submit
+```
+
+- App Store Connect: App ID `6764727176` ([링크](https://appstoreconnect.apple.com/apps/6764727176))
+- Bundle ID: `com.daham.voc` / Apple Team ID: `2UQDWHJ95K`
+- ASC API Key: `mobile/secrets/AuthKey_DWHQXK8QZ7.p8` (gitignore, 회사 PC 보관)
+- **iOS는 buildNumber 수동 관리** → 빌드 전 [mobile/app.json](mobile/app.json) `ios.buildNumber` 증가 필수
+- iOS 푸시(APNs) 활성화 절차: [IOS_PUSH_SETUP.md](IOS_PUSH_SETUP.md) 참조
+
+#### 양쪽 동시 빌드 + 자동 제출
+
+```bash
+cd mobile
+eas build --platform all --profile production --auto-submit
+```
+
+#### 버전 업데이트 규칙
+
+- 양쪽 공통: [mobile/app.json](mobile/app.json) `expo.version` 증가 (예: 1.0.4 → 1.0.5)
+- Android: EAS `autoIncrement: true`로 versionCode 자동 증가 (수동 작업 불필요)
+- iOS: [mobile/app.json](mobile/app.json) `ios.buildNumber` 직접 증가 (예: "1" → "2")
+
+#### 공통 주의사항
+
+- 앱 재빌드 시 양쪽 스토어 재제출 필요 → 백엔드만 변경 시 앱 빌드 불필요
 - API 응답 구조 변경 시 **기존 앱 하위 호환** 필수
+- OTA 가능 변경(JS/TSX): EAS Update로 즉시 반영. 네이티브 모듈 추가/변경은 재빌드 필수
 
 ### 사용자 선호사항
 - 모바일 테스트 시 **QR 코드 설치 방식** 선호
@@ -178,7 +211,8 @@ GCP 프로젝트 ID: `daham-food` (표시 이름: 다함 VOC)
 Firebase는 **Android 푸시 알림(FCM) 발송 용도로만 사용**합니다.
 - DB는 Supabase, 사진 저장은 GCS, 인증은 자체 JWT — Firebase가 제공하는 다른 서비스(Firestore/Auth/Hosting)는 사용하지 않음
 - **Android 푸시는 FCM이 강제** (구글 정책) → 백엔드를 어디에 호스팅하든 FCM 등록은 필수
-- iOS 푸시는 추후 활성화 예정 (APNs 인증서 별도 발급 필요)
+- **iOS 푸시도 FCM 경유** (Expo Push → FCM v1 → APNs) → Firebase 콘솔에 APNs Auth Key 업로드 필요
+- iOS 푸시 활성화 절차: [IOS_PUSH_SETUP.md](IOS_PUSH_SETUP.md) 참조 (회사 PC에서 작업 예정)
 
 ### Firebase 프로젝트 정보
 - **프로젝트 ID**: `daham-food` (표시 이름: `daham-voc`)
