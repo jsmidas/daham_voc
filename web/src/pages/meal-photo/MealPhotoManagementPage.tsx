@@ -1036,6 +1036,31 @@ export default function MealPhotoManagementPage() {
       </Card>
 
       {/* 갤러리 프리뷰 — mealType 이 지정되면 해당 끼니 사진만, 아니면 전체 사진 순회 */}
+      <style>{`
+        .daham-meal-preview .ant-image-preview-switch-left,
+        .daham-meal-preview .ant-image-preview-switch-right {
+          width: 56px;
+          height: 56px;
+          background: rgba(0, 0, 0, 0.65);
+          border: 2px solid rgba(255, 255, 255, 0.55);
+          color: #fff;
+          font-size: 24px;
+          opacity: 1;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .daham-meal-preview .ant-image-preview-switch-left:hover,
+        .daham-meal-preview .ant-image-preview-switch-right:hover {
+          background: rgba(0, 0, 0, 0.85);
+          border-color: #fff;
+        }
+        .daham-meal-preview .ant-image-preview-switch-left { left: 8%; }
+        .daham-meal-preview .ant-image-preview-switch-right { right: 8%; }
+        @media (max-width: 1200px) {
+          .daham-meal-preview .ant-image-preview-switch-left { left: 4%; }
+          .daham-meal-preview .ant-image-preview-switch-right { right: 4%; }
+        }
+      `}</style>
       {previewState.siteId && (() => {
         const g = siteGroups.find((s) => s.siteId === previewState.siteId);
         if (!g) return null;
@@ -1049,6 +1074,7 @@ export default function MealPhotoManagementPage() {
               preview={{
                 visible: previewState.visible,
                 current: previewState.current,
+                rootClassName: 'daham-meal-preview',
                 onVisibleChange: (vis) =>
                   setPreviewState((s) => ({ ...s, visible: vis })),
                 onChange: (current) =>
