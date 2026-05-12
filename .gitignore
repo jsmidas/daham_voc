@@ -28,3 +28,6 @@ sample/**/*.HEIC
 # Database Backups
 backup/
 *.dump
+
+# EAS Build Logs
+.eas-build*.log
