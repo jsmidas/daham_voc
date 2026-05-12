@@ -46,12 +46,13 @@ export default function MealPhotoManagementPage() {
   // 보기 모드 (갤러리/테이블)
   const [viewMode, setViewMode] = useState<'gallery' | 'table'>('gallery');
 
-  // 사업장 갤러리 프리뷰 상태
+  // 사업장 갤러리 프리뷰 상태 (mealType 이 지정되면 해당 끼니 안에서만 순회)
   const [previewState, setPreviewState] = useState<{
     visible: boolean;
     siteId: string | null;
+    mealType: MealType | null;
     current: number;
-  }>({ visible: false, siteId: null, current: 0 });
+  }>({ visible: false, siteId: null, mealType: null, current: 0 });
 
   // 각 끼니별 사진 상태 관리
   const [photos, setPhotos] = useState<Record<MealType, PhotoState>>({
@@ -484,14 +485,14 @@ export default function MealPhotoManagementPage() {
     return Object.values(groups);
   }, [dailyPhotos]);
 
-  // 사업장 단위 그룹핑 (갤러리 뷰용) - 끼니별 대표 사진 + 전체 사진 보존
+  // 사업장 단위 그룹핑 (갤러리 뷰용) - 끼니별 대표 사진/사진 배열 + 전체 사진 보존
   const siteGroups = React.useMemo(() => {
     const photos = Array.isArray(dailyPhotos) ? dailyPhotos : [];
     const map = new Map<string, {
       siteId: string;
       site: any;
       photos: any[];
-      byMeal: Record<MealType, { serving?: any; leftover?: any; count: number }>;
+      byMeal: Record<MealType, { serving?: any; leftover?: any; count: number; photos: any[] }>;
       uncheckedCount: number;
     }>();
 
@@ -503,10 +504,10 @@ export default function MealPhotoManagementPage() {
           site: p.site,
           photos: [],
           byMeal: {
-            BREAKFAST: { count: 0 },
-            LUNCH: { count: 0 },
-            DINNER: { count: 0 },
-            SUPPER: { count: 0 },
+            BREAKFAST: { count: 0, photos: [] },
+            LUNCH: { count: 0, photos: [] },
+            DINNER: { count: 0, photos: [] },
+            SUPPER: { count: 0, photos: [] },
           },
           uncheckedCount: 0,
         });
@@ -516,21 +517,28 @@ export default function MealPhotoManagementPage() {
       const meal = p.mealType as MealType;
       if (g.byMeal[meal]) {
         g.byMeal[meal].count += 1;
+        g.byMeal[meal].photos.push(p);
         if (p.photoType === 'SERVING' && !g.byMeal[meal].serving) g.byMeal[meal].serving = p;
         if (p.photoType === 'LEFTOVER' && !g.byMeal[meal].leftover) g.byMeal[meal].leftover = p;
       }
       if (!p.isChecked) g.uncheckedCount += 1;
     });
 
-    // 끼니/촬영 시각 순으로 photos 정렬 (프리뷰 일관성)
+    // 정렬: 사업장 전체 photos 는 끼니/타입/촬영시각 순, 끼니별 photos 는 타입/촬영시각 순
     const mealOrder: Record<MealType, number> = { BREAKFAST: 0, LUNCH: 1, DINNER: 2, SUPPER: 3 };
+    const byTypeAndTime = (a: any, b: any) => {
+      if (a.photoType !== b.photoType) return a.photoType === 'SERVING' ? -1 : 1;
+      return new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime();
+    };
     map.forEach((g) => {
       g.photos.sort((a: any, b: any) => {
         const ma = mealOrder[a.mealType as MealType] ?? 9;
         const mb = mealOrder[b.mealType as MealType] ?? 9;
         if (ma !== mb) return ma - mb;
-        if (a.photoType !== b.photoType) return a.photoType === 'SERVING' ? -1 : 1;
-        return new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime();
+        return byTypeAndTime(a, b);
+      });
+      (Object.keys(g.byMeal) as MealType[]).forEach((m) => {
+        g.byMeal[m].photos.sort(byTypeAndTime);
       });
     });
 
@@ -539,11 +547,13 @@ export default function MealPhotoManagementPage() {
     );
   }, [dailyPhotos]);
 
-  const openSitePreview = (siteId: string, photoId?: string) => {
+  const openSitePreview = (siteId: string, photoId?: string, mealType?: MealType) => {
     const group = siteGroups.find((g) => g.siteId === siteId);
-    if (!group || group.photos.length === 0) return;
-    const idx = photoId ? Math.max(0, group.photos.findIndex((p: any) => p.id === photoId)) : 0;
-    setPreviewState({ visible: true, siteId, current: idx });
+    if (!group) return;
+    const photoList = mealType ? group.byMeal[mealType]?.photos || [] : group.photos;
+    if (photoList.length === 0) return;
+    const idx = photoId ? Math.max(0, photoList.findIndex((p: any) => p.id === photoId)) : 0;
+    setPreviewState({ visible: true, siteId, mealType: mealType ?? null, current: idx });
   };
 
   // 필터링된 데이터
@@ -1025,10 +1035,14 @@ export default function MealPhotoManagementPage() {
           )}
       </Card>
 
-      {/* 갤러리 프리뷰 — 현재 선택된 사업장 그룹만 PreviewGroup 렌더 (eager 이미지 로딩 방지) */}
+      {/* 갤러리 프리뷰 — mealType 이 지정되면 해당 끼니 사진만, 아니면 전체 사진 순회 */}
       {previewState.siteId && (() => {
         const g = siteGroups.find((s) => s.siteId === previewState.siteId);
         if (!g) return null;
+        const photoList: any[] = previewState.mealType
+          ? (g.byMeal[previewState.mealType]?.photos || [])
+          : g.photos;
+        if (photoList.length === 0) return null;
         return (
           <div style={{ display: 'none' }}>
             <Image.PreviewGroup
@@ -1040,7 +1054,7 @@ export default function MealPhotoManagementPage() {
                 onChange: (current) =>
                   setPreviewState((s) => ({ ...s, current })),
                 countRender: (current, total) => {
-                  const photo = g.photos[current - 1];
+                  const photo = photoList[current - 1];
                   if (!photo) return `${current} / ${total}`;
                   const meal = getMealTypeLabel(photo.mealType);
                   const ptype = photo.photoType === 'SERVING' ? '배식준비' : '잔반';
@@ -1048,7 +1062,7 @@ export default function MealPhotoManagementPage() {
                 },
               }}
             >
-              {g.photos.map((p: any) => (
+              {photoList.map((p: any) => (
                 <Image key={p.id} src={p.imageUrl} />
               ))}
             </Image.PreviewGroup>
@@ -1106,13 +1120,15 @@ const MEAL_ORDER: Array<'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER'> = [
   'SUPPER',
 ];
 
+type GalleryMealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SUPPER';
+
 interface SiteGalleryProps {
   groups: any[];
   loading: boolean;
   mealTypeFilter: string;
   statusFilter: string;
   checkedFilter: string;
-  onOpenPreview: (siteId: string, photoId?: string) => void;
+  onOpenPreview: (siteId: string, photoId?: string, mealType?: GalleryMealType) => void;
 }
 
 function SiteGallery({
@@ -1192,9 +1208,35 @@ function SiteGalleryCard({
   onOpenPreview,
 }: {
   group: any;
-  onOpenPreview: (siteId: string, photoId?: string) => void;
+  onOpenPreview: (siteId: string, photoId?: string, mealType?: GalleryMealType) => void;
 }) {
   const totalPhotos = group.photos.length;
+
+  // 끼니별 현재 보여줄 사진 인덱스
+  const [mealIndex, setMealIndex] = useState<Record<GalleryMealType, number>>({
+    BREAKFAST: 0,
+    LUNCH: 0,
+    DINNER: 0,
+    SUPPER: 0,
+  });
+
+  const arrowButtonStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: '50%',
+    transform: 'translateY(-50%)',
+    background: 'rgba(0,0,0,0.5)',
+    color: '#fff',
+    border: 'none',
+    width: 22,
+    height: 22,
+    borderRadius: '50%',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+    zIndex: 2,
+  };
 
   return (
     <div
@@ -1251,12 +1293,22 @@ function SiteGalleryCard({
       >
         {MEAL_ORDER.map((meal) => {
           const slot = group.byMeal[meal];
-          const repPhoto = slot?.serving || slot?.leftover;
-          const has = !!repPhoto;
+          const photos: any[] = slot?.photos || [];
+          const total = photos.length;
+          // 데이터 갱신으로 인덱스가 범위를 벗어날 경우 클램프
+          const idx = total > 0 ? Math.min(mealIndex[meal] ?? 0, total - 1) : 0;
+          const currentPhoto = photos[idx];
+          const has = !!currentPhoto;
+          const ptypeLabel =
+            currentPhoto?.photoType === 'SERVING'
+              ? '배식준비'
+              : currentPhoto?.photoType === 'LEFTOVER'
+                ? '잔반'
+                : '';
           return (
             <div
               key={meal}
-              onClick={() => has && onOpenPreview(group.siteId, repPhoto.id)}
+              onClick={() => has && onOpenPreview(group.siteId, currentPhoto.id, meal)}
               style={{
                 position: 'relative',
                 aspectRatio: '1 / 1',
@@ -1270,7 +1322,7 @@ function SiteGalleryCard({
               {has ? (
                 <>
                   <img
-                    src={repPhoto.thumbnailUrl || repPhoto.imageUrl}
+                    src={currentPhoto.thumbnailUrl || currentPhoto.imageUrl}
                     alt={MEAL_LABEL[meal]}
                     style={{
                       width: '100%',
@@ -1292,22 +1344,53 @@ function SiteGalleryCard({
                     }}
                   >
                     {MEAL_LABEL[meal]}
+                    {ptypeLabel && total > 1 ? ` · ${ptypeLabel}` : ''}
                   </div>
-                  {slot.count > 1 && (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: 4,
-                        right: 4,
-                        background: 'rgba(0,0,0,0.6)',
-                        color: '#fff',
-                        fontSize: 11,
-                        padding: '1px 6px',
-                        borderRadius: 10,
-                      }}
-                    >
-                      +{slot.count - 1}
-                    </div>
+                  {total > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        aria-label="이전 사진"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMealIndex((prev) => ({
+                            ...prev,
+                            [meal]: (idx - 1 + total) % total,
+                          }));
+                        }}
+                        style={{ ...arrowButtonStyle, left: 2 }}
+                      >
+                        <LeftOutlined style={{ fontSize: 10 }} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label="다음 사진"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMealIndex((prev) => ({
+                            ...prev,
+                            [meal]: (idx + 1) % total,
+                          }));
+                        }}
+                        style={{ ...arrowButtonStyle, right: 2 }}
+                      >
+                        <RightOutlined style={{ fontSize: 10 }} />
+                      </button>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 4,
+                          right: 4,
+                          background: 'rgba(0,0,0,0.6)',
+                          color: '#fff',
+                          fontSize: 11,
+                          padding: '1px 6px',
+                          borderRadius: 10,
+                        }}
+                      >
+                        {idx + 1}/{total}
+                      </div>
+                    </>
                   )}
                 </>
               ) : (
