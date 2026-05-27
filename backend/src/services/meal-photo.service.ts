@@ -105,7 +105,7 @@ export async function createMealPhoto(
     },
     include: {
       site: {
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, division: true },
       },
       uploader: {
         select: { id: true, name: true, email: true },
@@ -178,7 +178,7 @@ export async function bulkCreateMealPhotos(
         },
         include: {
           site: {
-            select: { id: true, name: true, type: true },
+            select: { id: true, name: true, type: true, division: true },
           },
           uploader: {
             select: { id: true, name: true, email: true },
@@ -259,7 +259,7 @@ export async function getMealPhotos(filter: MealPhotoFilter): Promise<any[]> {
     where,
     include: {
       site: {
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, division: true },
       },
       uploader: {
         select: { id: true, name: true, email: true },
@@ -347,7 +347,7 @@ export async function updateMealPhoto(
     data: updateData,
     include: {
       site: {
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, division: true },
       },
       uploader: {
         select: { id: true, name: true, email: true },
@@ -644,7 +644,7 @@ export async function toggleCheckStatus(
     },
     include: {
       site: {
-        select: { id: true, name: true, type: true },
+        select: { id: true, name: true, type: true, division: true },
       },
       uploader: {
         select: { id: true, name: true, email: true },
