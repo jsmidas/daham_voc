@@ -492,9 +492,27 @@ export default function MealPhotoManagementPage() {
       siteId: string;
       site: any;
       photos: any[];
-      byMeal: Record<MealType, { serving?: any; leftover?: any; count: number; photos: any[] }>;
+      byMeal: Record<MealType, {
+        serving?: any;
+        leftover?: any;
+        count: number;
+        servingCount: number;
+        leftoverCount: number;
+        photos: any[];
+        servingPhotos: any[];
+        leftoverPhotos: any[];
+      }>;
       uncheckedCount: number;
     }>();
+
+    const emptySlot = () => ({
+      count: 0,
+      servingCount: 0,
+      leftoverCount: 0,
+      photos: [] as any[],
+      servingPhotos: [] as any[],
+      leftoverPhotos: [] as any[],
+    });
 
     photos.forEach((p: any) => {
       const sid = p.siteId;
@@ -504,10 +522,10 @@ export default function MealPhotoManagementPage() {
           site: p.site,
           photos: [],
           byMeal: {
-            BREAKFAST: { count: 0, photos: [] },
-            LUNCH: { count: 0, photos: [] },
-            DINNER: { count: 0, photos: [] },
-            SUPPER: { count: 0, photos: [] },
+            BREAKFAST: emptySlot(),
+            LUNCH: emptySlot(),
+            DINNER: emptySlot(),
+            SUPPER: emptySlot(),
           },
           uncheckedCount: 0,
         });
@@ -518,8 +536,15 @@ export default function MealPhotoManagementPage() {
       if (g.byMeal[meal]) {
         g.byMeal[meal].count += 1;
         g.byMeal[meal].photos.push(p);
-        if (p.photoType === 'SERVING' && !g.byMeal[meal].serving) g.byMeal[meal].serving = p;
-        if (p.photoType === 'LEFTOVER' && !g.byMeal[meal].leftover) g.byMeal[meal].leftover = p;
+        if (p.photoType === 'SERVING') {
+          g.byMeal[meal].servingCount += 1;
+          g.byMeal[meal].servingPhotos.push(p);
+          if (!g.byMeal[meal].serving) g.byMeal[meal].serving = p;
+        } else if (p.photoType === 'LEFTOVER') {
+          g.byMeal[meal].leftoverCount += 1;
+          g.byMeal[meal].leftoverPhotos.push(p);
+          if (!g.byMeal[meal].leftover) g.byMeal[meal].leftover = p;
+        }
       }
       if (!p.isChecked) g.uncheckedCount += 1;
     });
@@ -537,8 +562,12 @@ export default function MealPhotoManagementPage() {
         if (ma !== mb) return ma - mb;
         return byTypeAndTime(a, b);
       });
+      const byTime = (a: any, b: any) =>
+        new Date(a.capturedAt).getTime() - new Date(b.capturedAt).getTime();
       (Object.keys(g.byMeal) as MealType[]).forEach((m) => {
         g.byMeal[m].photos.sort(byTypeAndTime);
+        g.byMeal[m].servingPhotos.sort(byTime);
+        g.byMeal[m].leftoverPhotos.sort(byTime);
       });
     });
 
@@ -1172,8 +1201,11 @@ function SiteGallery({
   const visibleGroups = useMemo(() => {
     return groups.filter((g) => {
       // mealType 필터
-      if (mealTypeFilter !== 'ALL' && !(g.byMeal[mealTypeFilter]?.count > 0)) {
-        return false;
+      if (mealTypeFilter !== 'ALL') {
+        const slot = g.byMeal[mealTypeFilter];
+        if (!slot || (slot.servingCount === 0 && slot.leftoverCount === 0)) {
+          return false;
+        }
       }
 
       // status 필터: 끼니별 슬롯 단위로 평가 (mealType 필터가 있으면 그 끼니만)
@@ -1238,12 +1270,12 @@ function SiteGalleryCard({
 }) {
   const totalPhotos = group.photos.length;
 
-  // 끼니별 현재 보여줄 사진 인덱스
-  const [mealIndex, setMealIndex] = useState<Record<GalleryMealType, number>>({
-    BREAKFAST: 0,
-    LUNCH: 0,
-    DINNER: 0,
-    SUPPER: 0,
+  // 끼니별 × 사진 타입별 현재 보여줄 사진 인덱스
+  const [mealIndex, setMealIndex] = useState<Record<GalleryMealType, { serving: number; leftover: number }>>({
+    BREAKFAST: { serving: 0, leftover: 0 },
+    LUNCH: { serving: 0, leftover: 0 },
+    DINNER: { serving: 0, leftover: 0 },
+    SUPPER: { serving: 0, leftover: 0 },
   });
 
   const arrowButtonStyle: React.CSSProperties = {
@@ -1309,7 +1341,7 @@ function SiteGalleryCard({
         </div>
       </div>
 
-      {/* 끼니별 4장 */}
+      {/* 끼니별 컬럼: 위=배식전, 아래=잔반 */}
       <div
         style={{
           display: 'grid',
@@ -1319,120 +1351,52 @@ function SiteGalleryCard({
       >
         {MEAL_ORDER.map((meal) => {
           const slot = group.byMeal[meal];
-          const photos: any[] = slot?.photos || [];
-          const total = photos.length;
-          // 데이터 갱신으로 인덱스가 범위를 벗어날 경우 클램프
-          const idx = total > 0 ? Math.min(mealIndex[meal] ?? 0, total - 1) : 0;
-          const currentPhoto = photos[idx];
-          const has = !!currentPhoto;
-          const ptypeLabel =
-            currentPhoto?.photoType === 'SERVING'
-              ? '배식준비'
-              : currentPhoto?.photoType === 'LEFTOVER'
-                ? '잔반'
-                : '';
+          const servingPhotos: any[] = slot?.servingPhotos || [];
+          const leftoverPhotos: any[] = slot?.leftoverPhotos || [];
+          const servingIdx = servingPhotos.length > 0
+            ? Math.min(mealIndex[meal]?.serving ?? 0, servingPhotos.length - 1)
+            : 0;
+          const leftoverIdx = leftoverPhotos.length > 0
+            ? Math.min(mealIndex[meal]?.leftover ?? 0, leftoverPhotos.length - 1)
+            : 0;
           return (
-            <div
-              key={meal}
-              onClick={() => has && onOpenPreview(group.siteId, currentPhoto.id, meal)}
-              style={{
-                position: 'relative',
-                aspectRatio: '1 / 1',
-                background: has ? '#000' : '#fafafa',
-                borderRadius: 6,
-                overflow: 'hidden',
-                cursor: has ? 'pointer' : 'default',
-                border: has ? '1px solid transparent' : '1px dashed #d9d9d9',
-              }}
-            >
-              {has ? (
-                <>
-                  <img
-                    src={currentPhoto.thumbnailUrl || currentPhoto.imageUrl}
-                    alt={MEAL_LABEL[meal]}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: 4,
-                      left: 4,
-                      background: 'rgba(0,0,0,0.6)',
-                      color: '#fff',
-                      fontSize: 11,
-                      padding: '1px 6px',
-                      borderRadius: 4,
-                    }}
-                  >
-                    {MEAL_LABEL[meal]}
-                    {ptypeLabel && total > 1 ? ` · ${ptypeLabel}` : ''}
-                  </div>
-                  {total > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        aria-label="이전 사진"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMealIndex((prev) => ({
-                            ...prev,
-                            [meal]: (idx - 1 + total) % total,
-                          }));
-                        }}
-                        style={{ ...arrowButtonStyle, left: 2 }}
-                      >
-                        <LeftOutlined style={{ fontSize: 10 }} />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label="다음 사진"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setMealIndex((prev) => ({
-                            ...prev,
-                            [meal]: (idx + 1) % total,
-                          }));
-                        }}
-                        style={{ ...arrowButtonStyle, right: 2 }}
-                      >
-                        <RightOutlined style={{ fontSize: 10 }} />
-                      </button>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: 4,
-                          right: 4,
-                          background: 'rgba(0,0,0,0.6)',
-                          color: '#fff',
-                          fontSize: 11,
-                          padding: '1px 6px',
-                          borderRadius: 10,
-                        }}
-                      >
-                        {idx + 1}/{total}
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div
-                  style={{
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#bfbfbf',
-                    fontSize: 12,
-                  }}
-                >
-                  {MEAL_LABEL[meal]}
-                </div>
-              )}
+            <div key={meal} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textAlign: 'center',
+                  color: '#595959',
+                }}
+              >
+                {MEAL_LABEL[meal]}
+              </div>
+              <PhotoSlot
+                photos={servingPhotos}
+                currentIdx={servingIdx}
+                onIndexChange={(next) =>
+                  setMealIndex((prev) => ({
+                    ...prev,
+                    [meal]: { ...prev[meal], serving: next },
+                  }))
+                }
+                photoType="SERVING"
+                onOpen={(photoId) => onOpenPreview(group.siteId, photoId, meal)}
+                arrowButtonStyle={arrowButtonStyle}
+              />
+              <PhotoSlot
+                photos={leftoverPhotos}
+                currentIdx={leftoverIdx}
+                onIndexChange={(next) =>
+                  setMealIndex((prev) => ({
+                    ...prev,
+                    [meal]: { ...prev[meal], leftover: next },
+                  }))
+                }
+                photoType="LEFTOVER"
+                onOpen={(photoId) => onOpenPreview(group.siteId, photoId, meal)}
+                arrowButtonStyle={arrowButtonStyle}
+              />
             </div>
           );
         })}
@@ -1442,6 +1406,127 @@ function SiteGalleryCard({
       <Button block onClick={() => onOpenPreview(group.siteId)} disabled={totalPhotos === 0}>
         전체 사진 크게 보기 ({totalPhotos}장)
       </Button>
+    </div>
+  );
+}
+
+function PhotoSlot({
+  photos,
+  currentIdx,
+  onIndexChange,
+  photoType,
+  onOpen,
+  arrowButtonStyle,
+}: {
+  photos: any[];
+  currentIdx: number;
+  onIndexChange: (next: number) => void;
+  photoType: 'SERVING' | 'LEFTOVER';
+  onOpen: (photoId: string) => void;
+  arrowButtonStyle: React.CSSProperties;
+}) {
+  const total = photos.length;
+  const has = total > 0;
+  const current = has ? photos[currentIdx] : null;
+  const isServing = photoType === 'SERVING';
+  const label = isServing ? '배식전' : '잔반';
+  const accentColor = isServing ? '#1677ff' : '#fa8c16';
+
+  return (
+    <div
+      onClick={() => has && current && onOpen(current.id)}
+      style={{
+        position: 'relative',
+        aspectRatio: '1 / 1',
+        background: has ? '#000' : '#fafafa',
+        borderRadius: 6,
+        overflow: 'hidden',
+        cursor: has ? 'pointer' : 'default',
+        border: has ? `2px solid ${accentColor}` : '1px dashed #d9d9d9',
+      }}
+    >
+      {has && current ? (
+        <>
+          <img
+            src={current.thumbnailUrl || current.imageUrl}
+            alt={label}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              display: 'block',
+            }}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 2,
+              left: 2,
+              background: accentColor,
+              color: '#fff',
+              fontSize: 10,
+              padding: '1px 5px',
+              borderRadius: 3,
+              fontWeight: 600,
+            }}
+          >
+            {label}
+          </div>
+          {total > 1 && (
+            <>
+              <button
+                type="button"
+                aria-label={`이전 ${label} 사진`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onIndexChange((currentIdx - 1 + total) % total);
+                }}
+                style={{ ...arrowButtonStyle, left: 2 }}
+              >
+                <LeftOutlined style={{ fontSize: 10 }} />
+              </button>
+              <button
+                type="button"
+                aria-label={`다음 ${label} 사진`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onIndexChange((currentIdx + 1) % total);
+                }}
+                style={{ ...arrowButtonStyle, right: 2 }}
+              >
+                <RightOutlined style={{ fontSize: 10 }} />
+              </button>
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 2,
+                  right: 2,
+                  background: 'rgba(0,0,0,0.65)',
+                  color: '#fff',
+                  fontSize: 10,
+                  padding: '1px 5px',
+                  borderRadius: 8,
+                }}
+              >
+                {currentIdx + 1}/{total}
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <div
+          style={{
+            height: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#bfbfbf',
+            fontSize: 10,
+          }}
+        >
+          {label} 없음
+        </div>
+      )}
     </div>
   );
 }
